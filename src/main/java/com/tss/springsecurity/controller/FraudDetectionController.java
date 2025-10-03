@@ -24,7 +24,7 @@ public class FraudDetectionController {
     /**
      * Run complete fraud detection (Identity + Financial + Employment + Cross-Verification) for an applicant
      */
-    @PostMapping("/check/{applicantId}")
+    @GetMapping("/check/{applicantId}")
     public ResponseEntity<Map<String, Object>> checkFraud(@PathVariable Long applicantId) {
         try {
             FraudDetectionResult result = fraudDetectionService.runFraudDetection(applicantId);
