@@ -51,6 +51,18 @@ public class Applicant {
     @Column(name = "country", length = 100)
     private String country;
     
+    @Column(name = "password_hash", columnDefinition = "TEXT")
+    private String passwordHash;
+    
+    @Column(name = "is_approved", nullable = false)
+    private Boolean isApproved = false;
+    
+    @Column(name = "is_email_verified", nullable = false)
+    private Boolean isEmailVerified = false;
+    
+    @Column(name = "approval_status", length = 50)
+    private String approvalStatus = "PENDING"; // PENDING, APPROVED, REJECTED
+    
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
     

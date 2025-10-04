@@ -32,5 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 
-### Documentation ###
+### Documentation and Config Files ###
 *.md
+*.txt
+*.json
+*.properties
+*.xml

@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "loan_officer")
+@Table(name = "compliance_officer")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoanOfficer {
+public class ComplianceOfficer {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,11 +38,8 @@ public class LoanOfficer {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    @OneToMany(mappedBy = "officer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<VerificationLog> verificationLogs;
-    
-    @OneToMany(mappedBy = "officer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<OfficerApplicationAssignment> applicationAssignments;
+    @OneToMany(mappedBy = "complianceOfficer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ComplianceOfficerApplicationAssignment> applicationAssignments;
     
     @PrePersist
     protected void onCreate() {
