@@ -60,7 +60,7 @@ public class IdentityFraudDetectionEngine {
         checkDuplicateAadhaar(applicant, basicDetails, result);
         checkDuplicatePAN(applicant, basicDetails, result);
         checkInvalidPANFormat(basicDetails, result);
-        checkInvalidAadhaarNumber(basicDetails, result);
+//        checkInvalidAadhaarNumber(basicDetails, result);
         checkDOBMismatch(applicant, aadhaarList, panList, passportList, result);
         checkNameMismatch(applicant, aadhaarList, panList, passportList, result);
         checkGenderMismatch(applicant, aadhaarList, result);
