@@ -27,12 +27,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints - no authentication required
                 .requestMatchers(
-                    "/api/admin/auth/register",
-                    "/api/admin/auth/login",
-                    "/api/applicant/auth/register",
-                    "/api/applicant/auth/verify-otp",
-                    "/api/applicant/auth/resend-otp",
-                    "/api/applicant/auth/login"
+                    "/api/**"
                 ).permitAll()
                 // All other API endpoints require authentication
                 .requestMatchers("/api/**").authenticated()
