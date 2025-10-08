@@ -13,6 +13,8 @@ public interface LoanOfficerRepository extends JpaRepository<LoanOfficer, Long> 
     
     Optional<LoanOfficer> findByEmail(String email);
     
+    Optional<LoanOfficer> findByUsernameOrEmail(String username, String email);
+    
     Boolean existsByUsername(String username);
     
     Boolean existsByEmail(String email);

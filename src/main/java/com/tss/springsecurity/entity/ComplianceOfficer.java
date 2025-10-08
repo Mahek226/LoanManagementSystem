@@ -51,4 +51,13 @@ public class ComplianceOfficer {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+    
+    // Convenience method for authentication
+    public String getPassword() {
+        return this.passwordHash;
+    }
+    
+    public void setPassword(String password) {
+        this.passwordHash = password;
+    }
 }
