@@ -20,14 +20,9 @@ public class Admin {
     @Column(name = "admin_id")
     private Long adminId;
     
-    @Column(name = "username", unique = true, nullable = false, length = 100)
-    private String username;
-    
-    @Column(name = "email", unique = true, nullable = false, length = 150)
-    private String email;
-    
-    @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
-    private String passwordHash;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

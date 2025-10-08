@@ -33,8 +33,9 @@ public class Applicant {
     @Column(name = "gender", length = 10)
     private String gender;
     
-    @Column(name = "email", unique = true, length = 150)
-    private String email;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
     
     @Column(name = "phone", unique = true, length = 20)
     private String phone;
