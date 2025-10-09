@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -25,6 +26,7 @@ public class CrossVerificationFraudDetectionEngine {
     private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final ApplicantCreditHistoryRepository creditHistoryRepository;
     private final LoanCollateralRepository collateralRepository;
+    private final DatabaseFraudRuleEngine dbRuleEngine;
     
     public CrossVerificationFraudDetectionEngine(
             ApplicantRepository applicantRepository,
@@ -38,7 +40,8 @@ public class CrossVerificationFraudDetectionEngine {
             OtherDocumentRepository otherDocumentRepository,
             ApplicantLoanDetailsRepository loanDetailsRepository,
             ApplicantCreditHistoryRepository creditHistoryRepository,
-            LoanCollateralRepository collateralRepository) {
+            LoanCollateralRepository collateralRepository,
+            DatabaseFraudRuleEngine dbRuleEngine) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.employmentRepository = employmentRepository;
@@ -51,6 +54,7 @@ public class CrossVerificationFraudDetectionEngine {
         this.loanDetailsRepository = loanDetailsRepository;
         this.creditHistoryRepository = creditHistoryRepository;
         this.collateralRepository = collateralRepository;
+        this.dbRuleEngine = dbRuleEngine;
     }
     
     /**
@@ -63,6 +67,9 @@ public class CrossVerificationFraudDetectionEngine {
         FraudDetectionResult result = new FraudDetectionResult();
         result.setApplicantId(applicantId);
         result.setApplicantName(applicant.getFirstName() + " " + applicant.getLastName());
+        
+        // Load active rules from database for CROSS_VERIFICATION category
+        Map<String, FraudRuleDefinition> rules = dbRuleEngine.getRulesAsMap("CROSS_VERIFICATION");
         
         // Get all related data
         ApplicantBasicDetails basicDetails = basicDetailsRepository
@@ -91,17 +98,17 @@ public class CrossVerificationFraudDetectionEngine {
         List<LoanCollateral> collaterals = currentLoan != null ? 
                 collateralRepository.findByLoan_LoanId(currentLoan.getLoanId()) : new ArrayList<>();
         
-        // Run all cross-verification rules
-        crossVerifyIdentity(applicant, basicDetails, aadhaarList, panList, passportList, financials, result);
-        crossVerifyAddress(applicant, aadhaarList, documents, result);
-        crossVerifyPANAadhaar(basicDetails, aadhaarList, panList, documents, result);
-        crossVerifyIncome(employment, financials, documents, result);
-        crossVerifyEmployment(employment, documents, financials, result);
-        crossVerifyBanking(applicant, financials, basicDetails, result);
-        crossVerifyLoanLiabilities(creditHistory, financials, documents, result);
-        crossVerifyProperty(applicant, property, documents, collaterals, result);
-        crossVerifyGoldLoan(applicant, currentLoan, collaterals, result);
-        crossVerifyBehavioral(applicant, aadhaarList, employment, result);
+        // Run all cross-verification rules (only if enabled in database)
+        crossVerifyIdentity(applicant, basicDetails, aadhaarList, panList, passportList, financials, rules, result);
+        crossVerifyAddress(applicant, aadhaarList, documents, rules, result);
+        crossVerifyPANAadhaar(basicDetails, aadhaarList, panList, documents, rules, result);
+        crossVerifyIncome(employment, financials, documents, rules, result);
+        crossVerifyEmployment(employment, documents, financials, rules, result);
+        crossVerifyBanking(applicant, financials, basicDetails, rules, result);
+        crossVerifyLoanLiabilities(creditHistory, financials, documents, rules, result);
+        crossVerifyProperty(applicant, property, documents, collaterals, rules, result);
+        crossVerifyGoldLoan(applicant, currentLoan, collaterals, rules, result);
+        crossVerifyBehavioral(applicant, aadhaarList, employment, rules, result);
         
         // Calculate final risk level
         result.calculateRiskLevel();
@@ -116,7 +123,7 @@ public class CrossVerificationFraudDetectionEngine {
     private void crossVerifyIdentity(Applicant applicant, ApplicantBasicDetails basicDetails,
                                      List<AadhaarDetails> aadhaarList, List<PanDetails> panList,
                                      List<PassportDetails> passportList, ApplicantFinancials financials,
-                                     FraudDetectionResult result) {
+                                     Map<String, FraudRuleDefinition> rules, FraudDetectionResult result) {
         
         String applicantName = (applicant.getFirstName() + " " + 
                 (applicant.getLastName() != null ? applicant.getLastName() : "")).trim();
@@ -171,56 +178,44 @@ public class CrossVerificationFraudDetectionEngine {
         
         // Check for inconsistencies
         if (nameSources.size() >= 3 && !allNamesMatch(nameSources)) {
-            FraudRule rule = new FraudRule(
-                "NAME_CROSS_VERIFICATION_FAILED",
-                "Name mismatch across multiple sources: " + String.join(", ", nameSources),
-                50,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Name inconsistency detected across Form, Aadhaar, PAN, Bank - Possible identity theft"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("NAME_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Name mismatch across multiple sources: " + String.join(", ", nameSources);
+                String flagDetails = "Name inconsistency detected across Form, Aadhaar, PAN, Bank - Possible identity theft";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         if (dobSources.size() >= 3 && !allDOBsMatch(dobSources)) {
-            FraudRule rule = new FraudRule(
-                "DOB_CROSS_VERIFICATION_FAILED",
-                "DOB mismatch across multiple sources: " + String.join(", ", dobSources),
-                45,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Date of Birth inconsistency across Form, Aadhaar, PAN, Passport"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("DOB_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "DOB mismatch across multiple sources: " + String.join(", ", dobSources);
+                String flagDetails = "Date of Birth inconsistency across Form, Aadhaar, PAN, Passport";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         if (genderSources.size() >= 2 && !allGendersMatch(genderSources)) {
-            FraudRule rule = new FraudRule(
-                "GENDER_CROSS_VERIFICATION_FAILED",
-                "Gender mismatch: " + String.join(", ", genderSources),
-                30,
-                "MEDIUM",
-                "CROSS_VERIFICATION",
-                true,
-                "Gender inconsistency between Form and Aadhaar"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("GENDER_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Gender mismatch: " + String.join(", ", genderSources);
+                String flagDetails = "Gender inconsistency between Form and Aadhaar";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Father's name cross-verification
         if (fatherNameSources.size() >= 2 && !allFatherNamesMatch(fatherNameSources)) {
-            FraudRule rule = new FraudRule(
-                "FATHER_NAME_MISMATCH",
-                "Father's name mismatch across documents: " + String.join(", ", fatherNameSources),
-                35,
-                "MEDIUM",
-                "CROSS_VERIFICATION",
-                true,
-                "Father's name inconsistency in PAN and other documents"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("FATHER_NAME_MISMATCH");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Father's name mismatch across documents: " + String.join(", ", fatherNameSources);
+                String flagDetails = "Father's name inconsistency in PAN and other documents";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -228,7 +223,8 @@ public class CrossVerificationFraudDetectionEngine {
      * 2. Address Cross-Verification
      */
     private void crossVerifyAddress(Applicant applicant, List<AadhaarDetails> aadhaarList,
-                                    List<OtherDocument> documents, FraudDetectionResult result) {
+                                    List<OtherDocument> documents, Map<String, FraudRuleDefinition> rules, 
+                                    FraudDetectionResult result) {
         
         List<String> addressSources = new ArrayList<>();
         List<String> citySources = new ArrayList<>();
@@ -280,44 +276,34 @@ public class CrossVerificationFraudDetectionEngine {
         
         // Check address consistency
         if (addressSources.size() >= 3 && !allAddressesMatch(addressSources)) {
-            FraudRule rule = new FraudRule(
-                "ADDRESS_CROSS_VERIFICATION_FAILED",
-                "Address mismatch across multiple sources",
-                40,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Address inconsistency: " + String.join(" | ", addressSources)
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("ADDRESS_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Address inconsistency: " + String.join(" | ", addressSources);
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Check city consistency
         if (citySources.size() >= 2 && !allCitiesMatch(citySources)) {
-            FraudRule rule = new FraudRule(
-                "CITY_MISMATCH",
-                "City mismatch: " + String.join(", ", citySources),
-                25,
-                "MEDIUM",
-                "CROSS_VERIFICATION",
-                true,
-                "Declared city doesn't match Aadhaar city"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("CITY_MISMATCH");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "City mismatch: " + String.join(", ", citySources);
+                String flagDetails = "Declared city doesn't match Aadhaar city";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Check state consistency
         if (stateSources.size() >= 2 && !allStatesMatch(stateSources)) {
-            FraudRule rule = new FraudRule(
-                "STATE_MISMATCH",
-                "State mismatch: " + String.join(", ", stateSources),
-                25,
-                "MEDIUM",
-                "CROSS_VERIFICATION",
-                true,
-                "Declared state doesn't match Aadhaar state"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("STATE_MISMATCH");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "State mismatch: " + String.join(", ", stateSources);
+                String flagDetails = "Declared state doesn't match Aadhaar state";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -328,6 +314,7 @@ public class CrossVerificationFraudDetectionEngine {
                                        List<AadhaarDetails> aadhaarList,
                                        List<PanDetails> panList,
                                        List<OtherDocument> documents,
+                                       Map<String, FraudRuleDefinition> rules,
                                        FraudDetectionResult result) {
         
         if (basicDetails == null) return;
@@ -352,16 +339,13 @@ public class CrossVerificationFraudDetectionEngine {
         }
         
         if (panSources.size() >= 2 && !allPANsMatch(panSources)) {
-            FraudRule rule = new FraudRule(
-                "PAN_CROSS_VERIFICATION_FAILED",
-                "PAN number mismatch: " + String.join(", ", panSources),
-                50,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "PAN in form doesn't match PAN in documents (ITR/PAN Card)"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("PAN_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "PAN number mismatch: " + String.join(", ", panSources);
+                String flagDetails = "PAN in form doesn't match PAN in documents (ITR/PAN Card)";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Aadhaar cross-verification
@@ -387,16 +371,13 @@ public class CrossVerificationFraudDetectionEngine {
         }
         
         if (aadhaarSources.size() >= 2 && !allAadhaarsMatch(aadhaarSources)) {
-            FraudRule rule = new FraudRule(
-                "AADHAAR_CROSS_VERIFICATION_FAILED",
-                "Aadhaar number mismatch: " + String.join(", ", aadhaarSources),
-                50,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Aadhaar in form doesn't match Aadhaar in documents"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("AADHAAR_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Aadhaar number mismatch: " + String.join(", ", aadhaarSources);
+                String flagDetails = "Aadhaar in form doesn't match Aadhaar in documents";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // PAN-Aadhaar linking check (simulated)
@@ -407,16 +388,12 @@ public class CrossVerificationFraudDetectionEngine {
             boolean aadhaarDocExists = !aadhaarList.isEmpty();
             
             if (!panDocExists || !aadhaarDocExists) {
-                FraudRule rule = new FraudRule(
-                    "PAN_AADHAAR_LINKING_UNVERIFIED",
-                    "PAN-Aadhaar linking cannot be verified (missing documents)",
-                    30,
-                    "MEDIUM",
-                    "CROSS_VERIFICATION",
-                    true,
-                    "Both PAN and Aadhaar documents required for linking verification"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("PAN_AADHAAR_LINKING_UNVERIFIED");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String flagDetails = "Both PAN and Aadhaar documents required for linking verification";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
     }
@@ -425,7 +402,8 @@ public class CrossVerificationFraudDetectionEngine {
      * 4. Income Cross-Verification
      */
     private void crossVerifyIncome(ApplicantEmployment employment, ApplicantFinancials financials,
-                                   List<OtherDocument> documents, FraudDetectionResult result) {
+                                   List<OtherDocument> documents, Map<String, FraudRuleDefinition> rules,
+                                   FraudDetectionResult result) {
         
         if (employment == null || employment.getMonthlyIncome() == null) return;
         
@@ -487,17 +465,13 @@ public class CrossVerificationFraudDetectionEngine {
         
         // Check income consistency (allow 30% variance)
         if (incomeSources.size() >= 3 && !allIncomesMatch(incomeSources, declaredIncome)) {
-            FraudRule rule = new FraudRule(
-                "INCOME_CROSS_VERIFICATION_FAILED",
-                "Income mismatch across multiple sources",
-                55,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Income inconsistency: " + String.join(" | ", incomeSources) + 
-                " - Possible salary slip forgery or income inflation"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("INCOME_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Income inconsistency: " + String.join(" | ", incomeSources) + 
+                    " - Possible salary slip forgery or income inflation";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -507,6 +481,7 @@ public class CrossVerificationFraudDetectionEngine {
     private void crossVerifyEmployment(ApplicantEmployment employment, 
                                        List<OtherDocument> documents,
                                        ApplicantFinancials financials,
+                                       Map<String, FraudRuleDefinition> rules,
                                        FraudDetectionResult result) {
         
         if (employment == null || employment.getEmployerName() == null) return;
@@ -545,17 +520,13 @@ public class CrossVerificationFraudDetectionEngine {
         
         // Check employer consistency
         if (employerSources.size() >= 2 && !allEmployersMatch(employerSources)) {
-            FraudRule rule = new FraudRule(
-                "EMPLOYER_CROSS_VERIFICATION_FAILED",
-                "Employer name mismatch across sources",
-                45,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Employer inconsistency: " + String.join(" | ", employerSources) +
-                " - Possible fake employer or forged documents"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("EMPLOYER_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Employer inconsistency: " + String.join(" | ", employerSources) +
+                    " - Possible fake employer or forged documents";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -563,7 +534,8 @@ public class CrossVerificationFraudDetectionEngine {
      * 6. Banking Cross-Verification
      */
     private void crossVerifyBanking(Applicant applicant, ApplicantFinancials financials,
-                                    ApplicantBasicDetails basicDetails, FraudDetectionResult result) {
+                                    ApplicantBasicDetails basicDetails, Map<String, FraudRuleDefinition> rules,
+                                    FraudDetectionResult result) {
         
         if (financials == null) return;
         
@@ -577,16 +549,13 @@ public class CrossVerificationFraudDetectionEngine {
             Pattern ifscPattern = Pattern.compile("^[A-Z]{4}0[A-Z0-9]{6}$");
             
             if (!ifscPattern.matcher(ifsc).matches()) {
-                FraudRule rule = new FraudRule(
-                    "INVALID_IFSC_CODE",
-                    "IFSC code " + ifsc + " is invalid",
-                    30,
-                    "MEDIUM",
-                    "CROSS_VERIFICATION",
-                    true,
-                    "IFSC code format validation failed"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("INVALID_IFSC_CODE");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "IFSC code " + ifsc + " is invalid";
+                    String flagDetails = "IFSC code format validation failed";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
         
@@ -605,16 +574,13 @@ public class CrossVerificationFraudDetectionEngine {
                 (bankName.contains("pnb") && ifscPrefix.equals("PUNB"));
             
             if (!ifscBankMatch && !bankName.contains("bank")) {
-                FraudRule rule = new FraudRule(
-                    "BANK_IFSC_MISMATCH",
-                    "Bank name '" + financials.getBankName() + "' doesn't match IFSC prefix '" + ifscPrefix + "'",
-                    25,
-                    "MEDIUM",
-                    "CROSS_VERIFICATION",
-                    true,
-                    "Bank name and IFSC code inconsistency"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("BANK_IFSC_MISMATCH");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Bank name '" + financials.getBankName() + "' doesn't match IFSC prefix '" + ifscPrefix + "'";
+                    String flagDetails = "Bank name and IFSC code inconsistency";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
     }
@@ -625,6 +591,7 @@ public class CrossVerificationFraudDetectionEngine {
     private void crossVerifyLoanLiabilities(ApplicantCreditHistory creditHistory,
                                            ApplicantFinancials financials,
                                            List<OtherDocument> documents,
+                                           Map<String, FraudRuleDefinition> rules,
                                            FraudDetectionResult result) {
         
         if (creditHistory == null) return;
@@ -646,32 +613,26 @@ public class CrossVerificationFraudDetectionEngine {
                 
                 // Check for "no loans" declaration but EMI visible
                 if (declaredActiveLoans != null && declaredActiveLoans == 0 && emiCount > 0) {
-                    FraudRule rule = new FraudRule(
-                        "HIDDEN_LOANS_DETECTED",
-                        "Declared 'no active loans' but " + emiCount + " EMI transactions found in bank statement",
-                        50,
-                        "HIGH",
-                        "CROSS_VERIFICATION",
-                        true,
-                        "Applicant hiding existing loan obligations - Deliberate misrepresentation"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("HIDDEN_LOANS_DETECTED");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String customDesc = "Declared 'no active loans' but " + emiCount + " EMI transactions found in bank statement";
+                        String flagDetails = "Applicant hiding existing loan obligations - Deliberate misrepresentation";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
                 
                 // Check if declared loans don't match EMI count
                 if (declaredActiveLoans != null && emiCount > 0 && 
                     Math.abs(declaredActiveLoans - emiCount) >= 2) {
-                    FraudRule rule = new FraudRule(
-                        "LOAN_DECLARATION_MISMATCH",
-                        "Declared " + declaredActiveLoans + " loans but " + emiCount + 
-                        " EMI transactions in bank statement",
-                        40,
-                        "HIGH",
-                        "CROSS_VERIFICATION",
-                        true,
-                        "Mismatch between declared loans and actual EMI payments"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("LOAN_DECLARATION_MISMATCH");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String customDesc = "Declared " + declaredActiveLoans + " loans but " + emiCount + 
+                            " EMI transactions in bank statement";
+                        String flagDetails = "Mismatch between declared loans and actual EMI payments";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
                 
                 // Check credit card transactions
@@ -679,16 +640,12 @@ public class CrossVerificationFraudDetectionEngine {
                 Integer declaredCards = creditHistory.getCreditCardCount();
                 
                 if (declaredCards != null && declaredCards == 0 && creditCardCount > 0) {
-                    FraudRule rule = new FraudRule(
-                        "HIDDEN_CREDIT_CARDS",
-                        "Declared 'no credit cards' but credit card transactions found",
-                        35,
-                        "MEDIUM",
-                        "CROSS_VERIFICATION",
-                        true,
-                        "Credit card usage detected despite declaring no cards"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("HIDDEN_CREDIT_CARDS");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String flagDetails = "Credit card usage detected despite declaring no cards";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -699,7 +656,7 @@ public class CrossVerificationFraudDetectionEngine {
      */
     private void crossVerifyProperty(Applicant applicant, ApplicantPropertyDetails property,
                                     List<OtherDocument> documents, List<LoanCollateral> collaterals,
-                                    FraudDetectionResult result) {
+                                    Map<String, FraudRuleDefinition> rules, FraudDetectionResult result) {
         
         if (property == null) return;
         
@@ -718,16 +675,13 @@ public class CrossVerificationFraudDetectionEngine {
                         (applicant.getLastName() != null ? applicant.getLastName() : "")).trim();
                 
                 if (ownerName != null && !namesMatch(applicantName, ownerName)) {
-                    FraudRule rule = new FraudRule(
-                        "PROPERTY_OWNER_NAME_MISMATCH",
-                        "Property owner name '" + ownerName + "' doesn't match applicant '" + applicantName + "'",
-                        45,
-                        "HIGH",
-                        "CROSS_VERIFICATION",
-                        true,
-                        "Property ownership document shows different owner - Possible fraud"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("PROPERTY_OWNER_NAME_MISMATCH");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String customDesc = "Property owner name '" + ownerName + "' doesn't match applicant '" + applicantName + "'";
+                        String flagDetails = "Property ownership document shows different owner - Possible fraud";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -747,17 +701,14 @@ public class CrossVerificationFraudDetectionEngine {
                             java.math.RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
                     
                     if (variancePercent.compareTo(new BigDecimal("20")) > 0) {
-                        FraudRule rule = new FraudRule(
-                            "PROPERTY_VALUE_MISMATCH",
-                            "Declared property value ₹" + declaredValue + 
-                            " differs from valuation ₹" + valuationValue + " by " + variancePercent + "%",
-                            35,
-                            "MEDIUM",
-                            "CROSS_VERIFICATION",
-                            true,
-                            "Property value inflation detected"
-                        );
-                        result.addTriggeredRule(rule);
+                        FraudRuleDefinition ruleDef = rules.get("PROPERTY_VALUE_MISMATCH");
+                        if (ruleDef != null && ruleDef.getIsActive()) {
+                            String customDesc = "Declared property value ₹" + declaredValue + 
+                                " differs from valuation ₹" + valuationValue + " by " + variancePercent + "%";
+                            String flagDetails = "Property value inflation detected";
+                            FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                            result.addTriggeredRule(rule);
+                        }
                     }
                 }
             }
@@ -768,7 +719,8 @@ public class CrossVerificationFraudDetectionEngine {
      * 9. Gold Loan Cross-Verification
      */
     private void crossVerifyGoldLoan(Applicant applicant, ApplicantLoanDetails loan,
-                                    List<LoanCollateral> collaterals, FraudDetectionResult result) {
+                                    List<LoanCollateral> collaterals, Map<String, FraudRuleDefinition> rules,
+                                    FraudDetectionResult result) {
         
         if (loan == null || !"gold".equalsIgnoreCase(loan.getLoanType())) return;
         
@@ -778,32 +730,24 @@ public class CrossVerificationFraudDetectionEngine {
                 .toList();
         
         if (goldCollaterals.isEmpty()) {
-            FraudRule rule = new FraudRule(
-                "GOLD_LOAN_NO_COLLATERAL",
-                "Gold loan application without gold collateral details",
-                40,
-                "HIGH",
-                "CROSS_VERIFICATION",
-                true,
-                "Gold loan requires gold collateral documentation"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("GOLD_LOAN_NO_COLLATERAL");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Gold loan requires gold collateral documentation";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
             return;
         }
         
         for (LoanCollateral gold : goldCollaterals) {
             // Check if valuation report exists
             if (gold.getValuationReportUrl() == null || gold.getValuationReportUrl().isEmpty()) {
-                FraudRule rule = new FraudRule(
-                    "GOLD_NO_VALUATION_REPORT",
-                    "Gold collateral without valuation report",
-                    35,
-                    "MEDIUM",
-                    "CROSS_VERIFICATION",
-                    true,
-                    "Gold valuation report is mandatory for gold loans"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("GOLD_NO_VALUATION_REPORT");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String flagDetails = "Gold valuation report is mandatory for gold loans";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
             
             // Check for duplicate gold valuation reports across applicants
@@ -815,16 +759,13 @@ public class CrossVerificationFraudDetectionEngine {
                         .toList();
                 
                 if (!duplicateGold.isEmpty()) {
-                    FraudRule rule = new FraudRule(
-                        "DUPLICATE_GOLD_VALUATION",
-                        "Same gold valuation report used in " + (duplicateGold.size() + 1) + " applications",
-                        50,
-                        "HIGH",
-                        "CROSS_VERIFICATION",
-                        true,
-                        "Gold valuation slip reused across multiple applications - Fraud ring detected"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("DUPLICATE_GOLD_VALUATION");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String customDesc = "Same gold valuation report used in " + (duplicateGold.size() + 1) + " applications";
+                        String flagDetails = "Gold valuation slip reused across multiple applications - Fraud ring detected";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -834,7 +775,8 @@ public class CrossVerificationFraudDetectionEngine {
      * 10. Behavioral Cross-Verification
      */
     private void crossVerifyBehavioral(Applicant applicant, List<AadhaarDetails> aadhaarList,
-                                      ApplicantEmployment employment, FraudDetectionResult result) {
+                                      ApplicantEmployment employment, Map<String, FraudRuleDefinition> rules,
+                                      FraudDetectionResult result) {
         
         // Phone number cross-verification
         String formPhone = applicant.getPhone();
@@ -852,16 +794,13 @@ public class CrossVerificationFraudDetectionEngine {
         }
         
         if (phoneSources.size() >= 2 && !allPhonesMatch(phoneSources)) {
-            FraudRule rule = new FraudRule(
-                "PHONE_CROSS_VERIFICATION_FAILED",
-                "Phone number mismatch: " + String.join(", ", phoneSources),
-                30,
-                "MEDIUM",
-                "CROSS_VERIFICATION",
-                true,
-                "Phone number in form doesn't match Aadhaar-linked phone"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("PHONE_CROSS_VERIFICATION_FAILED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Phone number mismatch: " + String.join(", ", phoneSources);
+                String flagDetails = "Phone number in form doesn't match Aadhaar-linked phone";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Email cross-verification
@@ -885,16 +824,13 @@ public class CrossVerificationFraudDetectionEngine {
             String empDomain = employerEmail.substring(employerEmail.indexOf("@") + 1);
             
             if (!formDomain.equalsIgnoreCase(empDomain)) {
-                FraudRule rule = new FraudRule(
-                    "EMAIL_DOMAIN_MISMATCH",
-                    "Form email domain (" + formDomain + ") doesn't match employer domain (" + empDomain + ")",
-                    25,
-                    "MEDIUM",
-                    "CROSS_VERIFICATION",
-                    true,
-                    "Email domain inconsistency between form and employer"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("EMAIL_DOMAIN_MISMATCH");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Form email domain (" + formDomain + ") doesn't match employer domain (" + empDomain + ")";
+                    String flagDetails = "Email domain inconsistency between form and employer";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
         

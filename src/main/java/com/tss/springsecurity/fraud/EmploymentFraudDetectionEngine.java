@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -17,6 +18,7 @@ public class EmploymentFraudDetectionEngine {
     private final ApplicantEmploymentRepository employmentRepository;
     private final ApplicantBasicDetailsRepository basicDetailsRepository;
     private final OtherDocumentRepository otherDocumentRepository;
+    private final DatabaseFraudRuleEngine dbRuleEngine;
     
     // Valid corporate email domains (can be expanded)
     private static final List<String> INVALID_EMAIL_DOMAINS = Arrays.asList(
@@ -42,11 +44,13 @@ public class EmploymentFraudDetectionEngine {
             ApplicantRepository applicantRepository,
             ApplicantEmploymentRepository employmentRepository,
             ApplicantBasicDetailsRepository basicDetailsRepository,
-            OtherDocumentRepository otherDocumentRepository) {
+            OtherDocumentRepository otherDocumentRepository,
+            DatabaseFraudRuleEngine dbRuleEngine) {
         this.applicantRepository = applicantRepository;
         this.employmentRepository = employmentRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.otherDocumentRepository = otherDocumentRepository;
+        this.dbRuleEngine = dbRuleEngine;
     }
     
     /**
@@ -60,6 +64,9 @@ public class EmploymentFraudDetectionEngine {
         result.setApplicantId(applicantId);
         result.setApplicantName(applicant.getFirstName() + " " + applicant.getLastName());
         
+        // Load active rules from database for EMPLOYMENT category
+        Map<String, FraudRuleDefinition> rules = dbRuleEngine.getRulesAsMap("EMPLOYMENT");
+        
         // Get related data
         ApplicantEmployment employment = employmentRepository
                 .findByApplicant_ApplicantId(applicantId).orElse(null);
@@ -69,28 +76,24 @@ public class EmploymentFraudDetectionEngine {
                 .findByApplicant_ApplicantId(applicantId);
         
         if (employment == null) {
-            FraudRule rule = new FraudRule(
-                "MISSING_EMPLOYMENT_DETAILS",
-                "Employment details not provided",
-                30,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Cannot verify employment without details"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("MISSING_EMPLOYMENT_DETAILS");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Cannot verify employment without details";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
             result.calculateRiskLevel();
             return result;
         }
         
-        // Run all employment fraud rules
-        checkEmployerNotInValidDB(employment, result);
-        checkFakeEmployerEmail(employment, result);
-        checkPayslipFormatting(employment, documents, result);
-        checkInvalidEmployerAddress(employment, result);
-        checkEmploymentDurationMismatch(employment, documents, result);
-        checkUnverifiableSelfEmployed(employment, basicDetails, documents, result);
-        checkGhostCompany(employment, result);
+        // Run all employment fraud rules (only if enabled in database)
+        checkEmployerNotInValidDB(employment, rules, result);
+        checkFakeEmployerEmail(employment, rules, result);
+        checkPayslipFormatting(employment, documents, rules, result);
+        checkInvalidEmployerAddress(employment, rules, result);
+        checkEmploymentDurationMismatch(employment, documents, rules, result);
+        checkUnverifiableSelfEmployed(employment, basicDetails, documents, rules, result);
+        checkGhostCompany(employment, rules, result);
         
         // Calculate final risk level
         result.calculateRiskLevel();
@@ -100,9 +103,9 @@ public class EmploymentFraudDetectionEngine {
     
     /**
      * Rule 1: Employer Not in Valid Companies Database
-     * Fraud Points: +50 (HIGH)
      */
     private void checkEmployerNotInValidDB(ApplicantEmployment employment,
+                                           Map<String, FraudRuleDefinition> rules,
                                            FraudDetectionResult result) {
         if (employment.getEmployerName() == null) return;
         
@@ -118,36 +121,30 @@ public class EmploymentFraudDetectionEngine {
                     .anyMatch(keyword -> employerName.contains(keyword));
             
             if (hasShellIndicators) {
-                FraudRule rule = new FraudRule(
-                    "SHELL_COMPANY_EMPLOYER",
-                    "Employer '" + employment.getEmployerName() + "' shows shell company characteristics",
-                    50,
-                    "HIGH",
-                    "EMPLOYMENT",
-                    true,
-                    "Employer not in verified companies database and shows shell company patterns"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("SHELL_COMPANY_EMPLOYER");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Employer '" + employment.getEmployerName() + "' shows shell company characteristics";
+                    String flagDetails = "Employer not in verified companies database and shows shell company patterns";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             } else {
-                FraudRule rule = new FraudRule(
-                    "UNVERIFIED_EMPLOYER",
-                    "Employer '" + employment.getEmployerName() + "' not found in verified companies database",
-                    35,
-                    "MEDIUM",
-                    "EMPLOYMENT",
-                    true,
-                    "Employer legitimacy cannot be verified - requires manual verification"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("UNVERIFIED_EMPLOYER");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Employer '" + employment.getEmployerName() + "' not found in verified companies database";
+                    String flagDetails = "Employer legitimacy cannot be verified - requires manual verification";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
     }
     
     /**
      * Rule 2: Fake Employer Email Domain
-     * Fraud Points: +45 (HIGH)
      */
     private void checkFakeEmployerEmail(ApplicantEmployment employment,
+                                        Map<String, FraudRuleDefinition> rules,
                                         FraudDetectionResult result) {
         if (employment.getEmployerName() == null) return;
         
@@ -163,32 +160,26 @@ public class EmploymentFraudDetectionEngine {
             String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
             
             if (INVALID_EMAIL_DOMAINS.contains(domain)) {
-                FraudRule rule = new FraudRule(
-                    "FAKE_EMPLOYER_EMAIL",
-                    "Employer uses personal email domain (@" + domain + ") instead of corporate domain",
-                    45,
-                    "HIGH",
-                    "EMPLOYMENT",
-                    true,
-                    "Legitimate companies use corporate email domains, not " + domain
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("FAKE_EMPLOYER_EMAIL");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Employer uses personal email domain (@" + domain + ") instead of corporate domain";
+                    String flagDetails = "Legitimate companies use corporate email domains, not " + domain;
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
             }
         }
         
         // Check if employer name itself suggests fake email usage
         for (String invalidDomain : INVALID_EMAIL_DOMAINS) {
             if (employerName.contains(invalidDomain)) {
-                FraudRule rule = new FraudRule(
-                    "PERSONAL_EMAIL_IN_EMPLOYER",
-                    "Employer name contains personal email domain: " + invalidDomain,
-                    40,
-                    "HIGH",
-                    "EMPLOYMENT",
-                    true,
-                    "Employer contact uses personal email - likely fake employer"
-                );
-                result.addTriggeredRule(rule);
+                FraudRuleDefinition ruleDef = rules.get("PERSONAL_EMAIL_IN_EMPLOYER");
+                if (ruleDef != null && ruleDef.getIsActive()) {
+                    String customDesc = "Employer name contains personal email domain: " + invalidDomain;
+                    String flagDetails = "Employer contact uses personal email - likely fake employer";
+                    FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                    result.addTriggeredRule(rule);
+                }
                 break;
             }
         }
@@ -196,10 +187,10 @@ public class EmploymentFraudDetectionEngine {
     
     /**
      * Rule 3: Payslip Formatting Mismatch
-     * Fraud Points: +40 (HIGH)
      */
     private void checkPayslipFormatting(ApplicantEmployment employment,
                                         List<OtherDocument> documents,
+                                        Map<String, FraudRuleDefinition> rules,
                                         FraudDetectionResult result) {
         // Find payslip documents
         List<OtherDocument> payslips = documents.stream()
@@ -207,16 +198,12 @@ public class EmploymentFraudDetectionEngine {
                 .toList();
         
         if (payslips.isEmpty()) {
-            FraudRule rule = new FraudRule(
-                "MISSING_PAYSLIP",
-                "No payslip document provided for verification",
-                25,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Payslip required for employment verification"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("MISSING_PAYSLIP");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Payslip required for employment verification";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
             return;
         }
         
@@ -233,43 +220,32 @@ public class EmploymentFraudDetectionEngine {
                         ocrText.contains("dummy") || ocrText.contains("example");
                 
                 if (hasSuspiciousText) {
-                    FraudRule rule = new FraudRule(
-                        "FAKE_PAYSLIP_TEMPLATE",
-                        "Payslip contains template/sample text - likely forged",
-                        50,
-                        "HIGH",
-                        "EMPLOYMENT",
-                        true,
-                        "Payslip OCR detected: " + (ocrText.contains("template") ? "template" : 
-                                ocrText.contains("sample") ? "sample" : "dummy") + " text"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("FAKE_PAYSLIP_TEMPLATE");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String flagDetails = "Payslip OCR detected: " + (ocrText.contains("template") ? "template" : 
+                                ocrText.contains("sample") ? "sample" : "dummy") + " text";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
                 
                 if (!hasEmployerName) {
-                    FraudRule rule = new FraudRule(
-                        "PAYSLIP_EMPLOYER_MISMATCH",
-                        "Payslip does not contain employer name: " + employment.getEmployerName(),
-                        40,
-                        "HIGH",
-                        "EMPLOYMENT",
-                        true,
-                        "Employer name missing from payslip - possible forgery"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("PAYSLIP_EMPLOYER_MISMATCH");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String customDesc = "Payslip does not contain employer name: " + employment.getEmployerName();
+                        String flagDetails = "Employer name missing from payslip - possible forgery";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
                 
                 if (!hasBasicFields) {
-                    FraudRule rule = new FraudRule(
-                        "INCOMPLETE_PAYSLIP",
-                        "Payslip missing standard fields (Basic/Gross/Deductions/Net Pay)",
-                        30,
-                        "MEDIUM",
-                        "EMPLOYMENT",
-                        true,
-                        "Payslip format does not match standard salary slip structure"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("INCOMPLETE_PAYSLIP");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        String flagDetails = "Payslip format does not match standard salary slip structure";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -277,9 +253,9 @@ public class EmploymentFraudDetectionEngine {
     
     /**
      * Rule 4: Invalid Employer Address
-     * Fraud Points: +35 (MEDIUM)
      */
     private void checkInvalidEmployerAddress(ApplicantEmployment employment,
+                                             Map<String, FraudRuleDefinition> rules,
                                              FraudDetectionResult result) {
         if (employment.getEmployerName() == null) return;
         
@@ -288,40 +264,33 @@ public class EmploymentFraudDetectionEngine {
         // Check for address-related red flags
         if (employerName.contains("residential") || employerName.contains("home address") ||
             employerName.contains("apartment") || employerName.contains("flat no")) {
-            FraudRule rule = new FraudRule(
-                "RESIDENTIAL_EMPLOYER_ADDRESS",
-                "Employer address appears to be residential, not commercial",
-                35,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Legitimate companies operate from commercial addresses"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("RESIDENTIAL_EMPLOYER_ADDRESS");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Legitimate companies operate from commercial addresses";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Check if employer name is too generic or vague
         if (employerName.matches(".*\\b(company|firm|business|shop|store)\\b.*") && 
             employerName.length() < 20) {
-            FraudRule rule = new FraudRule(
-                "VAGUE_EMPLOYER_NAME",
-                "Employer name is too generic/vague: " + employment.getEmployerName(),
-                25,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Generic employer names often indicate fake companies"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("VAGUE_EMPLOYER_NAME");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Employer name is too generic/vague: " + employment.getEmployerName();
+                String flagDetails = "Generic employer names often indicate fake companies";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
     /**
      * Rule 5: Employment Duration Mismatch
-     * Fraud Points: +45 (HIGH)
      */
     private void checkEmploymentDurationMismatch(ApplicantEmployment employment,
                                                  List<OtherDocument> documents,
+                                                 Map<String, FraudRuleDefinition> rules,
                                                  FraudDetectionResult result) {
         if (employment.getStartDate() == null) return;
         
@@ -347,16 +316,13 @@ public class EmploymentFraudDetectionEngine {
                     
                     // Simple check: if payslip is recent but shows very short employment
                     if (declaredYears >= 3 && ocrText.contains("month")) {
-                        FraudRule rule = new FraudRule(
-                            "EMPLOYMENT_DURATION_MISMATCH",
-                            "Declared employment: " + declaredYears + " years, but payslip suggests shorter duration",
-                            45,
-                            "HIGH",
-                            "EMPLOYMENT",
-                            true,
-                            "Employment duration mismatch between application and payslip"
-                        );
-                        result.addTriggeredRule(rule);
+                        FraudRuleDefinition ruleDef = rules.get("EMPLOYMENT_DURATION_MISMATCH");
+                        if (ruleDef != null && ruleDef.getIsActive()) {
+                            String customDesc = "Declared employment: " + declaredYears + " years, but payslip suggests shorter duration";
+                            String flagDetails = "Employment duration mismatch between application and payslip";
+                            FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                            result.addTriggeredRule(rule);
+                        }
                     }
                 }
             }
@@ -364,40 +330,34 @@ public class EmploymentFraudDetectionEngine {
         
         // Check for unrealistic employment duration
         if (declaredYears > 40) {
-            FraudRule rule = new FraudRule(
-                "UNREALISTIC_EMPLOYMENT_DURATION",
-                "Employment duration of " + declaredYears + " years is unrealistic",
-                30,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Employment duration exceeds reasonable working years"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("UNREALISTIC_EMPLOYMENT_DURATION");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Employment duration of " + declaredYears + " years is unrealistic";
+                String flagDetails = "Employment duration exceeds reasonable working years";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Check if employment started in future
         if (startDate.isAfter(today)) {
-            FraudRule rule = new FraudRule(
-                "FUTURE_EMPLOYMENT_DATE",
-                "Employment start date is in the future: " + startDate,
-                50,
-                "CRITICAL",
-                "EMPLOYMENT",
-                true,
-                "Invalid employment start date - cannot be in future"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("FUTURE_EMPLOYMENT_DATE");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Employment start date is in the future: " + startDate;
+                String flagDetails = "Invalid employment start date - cannot be in future";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
     /**
      * Rule 6: Unverifiable Self-Employed Business
-     * Fraud Points: +40 (HIGH)
      */
     private void checkUnverifiableSelfEmployed(ApplicantEmployment employment,
                                                ApplicantBasicDetails basicDetails,
                                                List<OtherDocument> documents,
+                                               Map<String, FraudRuleDefinition> rules,
                                                FraudDetectionResult result) {
         if (!"self-employed".equalsIgnoreCase(employment.getEmploymentType())) return;
         
@@ -418,52 +378,40 @@ public class EmploymentFraudDetectionEngine {
                 .anyMatch(doc -> "itr".equalsIgnoreCase(doc.getDocType()));
         
         if (!hasGSTDoc && !hasBusinessDoc) {
-            FraudRule rule = new FraudRule(
-                "UNVERIFIABLE_SELF_EMPLOYED",
-                "Self-employed business not registered (No GST/Business Registration)",
-                40,
-                "HIGH",
-                "EMPLOYMENT",
-                true,
-                "Self-employed applicant must provide GST registration or business license"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("UNVERIFIABLE_SELF_EMPLOYED");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Self-employed applicant must provide GST registration or business license";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         if (!hasITR && employment.getMonthlyIncome() != null && 
             employment.getMonthlyIncome().doubleValue() > 50000) {
-            FraudRule rule = new FraudRule(
-                "SELF_EMPLOYED_NO_ITR",
-                "Self-employed with high income but no ITR filed",
-                35,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "Self-employed applicants must file ITR for income verification"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("SELF_EMPLOYED_NO_ITR");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Self-employed applicants must file ITR for income verification";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Check if PAN is available (required for business)
         if (basicDetails != null && basicDetails.getPanNumber() == null) {
-            FraudRule rule = new FraudRule(
-                "SELF_EMPLOYED_NO_PAN",
-                "Self-employed applicant without PAN number",
-                30,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                "PAN is mandatory for self-employed business owners"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("SELF_EMPLOYED_NO_PAN");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "PAN is mandatory for self-employed business owners";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
     /**
      * Rule 7: Ghost Company Detection
-     * Fraud Points: +50 (HIGH)
      */
     private void checkGhostCompany(ApplicantEmployment employment,
+                                   Map<String, FraudRuleDefinition> rules,
                                    FraudDetectionResult result) {
         if (employment.getEmployerName() == null) return;
         if ("self-employed".equalsIgnoreCase(employment.getEmploymentType())) return;
@@ -515,27 +463,21 @@ public class EmploymentFraudDetectionEngine {
         }
         
         if (ghostScore >= 30) {
-            FraudRule rule = new FraudRule(
-                "GHOST_COMPANY",
-                "Employer '" + employment.getEmployerName() + "' shows ghost company characteristics",
-                50,
-                "HIGH",
-                "EMPLOYMENT",
-                true,
-                ghostDetails.toString() + "Company likely exists only on paper"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("GHOST_COMPANY");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Employer '" + employment.getEmployerName() + "' shows ghost company characteristics";
+                String flagDetails = ghostDetails.toString() + "Company likely exists only on paper";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         } else if (ghostScore >= 15) {
-            FraudRule rule = new FraudRule(
-                "SUSPICIOUS_EMPLOYER",
-                "Employer '" + employment.getEmployerName() + "' shows suspicious characteristics",
-                30,
-                "MEDIUM",
-                "EMPLOYMENT",
-                true,
-                ghostDetails.toString() + "Requires manual verification"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("SUSPICIOUS_EMPLOYER");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Employer '" + employment.getEmployerName() + "' shows suspicious characteristics";
+                String flagDetails = ghostDetails.toString() + "Requires manual verification";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
 }

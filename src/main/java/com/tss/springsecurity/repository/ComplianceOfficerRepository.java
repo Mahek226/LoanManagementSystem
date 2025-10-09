@@ -13,6 +13,8 @@ public interface ComplianceOfficerRepository extends JpaRepository<ComplianceOff
     
     Optional<ComplianceOfficer> findByEmail(String email);
     
+    Optional<ComplianceOfficer> findByUsernameOrEmail(String username, String email);
+    
     Boolean existsByUsername(String username);
     
     Boolean existsByEmail(String email);

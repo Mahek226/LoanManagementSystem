@@ -34,7 +34,13 @@ build/
 
 ### Documentation and Config Files ###
 *.md
+!API_COLLECTION.json
+!API_DOCUMENTATION.md
+!README.md
+!POSTMAN_COLLECTION.json
 *.txt
 *.json
+!API_COLLECTION.json
+!POSTMAN_COLLECTION.json
 *.properties
 *.xml

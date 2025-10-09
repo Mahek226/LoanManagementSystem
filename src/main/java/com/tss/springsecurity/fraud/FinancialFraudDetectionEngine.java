@@ -9,6 +9,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FinancialFraudDetectionEngine {
@@ -19,6 +20,7 @@ public class FinancialFraudDetectionEngine {
     private final ApplicantCreditHistoryRepository creditHistoryRepository;
     private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final OtherDocumentRepository otherDocumentRepository;
+    private final DatabaseFraudRuleEngine dbRuleEngine;
     
     public FinancialFraudDetectionEngine(
             ApplicantRepository applicantRepository,
@@ -26,13 +28,15 @@ public class FinancialFraudDetectionEngine {
             ApplicantFinancialsRepository financialsRepository,
             ApplicantCreditHistoryRepository creditHistoryRepository,
             ApplicantLoanDetailsRepository loanDetailsRepository,
-            OtherDocumentRepository otherDocumentRepository) {
+            OtherDocumentRepository otherDocumentRepository,
+            DatabaseFraudRuleEngine dbRuleEngine) {
         this.applicantRepository = applicantRepository;
         this.employmentRepository = employmentRepository;
         this.financialsRepository = financialsRepository;
         this.creditHistoryRepository = creditHistoryRepository;
         this.loanDetailsRepository = loanDetailsRepository;
         this.otherDocumentRepository = otherDocumentRepository;
+        this.dbRuleEngine = dbRuleEngine;
     }
     
     /**
@@ -45,6 +49,9 @@ public class FinancialFraudDetectionEngine {
         FraudDetectionResult result = new FraudDetectionResult();
         result.setApplicantId(applicantId);
         result.setApplicantName(applicant.getFirstName() + " " + applicant.getLastName());
+        
+        // Load active rules from database for FINANCIAL category
+        Map<String, FraudRuleDefinition> rules = dbRuleEngine.getRulesAsMap("FINANCIAL");
         
         // Get related data
         ApplicantEmployment employment = employmentRepository
@@ -60,18 +67,18 @@ public class FinancialFraudDetectionEngine {
         
         ApplicantLoanDetails currentLoan = loans.isEmpty() ? null : loans.get(loans.size() - 1);
         
-        // Run all financial fraud rules
-        checkLoanToIncomeRatio(employment, currentLoan, result);
-        checkDebtToIncomeRatio(employment, creditHistory, result);
-        checkSalaryMismatch(employment, financials, documents, result);
-        checkLowBalanceHighLoan(financials, currentLoan, result);
-        checkChequeBounces(financials, result);
-        checkCashSalary(employment, result);
-        checkUnfiledITR(employment, documents, result);
-        checkITRSalaryMismatch(employment, documents, result);
-        checkExcessiveCreditUtilization(creditHistory, result);
-        checkMultipleActiveLoans(creditHistory, result);
-        checkShortCreditHistory(applicant, creditHistory, documents, result);
+        // Run all financial fraud rules (only if enabled in database)
+        checkLoanToIncomeRatio(employment, currentLoan, rules, result);
+        checkDebtToIncomeRatio(employment, creditHistory, rules, result);
+        checkSalaryMismatch(employment, financials, documents, rules, result);
+        checkLowBalanceHighLoan(financials, currentLoan, rules, result);
+        checkChequeBounces(financials, rules, result);
+        checkCashSalary(employment, rules, result);
+        checkUnfiledITR(employment, documents, rules, result);
+        checkITRSalaryMismatch(employment, documents, rules, result);
+        checkExcessiveCreditUtilization(creditHistory, rules, result);
+        checkMultipleActiveLoans(creditHistory, rules, result);
+        checkShortCreditHistory(applicant, creditHistory, documents, rules, result);
         
         // Calculate final risk level
         result.calculateRiskLevel();
@@ -81,10 +88,10 @@ public class FinancialFraudDetectionEngine {
     
     /**
      * Rule 1: Loan-to-Income Ratio > 20
-     * Fraud Points: +60 (HIGH)
      */
     private void checkLoanToIncomeRatio(ApplicantEmployment employment, 
                                         ApplicantLoanDetails loan,
+                                        Map<String, FraudRuleDefinition> rules,
                                         FraudDetectionResult result) {
         if (employment == null || loan == null) return;
         if (employment.getMonthlyIncome() == null || loan.getLoanAmount() == null) return;
@@ -97,36 +104,30 @@ public class FinancialFraudDetectionEngine {
         BigDecimal loanToIncomeRatio = loanAmount.divide(annualIncome, 2, RoundingMode.HALF_UP);
         
         if (loanToIncomeRatio.compareTo(new BigDecimal("20")) > 0) {
-            FraudRule rule = new FraudRule(
-                "HIGH_LOAN_TO_INCOME_RATIO",
-                "Loan-to-Income ratio is " + loanToIncomeRatio + " (exceeds 20x annual income)",
-                60,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Loan amount ₹" + loanAmount + " is too large for annual income ₹" + annualIncome
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("HIGH_LOAN_TO_INCOME_RATIO");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Loan-to-Income ratio is " + loanToIncomeRatio + " (exceeds 20x annual income)";
+                String flagDetails = "Loan amount ₹" + loanAmount + " is too large for annual income ₹" + annualIncome;
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         } else if (loanToIncomeRatio.compareTo(new BigDecimal("10")) > 0) {
-            FraudRule rule = new FraudRule(
-                "ELEVATED_LOAN_TO_INCOME_RATIO",
-                "Loan-to-Income ratio is " + loanToIncomeRatio + " (exceeds 10x annual income)",
-                30,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "Loan amount is significantly high compared to income"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("ELEVATED_LOAN_TO_INCOME_RATIO");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Loan-to-Income ratio is " + loanToIncomeRatio + " (exceeds 10x annual income)";
+                String flagDetails = "Loan amount is significantly high compared to income";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
     /**
      * Rule 2: Debt-to-Income Ratio > 50%
-     * Fraud Points: +50 (HIGH)
      */
     private void checkDebtToIncomeRatio(ApplicantEmployment employment,
                                         ApplicantCreditHistory creditHistory,
+                                        Map<String, FraudRuleDefinition> rules,
                                         FraudDetectionResult result) {
         if (employment == null || creditHistory == null) return;
         if (employment.getMonthlyIncome() == null || creditHistory.getTotalMonthlyEmi() == null) return;
@@ -139,27 +140,21 @@ public class FinancialFraudDetectionEngine {
                                       .multiply(new BigDecimal("100"));
         
         if (dtiRatio.compareTo(new BigDecimal("50")) > 0) {
-            FraudRule rule = new FraudRule(
-                "HIGH_DEBT_TO_INCOME_RATIO",
-                "Debt-to-Income ratio is " + dtiRatio + "% (exceeds 50%)",
-                50,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Monthly EMI ₹" + totalEmi + " consumes " + dtiRatio + "% of income ₹" + monthlyIncome
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("HIGH_DEBT_TO_INCOME_RATIO");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Debt-to-Income ratio is " + dtiRatio + "% (exceeds 50%)";
+                String flagDetails = "Monthly EMI ₹" + totalEmi + " consumes " + dtiRatio + "% of income ₹" + monthlyIncome;
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         } else if (dtiRatio.compareTo(new BigDecimal("40")) > 0) {
-            FraudRule rule = new FraudRule(
-                "ELEVATED_DEBT_TO_INCOME_RATIO",
-                "Debt-to-Income ratio is " + dtiRatio + "% (exceeds 40%)",
-                30,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "High debt burden - " + dtiRatio + "% of income goes to EMI"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("ELEVATED_DEBT_TO_INCOME_RATIO");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Debt-to-Income ratio is " + dtiRatio + "% (exceeds 40%)";
+                String flagDetails = "High debt burden - " + dtiRatio + "% of income goes to EMI";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -170,6 +165,7 @@ public class FinancialFraudDetectionEngine {
     private void checkSalaryMismatch(ApplicantEmployment employment,
                                      ApplicantFinancials financials,
                                      List<OtherDocument> documents,
+                                     Map<String, FraudRuleDefinition> rules,
                                      FraudDetectionResult result) {
         if (employment == null || financials == null) return;
         if (employment.getMonthlyIncome() == null) return;
@@ -190,20 +186,17 @@ public class FinancialFraudDetectionEngine {
                         .anyMatch(doc -> "payslip".equalsIgnoreCase(doc.getDocType()));
                 
                 if (hasPayslip) {
-                    BigDecimal variance = declaredSalary.subtract(bankCredit).abs();
-                    BigDecimal variancePercent = variance.divide(declaredSalary, 2, RoundingMode.HALF_UP)
-                                                         .multiply(new BigDecimal("100"));
-                    
-                    FraudRule rule = new FraudRule(
-                        "SALARY_MISMATCH",
-                        "Declared salary ₹" + declaredSalary + " doesn't match bank credit ₹" + bankCredit,
-                        55,
-                        "HIGH",
-                        "FINANCIAL",
-                        true,
-                        "Variance of " + variancePercent + "% between payslip and bank statement - Possible fake payslip"
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("SALARY_MISMATCH");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        BigDecimal variance = declaredSalary.subtract(bankCredit).abs();
+                        BigDecimal variancePercent = variance.divide(declaredSalary, 2, RoundingMode.HALF_UP)
+                                                             .multiply(new BigDecimal("100"));
+                        
+                        String customDesc = "Declared salary ₹" + declaredSalary + " doesn't match bank credit ₹" + bankCredit;
+                        String flagDetails = "Variance of " + variancePercent + "% between payslip and bank statement - Possible fake payslip";
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -215,6 +208,7 @@ public class FinancialFraudDetectionEngine {
      */
     private void checkLowBalanceHighLoan(ApplicantFinancials financials,
                                          ApplicantLoanDetails loan,
+                                         Map<String, FraudRuleDefinition> rules,
                                          FraudDetectionResult result) {
         if (financials == null || loan == null) return;
         if (loan.getLoanAmount() == null) return;
@@ -233,16 +227,13 @@ public class FinancialFraudDetectionEngine {
         BigDecimal threshold = loanAmount.multiply(new BigDecimal("0.01"));
         
         if (avgBalance.compareTo(threshold) < 0 && avgBalance.compareTo(new BigDecimal("10000")) < 0) {
-            FraudRule rule = new FraudRule(
-                "LOW_BALANCE_HIGH_LOAN",
-                "Very low average balance ₹" + avgBalance + " for loan request ₹" + loanAmount,
-                45,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Average balance is less than 1% of requested loan amount - Repayment capacity questionable"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("LOW_BALANCE_HIGH_LOAN");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Very low average balance ₹" + avgBalance + " for loan request ₹" + loanAmount;
+                String flagDetails = "Average balance is less than 1% of requested loan amount - Repayment capacity questionable";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -251,6 +242,7 @@ public class FinancialFraudDetectionEngine {
      * Fraud Points: +40 (HIGH)
      */
     private void checkChequeBounces(ApplicantFinancials financials,
+                                    Map<String, FraudRuleDefinition> rules,
                                     FraudDetectionResult result) {
         if (financials == null || financials.getAnomalies() == null) return;
         
@@ -262,16 +254,12 @@ public class FinancialFraudDetectionEngine {
             anomalies.contains("payment failed") ||
             anomalies.contains("dishonoured")) {
             
-            FraudRule rule = new FraudRule(
-                "FREQUENT_CHEQUE_BOUNCES",
-                "Bank statement shows cheque bounces or payment failures",
-                40,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Anomalies detected: " + financials.getAnomalies() + " - Poor repayment capacity"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("FREQUENT_CHEQUE_BOUNCES");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Anomalies detected: " + financials.getAnomalies() + " - Poor repayment capacity";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -280,6 +268,7 @@ public class FinancialFraudDetectionEngine {
      * Fraud Points: +35 (MEDIUM)
      */
     private void checkCashSalary(ApplicantEmployment employment,
+                                 Map<String, FraudRuleDefinition> rules,
                                  FraudDetectionResult result) {
         if (employment == null) return;
         
@@ -293,16 +282,12 @@ public class FinancialFraudDetectionEngine {
             employerName.toLowerCase().contains("contract") ||
             employerName.toLowerCase().contains("freelance"))) {
             
-            FraudRule rule = new FraudRule(
-                "CASH_SALARY_DECLARATION",
-                "Applicant declares cash-based salary or unverifiable income source",
-                35,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "Employer: " + employerName + " - Income cannot be verified through bank statements"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("CASH_SALARY_DECLARATION");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String flagDetails = "Employer: " + employerName + " - Income cannot be verified through bank statements";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // Self-employed with no verifiable income trail
@@ -317,6 +302,7 @@ public class FinancialFraudDetectionEngine {
      */
     private void checkUnfiledITR(ApplicantEmployment employment,
                                  List<OtherDocument> documents,
+                                 Map<String, FraudRuleDefinition> rules,
                                  FraudDetectionResult result) {
         if (employment == null) return;
         
@@ -331,17 +317,14 @@ public class FinancialFraudDetectionEngine {
                         .anyMatch(doc -> "itr".equalsIgnoreCase(doc.getDocType()));
                 
                 if (!hasITR) {
-                    BigDecimal annualIncome = monthlyIncome.multiply(new BigDecimal("12"));
-                    FraudRule rule = new FraudRule(
-                        "UNFILED_ITR",
-                        "Self-employed claiming high income (₹" + annualIncome + "/year) but no ITR filed",
-                        50,
-                        "HIGH",
-                        "FINANCIAL",
-                        true,
-                        "No Income Tax Return found for self-employed applicant with annual income ₹" + annualIncome
-                    );
-                    result.addTriggeredRule(rule);
+                    FraudRuleDefinition ruleDef = rules.get("UNFILED_ITR");
+                    if (ruleDef != null && ruleDef.getIsActive()) {
+                        BigDecimal annualIncome = monthlyIncome.multiply(new BigDecimal("12"));
+                        String customDesc = "Self-employed claiming high income (₹" + annualIncome + "/year) but no ITR filed";
+                        String flagDetails = "No Income Tax Return found for self-employed applicant with annual income ₹" + annualIncome;
+                        FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                        result.addTriggeredRule(rule);
+                    }
                 }
             }
         }
@@ -353,6 +336,7 @@ public class FinancialFraudDetectionEngine {
      */
     private void checkITRSalaryMismatch(ApplicantEmployment employment,
                                         List<OtherDocument> documents,
+                                        Map<String, FraudRuleDefinition> rules,
                                         FraudDetectionResult result) {
         if (employment == null || employment.getMonthlyIncome() == null) return;
         
@@ -373,21 +357,18 @@ public class FinancialFraudDetectionEngine {
                     BigDecimal upperBound = declaredAnnualIncome.multiply(new BigDecimal("1.40"));
                     
                     if (itrIncome.compareTo(lowerBound) < 0 || itrIncome.compareTo(upperBound) > 0) {
-                        BigDecimal variance = declaredAnnualIncome.subtract(itrIncome).abs();
-                        BigDecimal variancePercent = variance.divide(declaredAnnualIncome, 2, RoundingMode.HALF_UP)
-                                                             .multiply(new BigDecimal("100"));
-                        
-                        FraudRule rule = new FraudRule(
-                            "ITR_SALARY_MISMATCH",
-                            "Declared annual income ₹" + declaredAnnualIncome + 
-                            " doesn't match ITR income ₹" + itrIncome,
-                            55,
-                            "HIGH",
-                            "FINANCIAL",
-                            true,
-                            "Variance of " + variancePercent + "% between declared income and ITR - Fraudulent income declaration"
-                        );
-                        result.addTriggeredRule(rule);
+                        FraudRuleDefinition ruleDef = rules.get("ITR_SALARY_MISMATCH");
+                        if (ruleDef != null && ruleDef.getIsActive()) {
+                            BigDecimal variance = declaredAnnualIncome.subtract(itrIncome).abs();
+                            BigDecimal variancePercent = variance.divide(declaredAnnualIncome, 2, RoundingMode.HALF_UP)
+                                                                 .multiply(new BigDecimal("100"));
+                            
+                            String customDesc = "Declared annual income ₹" + declaredAnnualIncome + 
+                                " doesn't match ITR income ₹" + itrIncome;
+                            String flagDetails = "Variance of " + variancePercent + "% between declared income and ITR - Fraudulent income declaration";
+                            FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                            result.addTriggeredRule(rule);
+                        }
                     }
                 }
             }
@@ -399,33 +380,28 @@ public class FinancialFraudDetectionEngine {
      * Fraud Points: +35 (MEDIUM)
      */
     private void checkExcessiveCreditUtilization(ApplicantCreditHistory creditHistory,
+                                                 Map<String, FraudRuleDefinition> rules,
                                                  FraudDetectionResult result) {
         if (creditHistory == null || creditHistory.getCreditUtilizationRatio() == null) return;
         
         BigDecimal utilizationRatio = creditHistory.getCreditUtilizationRatio();
         
-        if (utilizationRatio.compareTo(new BigDecimal("80")) > 0) {
-            FraudRule rule = new FraudRule(
-                "EXCESSIVE_CREDIT_UTILIZATION",
-                "Credit card utilization is " + utilizationRatio + "% (exceeds 80%)",
-                35,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "High credit utilization indicates financial stress and potential default risk"
-            );
-            result.addTriggeredRule(rule);
-        } else if (utilizationRatio.compareTo(new BigDecimal("90")) > 0) {
-            FraudRule rule = new FraudRule(
-                "CRITICAL_CREDIT_UTILIZATION",
-                "Credit card utilization is " + utilizationRatio + "% (exceeds 90%)",
-                45,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Critical credit utilization - Severe financial stress"
-            );
-            result.addTriggeredRule(rule);
+        if (utilizationRatio.compareTo(new BigDecimal("90")) > 0) {
+            FraudRuleDefinition ruleDef = rules.get("CRITICAL_CREDIT_UTILIZATION");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Credit card utilization is " + utilizationRatio + "% (exceeds 90%)";
+                String flagDetails = "Critical credit utilization - Severe financial stress";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
+        } else if (utilizationRatio.compareTo(new BigDecimal("80")) > 0) {
+            FraudRuleDefinition ruleDef = rules.get("EXCESSIVE_CREDIT_UTILIZATION");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Credit card utilization is " + utilizationRatio + "% (exceeds 80%)";
+                String flagDetails = "High credit utilization indicates financial stress and potential default risk";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -434,33 +410,28 @@ public class FinancialFraudDetectionEngine {
      * Fraud Points: +40 (HIGH)
      */
     private void checkMultipleActiveLoans(ApplicantCreditHistory creditHistory,
+                                          Map<String, FraudRuleDefinition> rules,
                                           FraudDetectionResult result) {
         if (creditHistory == null || creditHistory.getTotalActiveLoans() == null) return;
         
         Integer activeLoans = creditHistory.getTotalActiveLoans();
         
         if (activeLoans >= 5) {
-            FraudRule rule = new FraudRule(
-                "EXCESSIVE_ACTIVE_LOANS",
-                "Applicant has " + activeLoans + " active loans (loan stacking fraud)",
-                40,
-                "HIGH",
-                "FINANCIAL",
-                true,
-                "Multiple active loans indicate loan stacking fraud - Borrowing from multiple lenders simultaneously"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("EXCESSIVE_ACTIVE_LOANS");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Applicant has " + activeLoans + " active loans (loan stacking fraud)";
+                String flagDetails = "Multiple active loans indicate loan stacking fraud - Borrowing from multiple lenders simultaneously";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         } else if (activeLoans >= 3) {
-            FraudRule rule = new FraudRule(
-                "MULTIPLE_ACTIVE_LOANS",
-                "Applicant has " + activeLoans + " active loans",
-                25,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "Multiple active loans increase default risk"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("MULTIPLE_ACTIVE_LOANS");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Applicant has " + activeLoans + " active loans";
+                String flagDetails = "Multiple active loans increase default risk";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
@@ -471,6 +442,7 @@ public class FinancialFraudDetectionEngine {
     private void checkShortCreditHistory(Applicant applicant,
                                          ApplicantCreditHistory creditHistory,
                                          List<OtherDocument> documents,
+                                         Map<String, FraudRuleDefinition> rules,
                                          FraudDetectionResult result) {
         if (applicant.getDob() == null) return;
         
@@ -487,30 +459,24 @@ public class FinancialFraudDetectionEngine {
         
         // If age > 25 but no credit history
         if (age > 25 && !hasITR && !hasCreditCard && !hasActiveLoans) {
-            FraudRule rule = new FraudRule(
-                "SHORT_CREDIT_HISTORY",
-                "Applicant (age " + age + ") has no credit history - No ITR, no credit cards, no loans",
-                30,
-                "MEDIUM",
-                "FINANCIAL",
-                true,
-                "Thin file applicant - Unable to assess creditworthiness"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("SHORT_CREDIT_HISTORY");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Applicant (age " + age + ") has no credit history - No ITR, no credit cards, no loans";
+                String flagDetails = "Thin file applicant - Unable to assess creditworthiness";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
         
         // If age < 23 and requesting large loan
         if (age < 23 && !hasITR && !hasCreditCard) {
-            FraudRule rule = new FraudRule(
-                "NEW_TO_CREDIT",
-                "Young applicant (age " + age + ") with no credit history",
-                20,
-                "LOW",
-                "FINANCIAL",
-                true,
-                "New to credit - Higher risk profile"
-            );
-            result.addTriggeredRule(rule);
+            FraudRuleDefinition ruleDef = rules.get("NEW_TO_CREDIT");
+            if (ruleDef != null && ruleDef.getIsActive()) {
+                String customDesc = "Young applicant (age " + age + ") with no credit history";
+                String flagDetails = "New to credit - Higher risk profile";
+                FraudRule rule = dbRuleEngine.createFraudRule(ruleDef, customDesc, flagDetails);
+                result.addTriggeredRule(rule);
+            }
         }
     }
     
