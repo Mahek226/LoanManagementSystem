@@ -16,10 +16,10 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${app.jwt-secret}")
+    @Value("${app.jwt-secret:mySecretKey123456789012345678901234567890}")
     private String secret;
 
-    @Value("${app-jwt-expiration-milliseconds}")
+    @Value("${app-jwt-expiration-milliseconds:86400000}")
     private long jwtExpirationMs;
 
     private Key getSigningKey() {

@@ -29,6 +29,12 @@ public class LoanOfficer {
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
     private String passwordHash;
     
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+    
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+    
     @Column(name = "loan_type", length = 100)
     private String loanType;
     

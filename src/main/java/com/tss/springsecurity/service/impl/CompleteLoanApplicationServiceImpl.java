@@ -23,9 +23,7 @@ public class CompleteLoanApplicationServiceImpl {
     private final PanDetailsRepository panDetailsRepository;
     private final PassportDetailsRepository passportDetailsRepository;
     private final OtherDocumentRepository otherDocumentRepository;
-    private final ApplicantReferenceRepository referenceRepository;
     private final ApplicantDependentRepository dependentRepository;
-    private final CoApplicantRepository coApplicantRepository;
     private final LoanCollateralRepository collateralRepository;
     
     public CompleteLoanApplicationServiceImpl(
@@ -40,9 +38,7 @@ public class CompleteLoanApplicationServiceImpl {
             PanDetailsRepository panDetailsRepository,
             PassportDetailsRepository passportDetailsRepository,
             OtherDocumentRepository otherDocumentRepository,
-            ApplicantReferenceRepository referenceRepository,
             ApplicantDependentRepository dependentRepository,
-            CoApplicantRepository coApplicantRepository,
             LoanCollateralRepository collateralRepository) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
@@ -55,9 +51,7 @@ public class CompleteLoanApplicationServiceImpl {
         this.panDetailsRepository = panDetailsRepository;
         this.passportDetailsRepository = passportDetailsRepository;
         this.otherDocumentRepository = otherDocumentRepository;
-        this.referenceRepository = referenceRepository;
         this.dependentRepository = dependentRepository;
-        this.coApplicantRepository = coApplicantRepository;
         this.collateralRepository = collateralRepository;
     }
     
@@ -94,15 +88,12 @@ public class CompleteLoanApplicationServiceImpl {
         
         // 8. Create Documents
         createDocuments(applicant, dto);
-        
-        // 9. Create References
-        createReferences(applicant, dto);
+
         
         // 10. Create Dependents
         createDependents(applicant, dto);
         
-        // 11. Create Co-Applicants
-        createCoApplicants(applicant, dto);
+     
         
         // 12. Create Collaterals
         createCollaterals(loan, dto);
@@ -276,24 +267,7 @@ public class CompleteLoanApplicationServiceImpl {
         }
     }
     
-    private void createReferences(Applicant applicant, CompleteLoanApplicationDTO dto) {
-        if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
-            for (CompleteLoanApplicationDTO.ReferenceDTO refDTO : dto.getReferences()) {
-                ApplicantReference reference = new ApplicantReference();
-                reference.setApplicant(applicant);
-                reference.setReferenceName(refDTO.getReferenceName());
-                reference.setRelationship(refDTO.getRelationship());
-                reference.setPhone(refDTO.getPhone());
-                reference.setEmail(refDTO.getEmail());
-                reference.setAddress(refDTO.getAddress());
-                reference.setOccupation(refDTO.getOccupation());
-                reference.setYearsKnown(refDTO.getYearsKnown());
-                reference.setVerificationStatus("pending");
-                referenceRepository.save(reference);
-            }
-        }
-    }
-    
+  
     private void createDependents(Applicant applicant, CompleteLoanApplicationDTO dto) {
         if (dto.getDependents() != null && !dto.getDependents().isEmpty()) {
             for (CompleteLoanApplicationDTO.DependentDTO depDTO : dto.getDependents()) {
@@ -311,32 +285,7 @@ public class CompleteLoanApplicationServiceImpl {
         }
     }
     
-    private void createCoApplicants(Applicant applicant, CompleteLoanApplicationDTO dto) {
-        if (dto.getCoApplicants() != null && !dto.getCoApplicants().isEmpty()) {
-            for (CompleteLoanApplicationDTO.CoApplicantDTO coAppDTO : dto.getCoApplicants()) {
-                CoApplicant coApplicant = new CoApplicant();
-                coApplicant.setApplicant(applicant);
-                coApplicant.setFirstName(coAppDTO.getFirstName());
-                coApplicant.setLastName(coAppDTO.getLastName());
-                coApplicant.setRelationship(coAppDTO.getRelationship());
-                coApplicant.setDob(coAppDTO.getDob());
-                coApplicant.setGender(coAppDTO.getGender());
-                coApplicant.setEmail(coAppDTO.getEmail());
-                coApplicant.setPhone(coAppDTO.getPhone());
-                coApplicant.setPanNumber(coAppDTO.getPanNumber());
-                coApplicant.setAadhaarNumber(coAppDTO.getAadhaarNumber());
-                coApplicant.setOccupation(coAppDTO.getOccupation());
-                coApplicant.setEmployerName(coAppDTO.getEmployerName());
-                coApplicant.setMonthlyIncome(coAppDTO.getMonthlyIncome());
-                coApplicant.setCreditScore(coAppDTO.getCreditScore());
-                coApplicant.setConsentGiven(coAppDTO.getConsentGiven());
-                if (Boolean.TRUE.equals(coAppDTO.getConsentGiven())) {
-                    coApplicant.setConsentDate(LocalDateTime.now());
-                }
-                coApplicantRepository.save(coApplicant);
-            }
-        }
-    }
+   
     
     private void createCollaterals(ApplicantLoanDetails loan, CompleteLoanApplicationDTO dto) {
         if (dto.getCollaterals() != null && !dto.getCollaterals().isEmpty()) {

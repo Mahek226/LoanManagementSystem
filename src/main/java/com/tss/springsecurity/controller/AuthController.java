@@ -1,14 +1,16 @@
 package com.tss.springsecurity.controller;
 
-import com.tss.springsecurity.entity.User;
 import com.tss.springsecurity.entity.Applicant;
-import com.tss.springsecurity.entity.UserRole;
+import com.tss.springsecurity.entity.Admin;
+import com.tss.springsecurity.entity.LoanOfficer;
+import com.tss.springsecurity.entity.ComplianceOfficer;
 import com.tss.springsecurity.payload.request.SignupRequest;
 import com.tss.springsecurity.payload.response.MessageResponse;
 import com.tss.springsecurity.payload.response.UserInfoResponse;
-import com.tss.springsecurity.repository.UserRepository;
 import com.tss.springsecurity.repository.ApplicantRepository;
-import com.tss.springsecurity.security.services.UserDetailsImpl;
+import com.tss.springsecurity.repository.AdminRepository;
+import com.tss.springsecurity.repository.LoanOfficerRepository;
+import com.tss.springsecurity.repository.ComplianceOfficerRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,51 +29,36 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/auth")
 public class AuthController {
     @Autowired
-    private UserRepository userRepository;
+    private ApplicantRepository applicantRepository;
     
     @Autowired
-    private ApplicantRepository applicantRepository;
+    private AdminRepository adminRepository;
+    
+    @Autowired
+    private LoanOfficerRepository loanOfficerRepository;
+    
+    @Autowired
+    private ComplianceOfficerRepository complianceOfficerRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @GetMapping("/user")
-    public ResponseEntity<?> getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(new MessageResponse("User not authenticated"));
-        }
-        
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(new UserInfoResponse(
-            userDetails.getId(),
-            userDetails.getUsername(),
-            userDetails.getEmail(),
-            userDetails.getFirstName(),
-            userDetails.getLastName(),
-            roles
-        ));
-    }
+    // Removed getCurrentUser() - will be implemented with JWT-based authentication
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
-        // Validate and get the role
-        UserRole role;
-        try {
-            role = UserRole.valueOf(signUpRequest.getRole());
-        } catch (IllegalArgumentException e) {
+        // Get the role as string
+        String role = signUpRequest.getRole();
+        
+        // Validate role
+        if (role == null || role.trim().isEmpty()) {
             return ResponseEntity
                     .badRequest()
-                    .body(new MessageResponse("Error: Invalid role specified!"));
+                    .body(new MessageResponse("Error: Role is required!"));
         }
 
         // If role is APPLICANT, save to applicant table
-        if (role == UserRole.ROLE_APPLICANT) {
+        if ("ROLE_APPLICANT".equals(role)) {
             // Check if username already exists in applicant table
             if (applicantRepository.existsByUsername(signUpRequest.getUsername())) {
                 return ResponseEntity
@@ -117,34 +104,85 @@ public class AuthController {
             applicantRepository.save(applicant);
 
             return ResponseEntity.ok(new MessageResponse("Applicant registered successfully!"));
-        } else {
-            // For other roles, save to user table as before
-            if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+        } else if ("ROLE_ADMIN".equals(role)) {
+            // Handle Admin registration
+            if (adminRepository.existsByUsername(signUpRequest.getUsername())) {
                 return ResponseEntity
                         .badRequest()
                         .body(new MessageResponse("Error: Username is already taken!"));
             }
 
-            if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+            if (adminRepository.existsByEmail(signUpRequest.getEmail())) {
                 return ResponseEntity
                         .badRequest()
                         .body(new MessageResponse("Error: Email is already in use!"));
             }
 
-            // Create new user's account with all fields
-            User user = new User(
-                    signUpRequest.getUsername(),
-                    signUpRequest.getEmail(),
-                    passwordEncoder.encode(signUpRequest.getPassword()),
-                    signUpRequest.getFirstName(),
-                    signUpRequest.getLastName(),
-                    role
-            );
+            // Create new admin
+            Admin admin = new Admin();
+            admin.setUsername(signUpRequest.getUsername());
+            admin.setEmail(signUpRequest.getEmail());
+            admin.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
+            admin.setFirstName(signUpRequest.getFirstName());
+            admin.setLastName(signUpRequest.getLastName());
             
-            // Save the user
-            userRepository.save(user);
+            adminRepository.save(admin);
+            return ResponseEntity.ok(new MessageResponse("Admin registered successfully!"));
+            
+        } else if ("ROLE_LOAN_OFFICER".equals(role)) {
+            // Handle Loan Officer registration
+            if (loanOfficerRepository.existsByUsername(signUpRequest.getUsername())) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Error: Username is already taken!"));
+            }
 
-            return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+            if (loanOfficerRepository.existsByEmail(signUpRequest.getEmail())) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Error: Email is already in use!"));
+            }
+
+            // Create new loan officer
+            LoanOfficer loanOfficer = new LoanOfficer();
+            loanOfficer.setUsername(signUpRequest.getUsername());
+            loanOfficer.setEmail(signUpRequest.getEmail());
+            loanOfficer.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
+            loanOfficer.setFirstName(signUpRequest.getFirstName());
+            loanOfficer.setLastName(signUpRequest.getLastName());
+            
+            loanOfficerRepository.save(loanOfficer);
+            return ResponseEntity.ok(new MessageResponse("Loan Officer registered successfully!"));
+            
+        } else if ("ROLE_COMPLIANCE_OFFICER".equals(role)) {
+            // Handle Compliance Officer registration
+            if (complianceOfficerRepository.existsByUsername(signUpRequest.getUsername())) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Error: Username is already taken!"));
+            }
+
+            if (complianceOfficerRepository.existsByEmail(signUpRequest.getEmail())) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(new MessageResponse("Error: Email is already in use!"));
+            }
+
+            // Create new compliance officer
+            ComplianceOfficer complianceOfficer = new ComplianceOfficer();
+            complianceOfficer.setUsername(signUpRequest.getUsername());
+            complianceOfficer.setEmail(signUpRequest.getEmail());
+            complianceOfficer.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
+            complianceOfficer.setFirstName(signUpRequest.getFirstName());
+            complianceOfficer.setLastName(signUpRequest.getLastName());
+            
+            complianceOfficerRepository.save(complianceOfficer);
+            return ResponseEntity.ok(new MessageResponse("Compliance Officer registered successfully!"));
+            
+        } else {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Invalid role specified!"));
         }
     }
 }
