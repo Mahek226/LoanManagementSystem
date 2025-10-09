@@ -9,7 +9,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "aadhaar_details")
+@Table(name = "aadhaar_details", indexes = {
+    @Index(name = "idx_aadhaar_number", columnList = "aadhaar_number"),
+    @Index(name = "idx_aadhaar_applicant_id", columnList = "applicant_id"),
+    @Index(name = "idx_aadhaar_name", columnList = "name")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

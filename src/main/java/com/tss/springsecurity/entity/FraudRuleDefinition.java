@@ -10,7 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "fraud_rule_definition")
+@Table(name = "fraud_rule_definition", indexes = {
+    @Index(name = "idx_fraud_rule_code", columnList = "rule_code", unique = true),
+    @Index(name = "idx_fraud_rule_category", columnList = "rule_category"),
+    @Index(name = "idx_fraud_rule_active", columnList = "is_active"),
+    @Index(name = "idx_fraud_rule_severity", columnList = "severity"),
+    @Index(name = "idx_fraud_rule_execution_order", columnList = "execution_order")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

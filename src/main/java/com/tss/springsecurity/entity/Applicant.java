@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
@@ -21,7 +22,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "applicant")
+@Table(name = "applicant", indexes = {
+    @Index(name = "idx_applicant_email", columnList = "email"),
+    @Index(name = "idx_applicant_phone", columnList = "phone"),
+    @Index(name = "idx_applicant_username", columnList = "username"),
+    @Index(name = "idx_applicant_dob", columnList = "dob"),
+    @Index(name = "idx_applicant_created_at", columnList = "created_at")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
