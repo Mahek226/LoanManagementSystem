@@ -47,7 +47,9 @@ public class SecurityConfig {
                     "/api/auth/reset-password/**",
                     "/api/applicant/auth/forgot-password",
                     "/api/applicant/auth/reset-password",
-                    "/api/test/**"
+                    "/api/test/**",
+                    "/api/admin/**",
+                    "/api/fraud-detection/**"
                 ).permitAll()
                 // All other API endpoints require authentication
                 .requestMatchers("/api/**").authenticated()
