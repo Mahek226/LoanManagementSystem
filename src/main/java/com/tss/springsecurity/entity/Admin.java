@@ -20,14 +20,6 @@ public class Admin {
     @Column(name = "admin_id")
     private Long adminId;
     
-    @Column(name = "username", unique = true, nullable = false, length = 100)
-    private String username;
-    
-    @Column(name = "email", unique = true, nullable = false, length = 150)
-    private String email;
-    
-    @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
-    private String passwordHash;
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -37,6 +29,8 @@ public class Admin {
     
     @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AdminLog> adminLogs;
+
+	private String passwordHash;
     
     @PrePersist
     protected void onCreate() {

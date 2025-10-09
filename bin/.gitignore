@@ -31,20 +31,4 @@ build/
 
 ### VS Code ###
 .vscode/
-<<<<<<< HEAD
-
-### Documentation and Config Files ###
-*.md
-!API_COLLECTION.json
-!API_DOCUMENTATION.md
-!README.md
-!POSTMAN_COLLECTION.json
-*.txt
-*.json
-!API_COLLECTION.json
-!POSTMAN_COLLECTION.json
-*.properties
-*.xml
-=======
 /.metadata/
->>>>>>> 3de8d5309d43c5ea64b2697bf8d75be5fd2d4054
