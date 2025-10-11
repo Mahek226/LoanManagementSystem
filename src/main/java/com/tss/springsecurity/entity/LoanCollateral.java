@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Table(name = "loan_collateral", indexes = {
     @Index(name = "idx_collateral_applicant_id", columnList = "applicant_id"),
     @Index(name = "idx_collateral_type", columnList = "collateral_type"),
-    @Index(name = "idx_collateral_valuation_report", columnList = "valuation_report_url"),
     @Index(name = "idx_collateral_created_at", columnList = "created_at")
 })
 @Data
