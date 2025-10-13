@@ -16,10 +16,10 @@ public class FraudDetectionResult {
     private Long applicantId;
     private String applicantName;
     private int totalFraudScore;
-    private String riskLevel; // LOW, MEDIUM, HIGH, CRITICAL
+    private String riskLevel; 
     private boolean isFraudulent;
     private List<FraudRule> triggeredRules = new ArrayList<>();
-    private String recommendation; // APPROVE, REVIEW, REJECT
+    private String recommendation; 
     
     // Enhanced scoring breakdown
     private Map<String, Object> fraudScoreBreakdown = new HashMap<>();

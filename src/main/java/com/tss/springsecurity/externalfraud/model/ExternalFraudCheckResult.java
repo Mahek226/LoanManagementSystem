@@ -79,15 +79,15 @@ public class ExternalFraudCheckResult {
         // Round to 2 decimal places
         this.riskScorePercentage = Math.round(this.riskScorePercentage * 100.0) / 100.0;
         
-        if (totalFraudScore >= 100) {
+        if (totalFraudScore >= 200) {
             this.riskLevel = "CRITICAL";
             this.isFraudulent = true;
             this.recommendation = "REJECT";
-        } else if (totalFraudScore >= 70) {
+        } else if (totalFraudScore >= 150) {
             this.riskLevel = "HIGH";
             this.isFraudulent = true;
             this.recommendation = "REJECT";
-        } else if (totalFraudScore >= 40) {
+        } else if (totalFraudScore >= 100) {
             this.riskLevel = "MEDIUM";
             this.isFraudulent = false;
             this.recommendation = "REVIEW";
