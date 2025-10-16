@@ -117,8 +117,8 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
             document.setCloudinaryPublicId((String) uploadResult.get("public_id"));
             document.setFileSize(file.getSize());
             document.setMimeType(file.getContentType());
-            document.setUploadStatus("UPLOADED");
-            document.setVerificationStatus("PENDING");
+            document.setUploadStatus(UploadedDocument.UploadStatus.UPLOADED);
+            document.setVerificationStatus(UploadedDocument.VerificationStatus.PENDING);
             
             return uploadedDocumentRepository.save(document);
             
@@ -161,7 +161,15 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
         UploadedDocument document = uploadedDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("Document not found with ID: " + documentId));
         
-        document.setVerificationStatus(verificationStatus);
+        // Convert string to enum
+        UploadedDocument.VerificationStatus status;
+        try {
+            status = UploadedDocument.VerificationStatus.valueOf(verificationStatus.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid verification status: " + verificationStatus);
+        }
+        
+        document.setVerificationStatus(status);
         document.setVerificationNotes(verificationNotes);
         document.setVerifiedBy(verifiedBy);
         document.setVerifiedAt(LocalDateTime.now());

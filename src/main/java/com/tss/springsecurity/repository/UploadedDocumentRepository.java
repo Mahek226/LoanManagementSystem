@@ -29,12 +29,12 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
     /**
      * Find documents by verification status
      */
-    List<UploadedDocument> findByVerificationStatus(String verificationStatus);
+    List<UploadedDocument> findByVerificationStatus(UploadedDocument.VerificationStatus verificationStatus);
     
     /**
      * Find documents by upload status
      */
-    List<UploadedDocument> findByUploadStatus(String uploadStatus);
+    List<UploadedDocument> findByUploadStatus(UploadedDocument.UploadStatus uploadStatus);
     
     /**
      * Count documents for an applicant
@@ -45,7 +45,7 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
     /**
      * Count verified documents for an applicant
      */
-    @Query("SELECT COUNT(ud) FROM UploadedDocument ud WHERE ud.applicant.applicantId = :applicantId AND ud.verificationStatus = 'VERIFIED'")
+    @Query("SELECT COUNT(ud) FROM UploadedDocument ud WHERE ud.applicant.applicantId = :applicantId AND ud.verificationStatus = com.tss.springsecurity.entity.UploadedDocument$VerificationStatus.VERIFIED")
     Long countVerifiedDocumentsByApplicantId(@Param("applicantId") Long applicantId);
     
     /**
