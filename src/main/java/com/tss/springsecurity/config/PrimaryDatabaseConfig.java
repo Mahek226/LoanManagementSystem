@@ -33,7 +33,8 @@ public class PrimaryDatabaseConfig {
         return DataSourceBuilder.create()
                 .url("jdbc:mysql://localhost:3306/lms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata")
                 .username("root")
-                .password("Rishit91@#15")
+                .password("Root@123") // Empty password - didn't work
+//                .password("root")
                 .driverClassName("com.mysql.cj.jdbc.Driver")
                 .build();
     }
