@@ -24,7 +24,7 @@ public interface ComplianceOfficerRepository extends JpaRepository<ComplianceOff
     
     List<ComplianceOfficer> findByLoanType(String loanType);
     
-    @Query("SELECT co FROM ComplianceOfficer co WHERE co.loanType = :loanType ORDER BY " +
+    @Query("SELECT co FROM ComplianceOfficer co ORDER BY " +
            "(SELECT COUNT(caa) FROM ComplianceOfficerApplicationAssignment caa WHERE caa.complianceOfficer = co AND caa.status IN ('PENDING', 'IN_PROGRESS')) ASC")
-    List<ComplianceOfficer> findByLoanTypeOrderByWorkload(@Param("loanType") String loanType);
+    List<ComplianceOfficer> findAllComplianceOfficersOrderByWorkload();
 }

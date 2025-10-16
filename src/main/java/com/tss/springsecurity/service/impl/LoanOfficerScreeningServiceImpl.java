@@ -111,12 +111,11 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         
         ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
         
-        // Find available compliance officer for this loan type
-        List<ComplianceOfficer> availableOfficers = complianceOfficerRepository
-                .findByLoanTypeOrderByWorkload(loan.getLoanType());
+        // Find any available compliance officer (compliance officers handle all loan types)
+        List<ComplianceOfficer> availableOfficers = complianceOfficerRepository.findAllComplianceOfficersOrderByWorkload();
         
         if (availableOfficers.isEmpty()) {
-            throw new RuntimeException("No compliance officers available for loan type: " + loan.getLoanType());
+            throw new RuntimeException("No compliance officers available");
         }
         
         ComplianceOfficer complianceOfficer = availableOfficers.get(0);
