@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
+import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ApplicantLoanDetails;
 import com.tss.springsecurity.service.LoanApplicationService;
@@ -63,6 +64,32 @@ public class LoanApplicationController {
             response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
             response.put("email", applicant.getEmail());
             response.put("phone", applicant.getPhone());
+            
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+    
+    @PostMapping("/submit-for-existing-applicant")
+    public ResponseEntity<Map<String, Object>> submitLoanApplicationForExistingApplicant(
+            @Valid @RequestBody LoanApplicationForExistingApplicantDTO loanApplicationDTO) {
+        try {
+            ApplicantLoanDetails loanDetails = loanApplicationService.submitLoanApplicationForExistingApplicant(loanApplicationDTO);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Loan application submitted successfully for existing applicant");
+            response.put("loanId", loanDetails.getLoanId());
+            response.put("applicantId", loanDetails.getApplicant().getApplicantId());
+            response.put("applicantName", loanDetails.getApplicant().getFirstName() + " " + loanDetails.getApplicant().getLastName());
+            response.put("loanType", loanDetails.getLoanType());
+            response.put("loanAmount", loanDetails.getLoanAmount());
+            response.put("status", loanDetails.getStatus());
+            response.put("interestRate", loanDetails.getInterestRate());
             
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (RuntimeException e) {
