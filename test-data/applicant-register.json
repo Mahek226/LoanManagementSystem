@@ -1,0 +1,13 @@
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "dob": "1990-05-15",
+  "gender": "Male",
+  "email": "john.doe@example.com",
+  "phone": "9876543210",
+  "password": "password123",
+  "address": "123 Main Street, Apt 4B",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "country": "India"
+}

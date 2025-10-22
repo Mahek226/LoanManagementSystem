@@ -1,50 +1,50 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# HELP.md
+# target/
+# .mvn/wrapper/maven-wrapper.jar
+# !**/src/main/**/target/
+# !**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# ### STS ###
+# .apt_generated
+# .classpath
+# .factorypath
+# .project
+# .settings
+# .springBeans
+# .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# ### IntelliJ IDEA ###
+# .idea
+# *.iws
+# *.iml
+# *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# ### NetBeans ###
+# /nbproject/private/
+# /nbbuild/
+# /dist/
+# /nbdist/
+# /.nb-gradle/
+# build/
+# !**/src/main/**/build/
+# !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
-<<<<<<< HEAD
+# ### VS Code ###
+# .vscode/
+# <<<<<<< HEAD
 
-### Documentation and Config Files ###
-*.md
-!API_COLLECTION.json
-!API_DOCUMENTATION.md
-!README.md
-!POSTMAN_COLLECTION.json
-*.txt
-*.json
-!API_COLLECTION.json
-!POSTMAN_COLLECTION.json
-*.properties
-*.xml
-=======
-/.metadata/
->>>>>>> 3de8d5309d43c5ea64b2697bf8d75be5fd2d4054
+# ### Documentation and Config Files ###
+# *.md
+# !API_COLLECTION.json
+# !API_DOCUMENTATION.md
+# !README.md
+# !POSTMAN_COLLECTION.json
+# *.txt
+# *.json
+# !API_COLLECTION.json
+# !POSTMAN_COLLECTION.json
+# *.properties
+# *.xml
+# =======
+# /.metadata/
+# >>>>>>> 3de8d5309d43c5ea64b2697bf8d75be5fd2d4054

@@ -4,9 +4,11 @@ import com.tss.springsecurity.dto.LoanScreeningRequest;
 import com.tss.springsecurity.dto.LoanScreeningResponse;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
+import com.tss.springsecurity.service.EnhancedLoanScreeningService;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,9 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private final ApplicantLoanDetailsRepository loanRepository;
     private final LoanOfficerRepository loanOfficerRepository;
     private final ComplianceOfficerRepository complianceOfficerRepository;
+    
+    @Autowired
+    private EnhancedLoanScreeningService enhancedScreeningService;
     
     @Value("${loan.risk-score.threshold:70}")
     private Integer riskScoreThreshold;
@@ -75,6 +80,20 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         }
         
         ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        
+        // Perform enhanced screening to get normalized score
+        try {
+            EnhancedLoanScreeningService.EnhancedScoringResult enhancedResult = 
+                enhancedScreeningService.performEnhancedScreening(assignment.getApplicant().getApplicantId());
+            
+            // Update loan with normalized score
+            loan.setRiskScore(enhancedResult.getNormalizedScore().intValue());
+            loanRepository.save(loan);
+            
+            log.info("Updated loan {} with enhanced normalized score: {}", loan.getLoanId(), enhancedResult.getNormalizedScore());
+        } catch (Exception e) {
+            log.error("Error performing enhanced screening for applicant {}, using existing score", assignment.getApplicant().getApplicantId(), e);
+        }
         
         // Check if officer can approve/reject based on risk score
         boolean canApproveReject = loan.getRiskScore() < riskScoreThreshold;
