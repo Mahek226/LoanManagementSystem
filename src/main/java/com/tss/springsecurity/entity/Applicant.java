@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import jakarta.validation.constraints.*;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,40 +40,68 @@ public class Applicant {
     @Column(name = "applicant_id")
     private Long applicantId;
     
+    @NotBlank(message = "First name is required")
+    @Size(min = 2, max = 100, message = "First name must be between 2 and 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "First name can only contain letters and spaces")
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
     
+    @Size(max = 100, message = "Last name must not exceed 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]*$", message = "Last name can only contain letters and spaces")
     @Column(name = "last_name", length = 100)
     private String lastName;
     
+    @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be in the past")
     @Column(name = "dob")
     private LocalDate dob;
     
+    @Pattern(regexp = "Male|Female|Other", message = "Gender must be Male, Female, or Other")
     @Column(name = "gender", length = 10)
     private String gender;
     
     
+    @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Username can only contain letters, numbers, dots, underscores, and hyphens")
     @Column(name = "username", unique = true, length = 50)
     private String username;
     
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
     @Column(name = "email", unique = true, length = 100)
     private String email;
     
+    @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Phone number must be 10-15 digits, optionally starting with +")
     @Column(name = "phone", unique = true, length = 20)
     private String phone;
     
+    @NotBlank(message = "Address is required")
+    @Size(min = 10, max = 500, message = "Address must be between 10 and 500 characters")
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
     
+    @NotBlank(message = "City is required")
+    @Size(min = 2, max = 100, message = "City must be between 2 and 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "City can only contain letters and spaces")
     @Column(name = "city", length = 100)
     private String city;
     
+    @NotBlank(message = "State is required")
+    @Size(min = 2, max = 100, message = "State must be between 2 and 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "State can only contain letters and spaces")
     @Column(name = "state", length = 100)
     private String state;
     
+    @NotBlank(message = "Country is required")
+    @Size(min = 2, max = 100, message = "Country must be between 2 and 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Country can only contain letters and spaces")
     @Column(name = "country", length = 100)
     private String country;
     
+    @NotBlank(message = "Password is required")
     @Column(name = "password_hash", columnDefinition = "TEXT")
     private String passwordHash;
     

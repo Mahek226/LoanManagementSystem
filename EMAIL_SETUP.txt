@@ -1,0 +1,82 @@
+===============================================
+EMAIL SETUP GUIDE FOR OTP FUNCTIONALITY
+===============================================
+
+Real email sending has been implemented using Spring Mail.
+Follow these steps to configure your Gmail account:
+
+STEP 1: ENABLE 2-FACTOR AUTHENTICATION
+=======================================
+1. Go to your Google Account: https://myaccount.google.com/
+2. Click on "Security" in the left sidebar
+3. Under "Signing in to Google", enable "2-Step Verification"
+
+STEP 2: GENERATE APP PASSWORD
+=======================================
+1. Go to: https://myaccount.google.com/apppasswords
+2. Select "Mail" as the app
+3. Select "Other (Custom name)" as the device
+4. Enter "Loan Management System" as the name
+5. Click "Generate"
+6. Copy the 16-character app password (without spaces)
+
+STEP 3: UPDATE APPLICATION.PROPERTIES
+=======================================
+Open: src/main/resources/application.properties
+
+Update these lines (around line 39-43):
+
+spring.mail.username=your-email@gmail.com    <- Replace with your Gmail address
+spring.mail.password=your-app-password       <- Replace with the 16-char app password from Step 2
+
+Example:
+spring.mail.username=mahek.morzaria@gmail.com
+spring.mail.password=abcd efgh ijkl mnop     <- (without spaces: abcdefghijklmnop)
+
+STEP 4: TEST THE EMAIL
+=======================================
+1. Start your Spring Boot application
+2. Register a new applicant using the registration API
+3. Check the email inbox for the OTP
+
+ALTERNATIVE: USE OTHER EMAIL PROVIDERS
+=======================================
+For Outlook/Hotmail:
+spring.mail.host=smtp-mail.outlook.com
+spring.mail.port=587
+
+For Yahoo:
+spring.mail.host=smtp.mail.yahoo.com
+spring.mail.port=587
+
+For custom SMTP:
+spring.mail.host=your-smtp-server.com
+spring.mail.port=587 (or 465 for SSL)
+
+TROUBLESHOOTING
+=======================================
+1. If emails are not sending:
+   - Verify 2FA is enabled
+   - Check if app password is correct (no spaces)
+   - Check firewall settings
+   - Try port 465 with SSL instead of 587 with STARTTLS
+
+2. Fallback behavior:
+   - If email fails, OTP will be logged to console
+   - Check application logs for the OTP code
+
+3. Common errors:
+   - "Authentication failed" = Wrong app password
+   - "Connection timeout" = Firewall blocking SMTP
+   - "Invalid credentials" = 2FA not enabled
+
+SECURITY NOTES
+=======================================
+- Never commit your actual email credentials to Git
+- Use environment variables in production:
+  spring.mail.username=${EMAIL_USERNAME}
+  spring.mail.password=${EMAIL_PASSWORD}
+- App passwords are safer than using your actual Gmail password
+- Revoke app passwords when no longer needed
+
+===============================================

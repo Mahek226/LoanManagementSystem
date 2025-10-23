@@ -1,5 +1,8 @@
 package com.tss.springsecurity.dto;
 
+import com.tss.springsecurity.validation.ValidAge;
+import com.tss.springsecurity.validation.ValidCreditScore;
+import com.tss.springsecurity.validation.ValidLoanAmount;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -13,6 +16,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidLoanAmount
+@ValidCreditScore
 public class CompleteLoanApplicationDTO {
     
     // ========== APPLICANT BASIC INFO ==========
