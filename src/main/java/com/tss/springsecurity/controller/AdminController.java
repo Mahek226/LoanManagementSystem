@@ -55,11 +55,14 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
         try {
+            System.out.println("Getting dashboard stats...");
             DashboardStatsResponse stats = adminService.getDashboardStats();
+            System.out.println("Dashboard stats: " + stats);
             return ResponseEntity.ok(stats);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
+        } catch (Exception e) {
+            System.err.println("Error getting dashboard stats: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 

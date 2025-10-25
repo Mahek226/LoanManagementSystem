@@ -14,8 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -89,18 +89,26 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats() {
-        // Get total counts
+        // Get total counts with debugging
         long totalApplicants = applicantRepository.count();
+        System.out.println("Total applicants from DB: " + totalApplicants);
+        
         long pendingApplications = applicantRepository.countByApprovalStatus("PENDING");
+        System.out.println("Pending applications from DB: " + pendingApplications);
+        
         long approvedLoans = applicantRepository.countByApprovalStatus("APPROVED");
+        System.out.println("Approved applications from DB: " + approvedLoans);
+        
         long rejectedApplications = applicantRepository.countByApprovalStatus("REJECTED");
+        System.out.println("Rejected applications from DB: " + rejectedApplications);
 
         // Mock data for loan amounts (you can implement actual loan calculations)
         double totalLoanAmount = 15750000.0;
         double averageLoanAmount = totalApplicants > 0 ? totalLoanAmount / totalApplicants : 0.0;
 
-        // Mock monthly applications data (you can implement actual monthly statistics)
-        List<Integer> monthlyApplications = Arrays.asList(45, 52, 38, 67, 89, 76, 94, 112, 87, 95, 103, 89);
+        // Get real monthly applications data from database
+        List<Integer> monthlyApplications = calculateMonthlyApplications();
+        System.out.println("Monthly applications from DB: " + monthlyApplications);
 
         // Create loan status distribution
         List<DashboardStatsResponse.LoanStatusDistribution> statusDistribution = Arrays.asList(
@@ -121,5 +129,30 @@ public class AdminServiceImpl implements AdminService {
                 monthlyApplications,
                 statusDistribution
         );
+    }
+    
+    /**
+     * Calculate monthly application counts for all 12 months of the current year
+     * Returns an array of 12 integers representing counts for Jan through Dec
+     */
+    private List<Integer> calculateMonthlyApplications() {
+        // Initialize array with zeros for all 12 months
+        Integer[] monthCounts = new Integer[12];
+        Arrays.fill(monthCounts, 0);
+        
+        // Get actual counts from database
+        List<Object[]> results = applicantRepository.countApplicantsByMonth();
+        
+        // Fill in the actual counts
+        for (Object[] result : results) {
+            Integer month = (Integer) result[0]; // Month (1-12)
+            Long count = (Long) result[1]; // Count
+            
+            if (month != null && month >= 1 && month <= 12) {
+                monthCounts[month - 1] = count.intValue(); // Convert to 0-indexed
+            }
+        }
+        
+        return Arrays.asList(monthCounts);
     }
 }

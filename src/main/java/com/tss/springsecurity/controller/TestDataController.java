@@ -1,6 +1,8 @@
 package com.tss.springsecurity.controller;
 
+import com.tss.springsecurity.entity.Admin;
 import com.tss.springsecurity.entity.Applicant;
+import com.tss.springsecurity.repository.AdminRepository;
 import com.tss.springsecurity.repository.ApplicantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,26 +19,45 @@ import java.time.LocalDateTime;
 public class TestDataController {
 
     private final ApplicantRepository applicantRepository;
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/create-sample-data")
     public ResponseEntity<String> createSampleData() {
         try {
-            // Create sample applicants if they don't exist
-            if (applicantRepository.count() == 0) {
-                createSampleApplicant("john_doe", "John", "Doe", "john.doe@example.com", "+1234567890", "PENDING");
-                createSampleApplicant("jane_smith", "Jane", "Smith", "jane.smith@example.com", "+1234567891", "APPROVED");
-                createSampleApplicant("mike_wilson", "Michael", "Wilson", "mike.wilson@example.com", "+1234567892", "REJECTED");
-                createSampleApplicant("sarah_johnson", "Sarah", "Johnson", "sarah.johnson@example.com", "+1234567893", "PENDING");
-                createSampleApplicant("david_brown", "David", "Brown", "david.brown@example.com", "+1234567894", "PENDING");
-                createSampleApplicant("emma_davis", "Emma", "Davis", "emma.davis@example.com", "+1234567895", "APPROVED");
-                createSampleApplicant("alex_miller", "Alex", "Miller", "alex.miller@example.com", "+1234567896", "PENDING");
-                createSampleApplicant("lisa_garcia", "Lisa", "Garcia", "lisa.garcia@example.com", "+1234567897", "REJECTED");
-            }
+            // Always create more sample data for testing
+            createSampleApplicant("john_doe", "John", "Doe", "john.doe@example.com", "+1234567890", "PENDING");
+            createSampleApplicant("jane_smith", "Jane", "Smith", "jane.smith@example.com", "+1234567891", "APPROVED");
+            createSampleApplicant("mike_wilson", "Michael", "Wilson", "mike.wilson@example.com", "+1234567892", "REJECTED");
+            createSampleApplicant("sarah_johnson", "Sarah", "Johnson", "sarah.johnson@example.com", "+1234567893", "PENDING");
+            createSampleApplicant("david_brown", "David", "Brown", "david.brown@example.com", "+1234567894", "PENDING");
+            createSampleApplicant("emma_davis", "Emma", "Davis", "emma.davis@example.com", "+1234567895", "APPROVED");
+            createSampleApplicant("alex_miller", "Alex", "Miller", "alex.miller@example.com", "+1234567896", "PENDING");
+            createSampleApplicant("lisa_garcia", "Lisa", "Garcia", "lisa.garcia@example.com", "+1234567897", "REJECTED");
             
             return ResponseEntity.ok("Sample data created successfully! Total applicants: " + applicantRepository.count());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error creating sample data: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/create-admin")
+    public ResponseEntity<String> createAdmin() {
+        try {
+            // Create admin user for testing
+            Admin admin = new Admin();
+            admin.setUsername("admin");
+            admin.setEmail("admin@lms.com");
+            admin.setPasswordHash(passwordEncoder.encode("admin123"));
+            
+            if (!adminRepository.existsByUsername("admin")) {
+                adminRepository.save(admin);
+                return ResponseEntity.ok("Admin user created successfully! Username: admin, Password: admin123");
+            } else {
+                return ResponseEntity.ok("Admin user already exists! Username: admin, Password: admin123");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error creating admin: " + e.getMessage());
         }
     }
 
@@ -63,6 +84,26 @@ public class TestDataController {
             applicant.setUpdatedAt(LocalDateTime.now());
             
             applicantRepository.save(applicant);
+        }
+    }
+
+    @GetMapping("/check-database")
+    public ResponseEntity<String> checkDatabase() {
+        try {
+            long totalCount = applicantRepository.count();
+            long pendingCount = applicantRepository.countByApprovalStatus("PENDING");
+            long approvedCount = applicantRepository.countByApprovalStatus("APPROVED");
+            long rejectedCount = applicantRepository.countByApprovalStatus("REJECTED");
+            
+            String result = String.format(
+                "Database Check:\nTotal: %d\nPending: %d\nApproved: %d\nRejected: %d", 
+                totalCount, pendingCount, approvedCount, rejectedCount
+            );
+            
+            System.out.println(result);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error checking database: " + e.getMessage());
         }
     }
 
