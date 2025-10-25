@@ -120,10 +120,42 @@
         </li>
         <li class="nav-item">
           <button class="nav-link" 
+                  [class.active]="activeTab === 'loan-officers'"
+                  (click)="setActiveTab('loan-officers')">
+            <i class="fas fa-user-tie me-2"></i>
+            Loan Officers
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'compliance-officers'"
+                  (click)="setActiveTab('compliance-officers')">
+            <i class="fas fa-user-shield me-2"></i>
+            Compliance Officers
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
                   [class.active]="activeTab === 'reports'"
                   (click)="setActiveTab('reports')">
             <i class="fas fa-chart-bar me-2"></i>
             Reports
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'activity-logs'"
+                  (click)="setActiveTab('activity-logs')">
+            <i class="fas fa-history me-2"></i>
+            Activity Logs
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'fraud-rules'"
+                  (click)="setActiveTab('fraud-rules')">
+            <i class="fas fa-shield-alt me-2"></i>
+            Fraud Rules
           </button>
         </li>
       </ul>
@@ -299,11 +331,29 @@
       <app-loans></app-loans>
     </div>
 
+    <!-- Loan Officers Tab -->
+    <div *ngIf="activeTab === 'loan-officers'">
+      <app-loan-officers></app-loan-officers>
+    </div>
+
+    <!-- Compliance Officers Tab -->
+    <div *ngIf="activeTab === 'compliance-officers'">
+      <app-compliance-officers></app-compliance-officers>
+    </div>
+
     <!-- Reports Tab -->
-    <div *ngIf="activeTab === 'reports'" class="text-center py-5">
-      <i class="fas fa-chart-bar text-muted" style="font-size: 4rem;"></i>
-      <h4 class="mt-3" style="color: var(--text-primary);">Reports Coming Soon</h4>
-      <p class="text-muted">Advanced reporting and analytics features will be available here.</p>
+    <div *ngIf="activeTab === 'reports'">
+      <app-reports></app-reports>
+    </div>
+
+    <!-- Activity Logs Tab -->
+    <div *ngIf="activeTab === 'activity-logs'">
+      <app-activity-logs></app-activity-logs>
+    </div>
+
+    <!-- Fraud Rules Tab -->
+    <div *ngIf="activeTab === 'fraud-rules'">
+      <app-fraud-rules></app-fraud-rules>
     </div>
 
   </main>

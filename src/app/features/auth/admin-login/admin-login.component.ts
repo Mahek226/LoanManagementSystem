@@ -49,6 +49,9 @@ import { environment } from '../../../../environments/environment';
           </form>
           
           <div class="text-center mt-3">
+            <button class="btn btn-outline-secondary btn-sm me-2" (click)="createAdmin()">
+              Create Admin
+            </button>
             <button class="btn btn-outline-secondary btn-sm" (click)="createSampleData()">
               Create Sample Data
             </button>
@@ -86,6 +89,18 @@ export class AdminLoginComponent {
       },
       complete: () => {
         this.loading = false;
+      }
+    });
+  }
+
+  createAdmin(): void {
+    this.http.post(`${environment.apiUrl}/test/create-admin`, {}).subscribe({
+      next: (response: any) => {
+        alert(response);
+      },
+      error: (error) => {
+        console.error('Error creating admin:', error);
+        alert('Error creating admin. Check console for details.');
       }
     });
   }

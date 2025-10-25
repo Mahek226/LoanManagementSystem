@@ -1,0 +1,216 @@
+<div class="fraud-rules-container">
+  <div class="header-section">
+    <div>
+      <h2 class="page-title"><i class="fas fa-shield-alt"></i> Fraud Detection Rules</h2>
+      <p class="page-subtitle">Manage fraud detection rules and configurations</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary-custom" (click)="exportToCsv()">
+        <i class="fas fa-download"></i> Export CSV
+      </button>
+      <button class="btn btn-primary-custom" (click)="toggleAddForm()">
+        <i class="fas fa-plus"></i> Add Rule
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="success" class="alert alert-success-custom">
+    <i class="fas fa-check-circle"></i> {{ success }}
+  </div>
+  
+  <div *ngIf="error && !showAddForm && !editingRule" class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+
+  <!-- Add/Edit Form -->
+  <div *ngIf="showAddForm || editingRule" class="card-custom form-card">
+    <div class="card-header">
+      <h4><i class="fas fa-plus-circle"></i> {{ showAddForm ? 'Add New Rule' : 'Edit Rule' }}</h4>
+      <button class="btn-close" (click)="showAddForm ? toggleAddForm() : cancelEdit()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div *ngIf="error" class="alert alert-error-custom">
+      <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    
+    <form (ngSubmit)="showAddForm ? addRule() : saveUpdate()" class="rule-form">
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Rule Code <span class="text-danger">*</span></label>
+          <input type="text" class="form-input-custom" 
+                 [(ngModel)]="showAddForm ? newRule.ruleCode : editingRule!.ruleCode"
+                 name="ruleCode" placeholder="e.g., FR_AGE_CHECK" required
+                 [disabled]="!showAddForm">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Rule Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-input-custom" 
+                 [(ngModel)]="showAddForm ? newRule.ruleName : updateRule.ruleName!"
+                 name="ruleName" placeholder="e.g., Age Verification" required>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-12">
+          <label class="form-label">Description</label>
+          <textarea class="form-input-custom" rows="3"
+                    [(ngModel)]="showAddForm ? newRule.ruleDescription : updateRule.ruleDescription!"
+                    name="ruleDescription" placeholder="Describe the rule purpose"></textarea>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label">Category <span class="text-danger">*</span></label>
+          <select class="form-input-custom" 
+                  [(ngModel)]="showAddForm ? newRule.ruleCategory : updateRule.ruleCategory!"
+                  name="ruleCategory" required>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Severity <span class="text-danger">*</span></label>
+          <select class="form-input-custom" 
+                  [(ngModel)]="showAddForm ? newRule.severity : updateRule.severity!"
+                  name="severity" required>
+            <option *ngFor="let sev of severities" [value]="sev">{{ sev }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Fraud Points <span class="text-danger">*</span></label>
+          <input type="number" class="form-input-custom" 
+                 [(ngModel)]="showAddForm ? newRule.fraudPoints : updateRule.fraudPoints!"
+                 name="fraudPoints" min="0" required>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label">Rule Type</label>
+          <select class="form-input-custom" 
+                  [(ngModel)]="showAddForm ? newRule.ruleType : updateRule.ruleType!"
+                  name="ruleType">
+            <option *ngFor="let type of ruleTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Execution Order</label>
+          <input type="number" class="form-input-custom" 
+                 [(ngModel)]="showAddForm ? newRule.executionOrder : updateRule.executionOrder!"
+                 name="executionOrder" min="1">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" 
+                   [(ngModel)]="showAddForm ? newRule.isActive : updateRule.isActive!"
+                   name="isActive">
+            <label class="form-check-label">Active</label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary-custom" 
+                (click)="showAddForm ? toggleAddForm() : cancelEdit()">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn-primary-custom" [disabled]="loading">
+          <i class="fas fa-save"></i> {{ loading ? 'Saving...' : 'Save Rule' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Filters -->
+  <div class="card-custom filter-card">
+    <div class="filter-row">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="form-input-custom search-input" [(ngModel)]="searchQuery"
+               (input)="applyFilters()" placeholder="Search rules...">
+      </div>
+      <div class="filter-group">
+        <select class="form-input-custom" [(ngModel)]="selectedCategory" (change)="applyFilters()">
+          <option value="">All Categories</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+        <select class="form-input-custom" [(ngModel)]="selectedSeverity" (change)="applyFilters()">
+          <option value="">All Severities</option>
+          <option *ngFor="let sev of severities" [value]="sev">{{ sev }}</option>
+        </select>
+        <select class="form-input-custom" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option value="active">Active Only</option>
+          <option value="inactive">Inactive Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="results-info">
+      Showing {{ filteredRules.length }} of {{ rules.length }} rules
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading && !showAddForm && !editingRule" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Loading rules...</p>
+  </div>
+
+  <!-- Rules Table -->
+  <div *ngIf="!loading" class="card-custom table-card">
+    <div class="table-responsive">
+      <table class="table rules-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Severity</th>
+            <th>Points</th>
+            <th>Type</th>
+            <th>Order</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let rule of filteredRules">
+            <td><code>{{ rule.ruleCode }}</code></td>
+            <td>
+              <strong>{{ rule.ruleName }}</strong>
+              <br><small class="text-muted">{{ rule.ruleDescription }}</small>
+            </td>
+            <td><span class="badge badge-primary">{{ rule.ruleCategory }}</span></td>
+            <td><span class="badge {{ getSeverityClass(rule.severity) }}">{{ rule.severity }}</span></td>
+            <td><strong>{{ rule.fraudPoints }}</strong></td>
+            <td><small>{{ rule.ruleType || 'N/A' }}</small></td>
+            <td><small>{{ rule.executionOrder }}</small></td>
+            <td>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" [checked]="rule.isActive"
+                       (change)="toggleRule(rule)">
+              </div>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-info me-2" (click)="editRule(rule)" title="Edit">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteRule(rule)" title="Delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredRules.length === 0">
+            <td colspan="9" class="text-center py-4">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <p class="text-muted">No rules found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

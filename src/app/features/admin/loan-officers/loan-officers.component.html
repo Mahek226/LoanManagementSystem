@@ -1,0 +1,337 @@
+<div class="loan-officers-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="header-left">
+      <h2 class="page-title">
+        <i class="fas fa-user-tie"></i>
+        Loan Officers Management
+      </h2>
+      <p class="page-subtitle">Manage loan officers and their assignments</p>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-primary-custom" (click)="toggleAddForm()">
+        <i class="fas fa-plus"></i>
+        Add Loan Officer
+      </button>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="success" class="alert alert-success-custom">
+    <i class="fas fa-check-circle"></i>
+    {{ success }}
+  </div>
+  
+  <div *ngIf="error && !showAddForm" class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i>
+    {{ error }}
+  </div>
+
+  <!-- Add Officer Form -->
+  <div *ngIf="showAddForm" class="card-custom add-form-card">
+    <div class="card-header">
+      <h4>
+        <i class="fas fa-user-plus"></i>
+        Add New Loan Officer
+      </h4>
+      <button class="btn-close" (click)="toggleAddForm()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div *ngIf="error" class="alert alert-error-custom">
+      <i class="fas fa-exclamation-circle"></i>
+      {{ error }}
+    </div>
+    
+    <form (ngSubmit)="addOfficer()" class="officer-form">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Username <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.username"
+              name="username"
+              placeholder="Enter username"
+              required
+              minlength="3">
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input 
+              type="email" 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.email"
+              name="email"
+              placeholder="Enter email"
+              required>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Password <span class="text-danger">*</span></label>
+            <input 
+              type="password" 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.password"
+              name="password"
+              placeholder="Enter password"
+              required
+              minlength="6">
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Loan Type</label>
+            <select 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.loanType"
+              name="loanType">
+              <option value="">Select loan type (Optional)</option>
+              <option *ngFor="let type of loanTypes" [value]="type">{{ type }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary-custom" (click)="toggleAddForm()">
+          <i class="fas fa-times"></i>
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary-custom" [disabled]="loading">
+          <i class="fas fa-save"></i>
+          {{ loading ? 'Adding...' : 'Add Officer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="card-custom filter-card">
+    <div class="filter-row">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input 
+          type="text" 
+          class="form-input-custom search-input" 
+          [(ngModel)]="searchQuery"
+          (input)="onSearchChange()"
+          placeholder="Search by username, email, or loan type...">
+      </div>
+      
+      <div class="filter-group">
+        <select 
+          class="form-input-custom filter-select" 
+          [(ngModel)]="selectedLoanType"
+          (change)="onLoanTypeChange()">
+          <option value="">All Loan Types</option>
+          <option *ngFor="let type of loanTypes" [value]="type">{{ type }}</option>
+        </select>
+        
+        <button class="btn btn-secondary-custom" (click)="toggleViewMode()">
+          <i [class]="viewMode === 'table' ? 'fas fa-th' : 'fas fa-table'"></i>
+          {{ viewMode === 'table' ? 'Grid' : 'Table' }}
+        </button>
+        
+        <button class="btn btn-secondary-custom" (click)="exportToCsv()">
+          <i class="fas fa-download"></i>
+          Export CSV
+        </button>
+      </div>
+    </div>
+    
+    <div class="results-info">
+      Showing {{ filteredOfficers.length }} of {{ officers.length }} loan officers
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !showAddForm" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading loan officers...</p>
+  </div>
+
+  <!-- Table View -->
+  <div *ngIf="!loading && viewMode === 'table'" class="card-custom table-card">
+    <div class="table-responsive">
+      <table class="table officers-table">
+        <thead>
+          <tr>
+            <th>Officer ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Loan Type</th>
+            <th>Created At</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let officer of filteredOfficers">
+            <td>
+              <span class="badge badge-primary">{{ officer.officerId }}</span>
+            </td>
+            <td>
+              <strong>{{ officer.username }}</strong>
+            </td>
+            <td>
+              <i class="fas fa-envelope text-muted me-2"></i>
+              {{ officer.email }}
+            </td>
+            <td>
+              <span class="badge badge-info" *ngIf="officer.loanType">
+                {{ officer.loanType }}
+              </span>
+              <span class="text-muted" *ngIf="!officer.loanType">N/A</span>
+            </td>
+            <td>
+              <small class="text-muted">{{ formatDate(officer.createdAt) }}</small>
+            </td>
+            <td class="text-center">
+              <button 
+                class="btn btn-sm btn-info me-2" 
+                (click)="viewDetails(officer)"
+                title="View Details">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button 
+                class="btn btn-sm btn-danger" 
+                (click)="deleteOfficer(officer.officerId, officer.username)"
+                title="Delete Officer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredOfficers.length === 0">
+            <td colspan="6" class="text-center py-4">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <p class="text-muted">No loan officers found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Grid View -->
+  <div *ngIf="!loading && viewMode === 'grid'" class="officers-grid">
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-4" *ngFor="let officer of filteredOfficers">
+        <div class="card-custom officer-card">
+          <div class="officer-card-header">
+            <div class="officer-avatar">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="officer-badge">
+              <span class="badge badge-primary">ID: {{ officer.officerId }}</span>
+            </div>
+          </div>
+          
+          <div class="officer-card-body">
+            <h5 class="officer-name">{{ officer.username }}</h5>
+            <p class="officer-email">
+              <i class="fas fa-envelope"></i>
+              {{ officer.email }}
+            </p>
+            <p class="officer-loan-type" *ngIf="officer.loanType">
+              <i class="fas fa-briefcase"></i>
+              <span class="badge badge-info">{{ officer.loanType }}</span>
+            </p>
+            <p class="officer-date">
+              <i class="fas fa-calendar"></i>
+              {{ formatDate(officer.createdAt) }}
+            </p>
+          </div>
+          
+          <div class="officer-card-actions">
+            <button class="btn btn-sm btn-info" (click)="viewDetails(officer)">
+              <i class="fas fa-eye"></i>
+              View Details
+            </button>
+            <button 
+              class="btn btn-sm btn-danger" 
+              (click)="deleteOfficer(officer.officerId, officer.username)">
+              <i class="fas fa-trash"></i>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="filteredOfficers.length === 0" class="col-12 text-center py-5">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No loan officers found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div class="modal-backdrop" *ngIf="selectedOfficer" (click)="closeDetails()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h4>
+          <i class="fas fa-user-tie"></i>
+          Loan Officer Details
+        </h4>
+        <button class="btn-close" (click)="closeDetails()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="detail-row">
+          <span class="detail-label">Officer ID:</span>
+          <span class="detail-value">
+            <span class="badge badge-primary">{{ selectedOfficer.officerId }}</span>
+          </span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Username:</span>
+          <span class="detail-value">{{ selectedOfficer.username }}</span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Email:</span>
+          <span class="detail-value">{{ selectedOfficer.email }}</span>
+        </div>
+        
+        <div class="detail-row" *ngIf="selectedOfficer.loanType">
+          <span class="detail-label">Loan Type:</span>
+          <span class="detail-value">
+            <span class="badge badge-info">{{ selectedOfficer.loanType }}</span>
+          </span>
+        </div>
+        
+        <div class="detail-row">
+          <span class="detail-label">Created At:</span>
+          <span class="detail-value">{{ formatDate(selectedOfficer.createdAt) }}</span>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary-custom" (click)="closeDetails()">
+          <i class="fas fa-times"></i>
+          Close
+        </button>
+        <button 
+          class="btn btn-danger" 
+          (click)="deleteOfficer(selectedOfficer.officerId, selectedOfficer.username); closeDetails()">
+          <i class="fas fa-trash"></i>
+          Delete Officer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

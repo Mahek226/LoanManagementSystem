@@ -157,12 +157,10 @@ export class ApplicantsComponent implements OnInit {
 
   approveApplicant(applicant: Applicant): void {
     if (confirm(`Are you sure you want to approve ${applicant.firstName} ${applicant.lastName}?`)) {
-      this.adminService.approveApplicant(applicant.id).subscribe({
+      this.adminService.approveApplicant(applicant.applicantId).subscribe({
         next: () => {
-          applicant.approvalStatus = 'APPROVED';
-          applicant.isApproved = true;
-          this.updateStatistics();
-          this.applyFilters();
+          // Refresh the data from backend instead of updating locally
+          this.loadApplicants();
           alert('Applicant approved successfully!');
         },
         error: (error) => {
@@ -176,12 +174,10 @@ export class ApplicantsComponent implements OnInit {
   rejectApplicant(applicant: Applicant): void {
     const reason = prompt(`Please provide a reason for rejecting ${applicant.firstName} ${applicant.lastName}:`);
     if (reason) {
-      this.adminService.rejectApplicant(applicant.id, reason).subscribe({
+      this.adminService.rejectApplicant(applicant.applicantId, reason).subscribe({
         next: () => {
-          applicant.approvalStatus = 'REJECTED';
-          applicant.isApproved = false;
-          this.updateStatistics();
-          this.applyFilters();
+          // Refresh the data from backend instead of updating locally
+          this.loadApplicants();
           alert('Applicant rejected successfully!');
         },
         error: (error) => {

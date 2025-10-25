@@ -15,7 +15,7 @@ export interface DashboardStats {
 }
 
 export interface Applicant {
-  id: number;
+  applicantId: number;
   username: string;
   firstName: string;
   lastName: string;
@@ -27,10 +27,12 @@ export interface Applicant {
   city: string;
   state: string;
   country: string;
+  passwordHash: string;
   isApproved: boolean;
   isEmailVerified: boolean;
   approvalStatus: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoanApplication {
@@ -49,6 +51,86 @@ export interface LoanApplication {
   comments?: string;
 }
 
+export interface OfficerResponse {
+  officerId: number;
+  username: string;
+  email: string;
+  loanType?: string;
+  createdAt: string;
+  message?: string;
+}
+
+export interface LoanOfficerRequest {
+  username: string;
+  email: string;
+  password: string;
+  loanType?: string;
+}
+
+export interface ComplianceOfficerRequest {
+  username: string;
+  email: string;
+  password: string;
+  loanType?: string;
+}
+
+export interface ActivityLog {
+  logId: number;
+  performedBy: string;
+  userRole: string;
+  activityType: string;
+  entityType?: string;
+  entityId?: number;
+  description: string;
+  ipAddress?: string;
+  userAgent?: string;
+  oldValue?: string;
+  newValue?: string;
+  status: string;
+  errorMessage?: string;
+  timestamp: string;
+}
+
+export interface FraudRule {
+  ruleId: number;
+  ruleCode: string;
+  ruleName: string;
+  ruleDescription?: string;
+  ruleCategory: string;
+  severity: string;
+  fraudPoints: number;
+  isActive: boolean;
+  ruleType?: string;
+  executionOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface FraudRuleRequest {
+  ruleCode: string;
+  ruleName: string;
+  ruleDescription?: string;
+  ruleCategory: string;
+  severity: string;
+  fraudPoints: number;
+  isActive?: boolean;
+  ruleType?: string;
+  executionOrder?: number;
+}
+
+export interface FraudRuleUpdateRequest {
+  ruleName?: string;
+  ruleDescription?: string;
+  ruleCategory?: string;
+  severity?: string;
+  fraudPoints?: number;
+  isActive?: boolean;
+  ruleType?: string;
+  executionOrder?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -58,13 +140,15 @@ export class AdminService {
   constructor(private http: HttpClient) {}
 
   // Dashboard Statistics
-  getDashboardStats(): Observable<DashboardStats> {
-    return this.http.get<DashboardStats>(`${this.API_URL}/admin/dashboard/stats`);
+  getDashboardStats(): Observable<any> {
+    // Use public endpoint for testing
+    return this.http.get<any>(`${this.API_URL}/public/admin/dashboard/stats`);
   }
 
   // Applicant Management
   getAllApplicants(page: number = 0, size: number = 10): Observable<{content: Applicant[], totalElements: number}> {
-    return this.http.get<{content: Applicant[], totalElements: number}>(`${this.API_URL}/admin/applicants?page=${page}&size=${size}`);
+    // Use public endpoint for testing
+    return this.http.get<{content: Applicant[], totalElements: number}>(`${this.API_URL}/public/admin/applicants?page=${page}&size=${size}`);
   }
 
   getApplicantById(id: number): Observable<Applicant> {
@@ -72,11 +156,13 @@ export class AdminService {
   }
 
   approveApplicant(id: number, comments?: string): Observable<any> {
-    return this.http.put(`${this.API_URL}/admin/applicants/${id}/approve`, { comments: comments || '' });
+    // Use correct backend endpoint
+    return this.http.put(`${this.API_URL}/admin/applicant-approvals/${id}/approve`, { comments: comments || '' });
   }
 
   rejectApplicant(id: number, comments: string): Observable<any> {
-    return this.http.put(`${this.API_URL}/admin/applicants/${id}/reject`, { comments });
+    // Use correct backend endpoint
+    return this.http.put(`${this.API_URL}/admin/applicant-approvals/${id}/reject`, { comments });
   }
 
   // Loan Management
@@ -103,5 +189,101 @@ export class AdminService {
 
   filterApplicantsByStatus(status: string): Observable<Applicant[]> {
     return this.http.get<Applicant[]>(`${this.API_URL}/admin/applicants/filter?status=${status}`);
+  }
+
+  // Loan Officer Management
+  getAllLoanOfficers(): Observable<OfficerResponse[]> {
+    return this.http.get<OfficerResponse[]>(`${this.API_URL}/admin/officers/loan-officers`);
+  }
+
+  getLoanOfficerById(id: number): Observable<OfficerResponse> {
+    return this.http.get<OfficerResponse>(`${this.API_URL}/admin/officers/loan-officers/${id}`);
+  }
+
+  addLoanOfficer(request: LoanOfficerRequest): Observable<OfficerResponse> {
+    return this.http.post<OfficerResponse>(`${this.API_URL}/admin/officers/loan-officers`, request);
+  }
+
+  deleteLoanOfficer(id: number): Observable<any> {
+    return this.http.delete(`${this.API_URL}/admin/officers/loan-officers/${id}`);
+  }
+
+  // Compliance Officer Management
+  getAllComplianceOfficers(): Observable<OfficerResponse[]> {
+    return this.http.get<OfficerResponse[]>(`${this.API_URL}/admin/officers/compliance-officers`);
+  }
+
+  getComplianceOfficerById(id: number): Observable<OfficerResponse> {
+    return this.http.get<OfficerResponse>(`${this.API_URL}/admin/officers/compliance-officers/${id}`);
+  }
+
+  addComplianceOfficer(request: ComplianceOfficerRequest): Observable<OfficerResponse> {
+    return this.http.post<OfficerResponse>(`${this.API_URL}/admin/officers/compliance-officers`, request);
+  }
+
+  deleteComplianceOfficer(id: number): Observable<any> {
+    return this.http.delete(`${this.API_URL}/admin/officers/compliance-officers/${id}`);
+  }
+
+  // Activity Logs Management
+  getAllActivityLogs(page: number = 0, size: number = 20): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/activity-logs?page=${page}&size=${size}`);
+  }
+
+  getRecentActivityLogs(): Observable<ActivityLog[]> {
+    return this.http.get<ActivityLog[]>(`${this.API_URL}/admin/activity-logs/recent`);
+  }
+
+  getActivityLogsByUser(username: string, page: number = 0, size: number = 20): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/activity-logs/user/${username}?page=${page}&size=${size}`);
+  }
+
+  getActivityLogsByType(activityType: string, page: number = 0, size: number = 20): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/activity-logs/type/${activityType}?page=${page}&size=${size}`);
+  }
+
+  searchActivityLogs(query: string, page: number = 0, size: number = 20): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/activity-logs/search?query=${query}&page=${page}&size=${size}`);
+  }
+
+  getActivityStatistics(): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/activity-logs/statistics`);
+  }
+
+  // Fraud Rules Management
+  getAllFraudRules(): Observable<FraudRule[]> {
+    return this.http.get<FraudRule[]>(`${this.API_URL}/admin/fraud-rules`);
+  }
+
+  getActiveFraudRules(): Observable<FraudRule[]> {
+    return this.http.get<FraudRule[]>(`${this.API_URL}/admin/fraud-rules/active`);
+  }
+
+  getFraudRulesByCategory(category: string): Observable<FraudRule[]> {
+    return this.http.get<FraudRule[]>(`${this.API_URL}/admin/fraud-rules/category/${category}`);
+  }
+
+  getFraudRuleById(id: number): Observable<FraudRule> {
+    return this.http.get<FraudRule>(`${this.API_URL}/admin/fraud-rules/${id}`);
+  }
+
+  createFraudRule(request: FraudRuleRequest): Observable<FraudRule> {
+    return this.http.post<FraudRule>(`${this.API_URL}/admin/fraud-rules`, request);
+  }
+
+  updateFraudRule(id: number, request: FraudRuleUpdateRequest): Observable<FraudRule> {
+    return this.http.put<FraudRule>(`${this.API_URL}/admin/fraud-rules/${id}`, request);
+  }
+
+  toggleFraudRule(id: number): Observable<FraudRule> {
+    return this.http.patch<FraudRule>(`${this.API_URL}/admin/fraud-rules/${id}/toggle`, {});
+  }
+
+  deleteFraudRule(id: number): Observable<any> {
+    return this.http.delete(`${this.API_URL}/admin/fraud-rules/${id}`);
+  }
+
+  getFraudRuleStatistics(): Observable<any> {
+    return this.http.get(`${this.API_URL}/admin/fraud-rules/statistics`);
   }
 }

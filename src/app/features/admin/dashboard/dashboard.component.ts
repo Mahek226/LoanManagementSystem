@@ -7,6 +7,11 @@ import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApplicantsComponent } from '../applicants/applicants.component';
 import { LoansComponent } from '../loans/loans.component';
+import { LoanOfficersComponent } from '../loan-officers/loan-officers.component';
+import { ComplianceOfficersComponent } from '../compliance-officers/compliance-officers.component';
+import { ReportsComponent } from '../reports/reports.component';
+import { ActivityLogsComponent } from '../activity-logs/activity-logs.component';
+import { FraudRulesComponent } from '../fraud-rules/fraud-rules.component';
 import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
@@ -22,7 +27,7 @@ interface Activity {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ApplicantsComponent, LoansComponent],
+  imports: [CommonModule, ApplicantsComponent, LoansComponent, LoanOfficersComponent, ComplianceOfficersComponent, ReportsComponent, ActivityLogsComponent, FraudRulesComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -86,6 +91,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     // Load real data from backend
     this.adminService.getDashboardStats().subscribe({
       next: (stats) => {
+        console.log('Dashboard stats received:', stats);
         this.stats = stats;
         // Update charts after data is loaded
         setTimeout(() => {

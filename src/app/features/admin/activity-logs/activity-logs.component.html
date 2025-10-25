@@ -1,0 +1,109 @@
+<div class="activity-logs-container">
+  <div class="header-section">
+    <div>
+      <h2 class="page-title"><i class="fas fa-history"></i> Activity Logs</h2>
+      <p class="page-subtitle">Monitor all system activities and user actions</p>
+    </div>
+    <button class="btn btn-secondary-custom" (click)="exportToCsv()">
+      <i class="fas fa-download"></i> Export CSV
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+
+  <div class="card-custom filter-card">
+    <div class="filter-row">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="form-input-custom search-input" [(ngModel)]="searchQuery"
+               (input)="onSearchChange()" placeholder="Search activities...">
+      </div>
+      <div class="filter-group">
+        <select class="form-input-custom" [(ngModel)]="selectedType" (change)="onTypeChange()">
+          <option value="">All Types</option>
+          <option *ngFor="let type of activityTypes" [value]="type">{{ type }}</option>
+        </select>
+        <select class="form-input-custom" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option *ngFor="let status of statusTypes" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="results-info">
+      Showing {{ filteredActivities.length }} of {{ totalElements }} activities
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Loading activities...</p>
+  </div>
+
+  <div *ngIf="!loading" class="card-custom table-card">
+    <div class="table-responsive">
+      <table class="table activities-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Activity</th>
+            <th>Description</th>
+            <th>Entity</th>
+            <th>IP Address</th>
+            <th>Status</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let activity of filteredActivities">
+            <td><span class="badge badge-secondary">{{ activity.logId }}</span></td>
+            <td>
+              <strong>{{ activity.performedBy }}</strong>
+              <br><small class="text-muted">{{ activity.userRole }}</small>
+            </td>
+            <td>
+              <span class="badge badge-{{ getActivityColor(activity.activityType) }}">
+                <i class="fas {{ getActivityIcon(activity.activityType) }}"></i>
+                {{ activity.activityType }}
+              </span>
+            </td>
+            <td><small>{{ activity.description }}</small></td>
+            <td>
+              <span *ngIf="activity.entityType" class="badge badge-info">
+                {{ activity.entityType }}
+                <span *ngIf="activity.entityId">#{{ activity.entityId }}</span>
+              </span>
+              <span *ngIf="!activity.entityType" class="text-muted">-</span>
+            </td>
+            <td><small class="text-muted">{{ activity.ipAddress || 'N/A' }}</small></td>
+            <td>
+              <span class="badge" [class.badge-success]="activity.status === 'SUCCESS'" 
+                    [class.badge-danger]="activity.status === 'FAILED'">
+                {{ activity.status }}
+              </span>
+            </td>
+            <td><small class="text-muted">{{ formatDate(activity.timestamp) }}</small></td>
+          </tr>
+          <tr *ngIf="filteredActivities.length === 0">
+            <td colspan="8" class="text-center py-4">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <p class="text-muted">No activities found</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && totalPages > 1" class="pagination-container">
+    <button class="btn btn-secondary-custom" (click)="previousPage()" [disabled]="currentPage === 0">
+      <i class="fas fa-chevron-left"></i> Previous
+    </button>
+    <span class="page-info">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+    <button class="btn btn-secondary-custom" (click)="nextPage()" [disabled]="currentPage >= totalPages - 1">
+      Next <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>
