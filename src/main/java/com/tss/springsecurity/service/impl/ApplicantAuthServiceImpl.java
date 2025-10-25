@@ -33,6 +33,11 @@ public class ApplicantAuthServiceImpl implements ApplicantAuthService {
     @Override
     @Transactional
     public String registerApplicant(ApplicantRegisterRequest request) {
+        // Check if username already exists
+        if (applicantRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("Username is already taken");
+        }
+
         // Check if email already exists
         if (applicantRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email is already registered");
@@ -45,6 +50,7 @@ public class ApplicantAuthServiceImpl implements ApplicantAuthService {
 
         // Create applicant with pending status
         Applicant applicant = new Applicant();
+        applicant.setUsername(request.getUsername());
         applicant.setFirstName(request.getFirstName());
         applicant.setLastName(request.getLastName());
         applicant.setDob(request.getDob());

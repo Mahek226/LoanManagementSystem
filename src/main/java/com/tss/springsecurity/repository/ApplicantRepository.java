@@ -14,4 +14,5 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
     boolean existsByUsername(String username);
+    long countByApprovalStatus(String approvalStatus);
 }

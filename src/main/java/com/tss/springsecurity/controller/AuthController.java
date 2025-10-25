@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, maxAge = 3600, allowCredentials = "true")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -88,12 +88,13 @@ public class AuthController {
             applicant.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
             applicant.setFirstName(signUpRequest.getFirstName());
             applicant.setLastName(signUpRequest.getLastName());
+            applicant.setDob(signUpRequest.getDob());
+            applicant.setGender(signUpRequest.getGender());
             applicant.setPhone(signUpRequest.getPhone());
             applicant.setAddress(signUpRequest.getAddress());
             applicant.setCity(signUpRequest.getCity());
             applicant.setState(signUpRequest.getState());
             applicant.setCountry(signUpRequest.getCountry());
-            applicant.setGender(signUpRequest.getGender());
             
             // Set default values
             applicant.setIsApproved(false);
