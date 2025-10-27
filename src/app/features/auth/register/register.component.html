@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 register-page">
   <!-- Header Section -->
   <div class="bg-gradient-to-r from-blue-800 to-blue-900 shadow-lg">
     <div class="container mx-auto px-4 py-6">
@@ -328,14 +328,48 @@
                 </div>
               </div>
 
+              <!-- Terms and Conditions Section -->
+              <div class="card border-0 bg-light mb-4 terms-card">
+                <div class="card-body">
+                  <div class="form-check d-flex align-items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="termsAccepted"
+                      formControlName="termsAccepted"
+                      class="form-check-input mt-1 custom-checkbox"
+                      [class.is-invalid]="submitted && f['termsAccepted'].errors"
+                    />
+                    <label for="termsAccepted" class="form-check-label small">
+                      I agree to the 
+                      <a href="#" class="text-blue-600 text-decoration-none fw-semibold" (click)="openTermsModal($event)">
+                        Terms and Conditions
+                      </a> 
+                      and 
+                      <a href="#" class="text-blue-600 text-decoration-none fw-semibold" (click)="openPrivacyModal($event)">
+                        Privacy Policy
+                      </a>
+                      of FraudShield Loan Management System. I understand that my information will be processed securely and used for loan application purposes.
+                    </label>
+                  </div>
+                  <div *ngIf="submitted && f['termsAccepted'].errors" class="text-danger small mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    <span *ngIf="f['termsAccepted'].errors['required']">You must accept the terms and conditions to proceed</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Submit Button -->
               <div class="d-grid gap-2 mb-4">
                 <button 
                   type="submit" 
-                  class="btn-primary-custom"
-                  [disabled]="loading"
+                  class="btn-primary-custom submit-btn"
+                  [disabled]="loading || (submitted && !f['termsAccepted'].value)"
                 >
-                  <span *ngIf="!loading">Create Account</span>
+                  <span *ngIf="!loading">Create Account & Verify Email</span>
                   <span *ngIf="loading" class="d-flex align-items-center justify-content-center">
                     <div class="spinner-border spinner-border-sm me-2" role="status">
                       <span class="visually-hidden">Loading...</span>
@@ -356,6 +390,105 @@
               </div>
             </form>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Terms and Conditions Modal -->
+  <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true" *ngIf="showTermsModal">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <h5 class="modal-title" id="termsModalLabel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="display: inline;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14,2 14,8 20,8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10,9 9,9 8,9"></polyline>
+            </svg>
+            Terms and Conditions
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeTermsModal()" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="terms-content">
+            <h6 class="fw-bold text-blue-700 mb-3">1. Acceptance of Terms</h6>
+            <p class="mb-4">By accessing and using the FraudShield Loan Management System, you accept and agree to be bound by the terms and provision of this agreement.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">2. Loan Application Process</h6>
+            <p class="mb-4">All loan applications are subject to verification and approval. FraudShield reserves the right to accept or reject any application based on our assessment criteria and fraud detection algorithms.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">3. Information Accuracy</h6>
+            <p class="mb-4">You agree to provide accurate, current, and complete information during the registration and loan application process. Providing false information may result in application rejection and potential legal action.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">4. Data Security</h6>
+            <p class="mb-4">We employ bank-level security measures to protect your personal and financial information. Your data is encrypted and stored securely in compliance with industry standards.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">5. Fraud Detection</h6>
+            <p class="mb-4">Our advanced fraud detection system analyzes all applications. Any suspicious activity will be flagged and may result in application review or rejection.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">6. User Responsibilities</h6>
+            <p class="mb-4">You are responsible for maintaining the confidentiality of your account credentials. Any activity under your account is your responsibility.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">7. Modifications to Terms</h6>
+            <p class="mb-4">FraudShield reserves the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">8. Contact Information</h6>
+            <p class="mb-0">For questions about these terms, please contact us at support&#64;fraudshield.com</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeTermsModal()">Close</button>
+          <button type="button" class="btn btn-primary" (click)="acceptTerms()">Accept Terms</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy Modal -->
+  <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true" *ngIf="showPrivacyModal">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <h5 class="modal-title" id="privacyModalLabel">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="display: inline;">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Privacy Policy
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closePrivacyModal()" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="terms-content">
+            <h6 class="fw-bold text-blue-700 mb-3">1. Information We Collect</h6>
+            <p class="mb-4">We collect personal information including name, address, date of birth, contact details, and financial information necessary for loan processing.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">2. How We Use Your Information</h6>
+            <p class="mb-4">Your information is used solely for loan application processing, fraud detection, identity verification, and communication regarding your application status.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">3. Data Protection</h6>
+            <p class="mb-4">We implement industry-standard security measures including encryption, secure servers, and access controls to protect your data from unauthorized access.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">4. Data Sharing</h6>
+            <p class="mb-4">We do not sell your personal information. Data may be shared with authorized loan officers, compliance officers, and regulatory authorities as required by law.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">5. Your Rights</h6>
+            <p class="mb-4">You have the right to access, correct, or delete your personal information. Contact us to exercise these rights.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">6. Cookies and Tracking</h6>
+            <p class="mb-4">We use cookies and similar technologies to enhance user experience and analyze system usage. You can control cookie preferences in your browser settings.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">7. Data Retention</h6>
+            <p class="mb-4">We retain your information for as long as necessary to fulfill the purposes outlined in this policy and comply with legal obligations.</p>
+            
+            <h6 class="fw-bold text-blue-700 mb-3">8. Contact Us</h6>
+            <p class="mb-0">For privacy-related inquiries, contact our Data Protection Officer at privacy&#64;fraudshield.com</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closePrivacyModal()">Close</button>
         </div>
       </div>
     </div>

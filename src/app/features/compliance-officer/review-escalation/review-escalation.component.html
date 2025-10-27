@@ -1,0 +1,352 @@
+<div class="review-container">
+  <!-- Back Button -->
+  <button class="btn btn-outline-secondary mb-4" (click)="goBack()">
+    <i class="fas fa-arrow-left me-2"></i>
+    Back to Escalations
+  </button>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading escalation details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !loading && !successMessage" class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Success State -->
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ successMessage }}
+    <div class="mt-2">
+      <small>Redirecting to escalations list...</small>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading && escalation && !successMessage">
+    <!-- Header -->
+    <div class="review-header mb-4">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="mb-2">
+            <i class="fas fa-gavel me-2 text-danger"></i>
+            Compliance Review
+          </h2>
+          <p class="text-muted mb-0">Review and make a decision on this escalated application</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <span class="priority-badge" 
+                [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
+            <i class="fas fa-exclamation-circle me-1"></i>
+            {{ getPriorityLevel(escalation) }} PRIORITY
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Assessment Card -->
+    <div class="card card-custom risk-card mb-4">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-shield-alt me-2 text-danger"></i>
+          Risk Assessment
+        </h5>
+        <div class="row align-items-center">
+          <div class="col-md-4 text-center">
+            <div class="risk-circle" [style.border-color]="getRiskColor(escalation.riskLevel)">
+              <div class="risk-score">{{ escalation.riskScore }}</div>
+              <div class="risk-label">Risk Score</div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="fw-semibold">Risk Level:</span>
+                <span [class]="getRiskBadgeClass(escalation.riskLevel)">
+                  {{ escalation.riskLevel }}
+                </span>
+              </div>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     [class.bg-success]="escalation.riskLevel === 'LOW'"
+                     [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
+                     [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
+                     [style.width.%]="escalation.riskScore"
+                     role="progressbar">
+                  {{ escalation.riskScore }}%
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-danger" *ngIf="escalation.riskLevel === 'CRITICAL' || escalation.riskLevel === 'HIGH'">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>High Risk Alert:</strong> This application requires careful review due to elevated fraud indicators.
+            </div>
+
+            <div *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0">
+              <h6 class="fw-bold mb-2">Fraud Indicators:</h6>
+              <ul class="fraud-indicators">
+                <li *ngFor="let indicator of escalation.fraudIndicators">
+                  <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                  {{ indicator }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <!-- Applicant Information -->
+      <div class="col-md-6">
+        <div class="card card-custom h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-4">
+              <i class="fas fa-user me-2 text-danger"></i>
+              Applicant Information
+            </h5>
+            <div class="info-group">
+              <div class="info-item">
+                <span class="info-label">Name:</span>
+                <span class="info-value">{{ escalation.applicantName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Applicant ID:</span>
+                <span class="info-value">{{ escalation.applicantId }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Status:</span>
+                <span [class]="getStatusBadgeClass(escalation.status)">
+                  {{ escalation.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loan Information -->
+      <div class="col-md-6">
+        <div class="card card-custom h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-4">
+              <i class="fas fa-file-invoice-dollar me-2 text-danger"></i>
+              Loan Information
+            </h5>
+            <div class="info-group">
+              <div class="info-item">
+                <span class="info-label">Loan ID:</span>
+                <span class="info-value">{{ escalation.loanId }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Loan Type:</span>
+                <span class="info-value">{{ escalation.loanType }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Loan Amount:</span>
+                <span class="info-value text-danger fw-bold">{{ formatCurrency(escalation.loanAmount) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Escalation Details -->
+    <div class="card card-custom mb-4">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-info-circle me-2 text-danger"></i>
+          Escalation Details
+        </h5>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-item">
+              <span class="info-label">Assignment ID:</span>
+              <span class="info-value">{{ escalation.assignmentId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Escalated At:</span>
+              <span class="info-value">{{ formatDate(escalation.assignedAt) }}</span>
+            </div>
+            <div class="info-item" *ngIf="escalation.officerName">
+              <span class="info-label">Escalated By:</span>
+              <span class="info-value">{{ escalation.officerName }} ({{ escalation.officerType }})</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-item" *ngIf="escalation.escalationReason">
+              <span class="info-label">Escalation Reason:</span>
+              <span class="info-value">{{ escalation.escalationReason }}</span>
+            </div>
+            <div class="info-item" *ngIf="escalation.remarks">
+              <span class="info-label">Officer Remarks:</span>
+              <span class="info-value">{{ escalation.remarks }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card card-custom action-card">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-tasks me-2 text-danger"></i>
+          Compliance Decision
+        </h5>
+        <p class="text-muted mb-4">
+          Review all information carefully and make your compliance decision. Your decision will be final and recorded in the system.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <button class="btn btn-success w-100 action-btn" (click)="openApproveModal()">
+              <i class="fas fa-check-circle me-2"></i>
+              Approve Application
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-danger w-100 action-btn" (click)="openRejectModal()">
+              <i class="fas fa-times-circle me-2"></i>
+              Reject Application
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-warning w-100 action-btn" (click)="openRequestInfoModal()">
+              <i class="fas fa-question-circle me-2"></i>
+              Request More Info
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" *ngIf="showApproveModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-check-circle me-2"></i>
+          Approve Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Are you sure you want to approve this loan application?</p>
+        <div class="mb-3">
+          <label class="form-label">Remarks (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="remarks"
+                    placeholder="Add any additional comments..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-success" (click)="processDecision()" [disabled]="processing">
+          <span *ngIf="!processing">
+            <i class="fas fa-check me-2"></i>
+            Confirm Approval
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" *ngIf="showRejectModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-times-circle me-2"></i>
+          Reject Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Please provide a reason for rejecting this application.</p>
+        <div class="mb-3">
+          <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="3" [(ngModel)]="rejectionReason" required
+                    placeholder="Explain why this application is being rejected..."></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Additional Remarks (Optional)</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="remarks"
+                    placeholder="Add any additional comments..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="processDecision()" 
+                [disabled]="processing || !rejectionReason.trim()">
+          <span *ngIf="!processing">
+            <i class="fas fa-times me-2"></i>
+            Confirm Rejection
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request More Info Modal -->
+<div class="modal fade" id="requestInfoModal" tabindex="-1" *ngIf="showRequestInfoModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-question-circle me-2"></i>
+          Request More Information
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Specify what additional information or checks are needed.</p>
+        <div class="mb-3">
+          <label class="form-label">Information Required <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="4" [(ngModel)]="remarks" required
+                    placeholder="Describe what additional information or verification is needed..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" (click)="processDecision()" 
+                [disabled]="processing || !remarks.trim()">
+          <span *ngIf="!processing">
+            <i class="fas fa-paper-plane me-2"></i>
+            Send Request
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

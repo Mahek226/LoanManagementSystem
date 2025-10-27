@@ -95,13 +95,26 @@ export const routes: Routes = [
 
   // Compliance Officer routes
   {
-    path: 'compliance',
+    path: 'compliance-officer',
     canActivate: [authGuard, roleGuard],
     data: { roles: [APP_CONSTANTS.ROLES.COMPLIANCE_OFFICER] },
+    loadComponent: () => import('./features/compliance-officer/compliance-officer-layout/compliance-officer-layout.component').then(m => m.ComplianceOfficerLayoutComponent),
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/compliance-officer/dashboard/compliance-dashboard.component').then(m => m.ComplianceDashboardComponent)
+        loadComponent: () => import('./features/compliance-officer/dashboard/dashboard.component').then(m => m.ComplianceDashboardComponent)
+      },
+      {
+        path: 'escalations',
+        loadComponent: () => import('./features/compliance-officer/escalations/escalations.component').then(m => m.EscalationsComponent)
+      },
+      {
+        path: 'review/:id',
+        loadComponent: () => import('./features/compliance-officer/review-escalation/review-escalation.component').then(m => m.ReviewEscalationComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/compliance-officer/profile/profile.component').then(m => m.ComplianceProfileComponent)
       },
       {
         path: '',

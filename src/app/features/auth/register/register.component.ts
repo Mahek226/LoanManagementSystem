@@ -18,6 +18,8 @@ export class RegisterComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   showFallbackLogo = false;
+  showTermsModal = false;
+  showPrivacyModal = false;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -43,7 +45,8 @@ export class RegisterComponent implements OnInit {
       city: ['', [Validators.required]],
       state: ['', [Validators.required]],
       country: ['', [Validators.required]],
-      gender: ['', [Validators.required]]
+      gender: ['', [Validators.required]],
+      termsAccepted: [false, [Validators.requiredTrue]] // Terms and conditions checkbox
     }, { validators: this.passwordMatchValidator });
   }
 
@@ -124,5 +127,60 @@ export class RegisterComponent implements OnInit {
 
   onImageError(): void {
     this.showFallbackLogo = true;
+  }
+
+  openTermsModal(event: Event): void {
+    event.preventDefault();
+    this.showTermsModal = true;
+    setTimeout(() => {
+      const modalElement = document.getElementById('termsModal');
+      if (modalElement) {
+        const modal = new (window as any).bootstrap.Modal(modalElement);
+        modal.show();
+      }
+    }, 100);
+  }
+
+  closeTermsModal(): void {
+    const modalElement = document.getElementById('termsModal');
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
+    setTimeout(() => {
+      this.showTermsModal = false;
+    }, 300);
+  }
+
+  acceptTerms(): void {
+    this.registerForm.patchValue({ termsAccepted: true });
+    this.closeTermsModal();
+  }
+
+  openPrivacyModal(event: Event): void {
+    event.preventDefault();
+    this.showPrivacyModal = true;
+    setTimeout(() => {
+      const modalElement = document.getElementById('privacyModal');
+      if (modalElement) {
+        const modal = new (window as any).bootstrap.Modal(modalElement);
+        modal.show();
+      }
+    }, 100);
+  }
+
+  closePrivacyModal(): void {
+    const modalElement = document.getElementById('privacyModal');
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
+    setTimeout(() => {
+      this.showPrivacyModal = false;
+    }, 300);
   }
 }

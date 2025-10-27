@@ -1,0 +1,306 @@
+<div class="escalations-container">
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-1">
+        <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+        Escalated Applications
+      </h2>
+      <p class="text-muted mb-0">Review and process high-risk loan applications</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-danger" (click)="exportToCSV()">
+        <i class="fas fa-download me-2"></i>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters and Search -->
+  <div class="card card-custom mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Search -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="fas fa-search"></i>
+            </span>
+            <input type="text" 
+                   class="form-control" 
+                   placeholder="Search by name, ID, loan type..."
+                   [(ngModel)]="searchQuery"
+                   (ngModelChange)="onSearchChange()">
+          </div>
+        </div>
+
+        <!-- Priority Filter -->
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedPriority" (ngModelChange)="onFilterChange()">
+            <option value="all">All Priorities</option>
+            <option value="URGENT">Urgent</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        <!-- Risk Level Filter -->
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedRiskLevel" (ngModelChange)="onFilterChange()">
+            <option value="all">All Risk Levels</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
+            <option value="all">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="ESCALATED_TO_COMPLIANCE">Escalated</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
+
+        <!-- Sort By -->
+        <div class="col-md-2">
+          <div class="input-group">
+            <select class="form-select" [(ngModel)]="sortBy" (ngModelChange)="onSortChange()">
+              <option value="assignedAt">Date</option>
+              <option value="loanAmount">Amount</option>
+              <option value="riskScore">Risk Score</option>
+              <option value="priority">Priority</option>
+            </select>
+            <button class="btn btn-outline-secondary" (click)="toggleSortOrder()">
+              <i class="fas" [class.fa-sort-amount-down]="sortOrder === 'desc'" 
+                 [class.fa-sort-amount-up]="sortOrder === 'asc'"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Filters -->
+      <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+        <small class="text-muted">Active Filters:</small>
+        <span class="badge bg-secondary" *ngIf="searchQuery">
+          Search: {{ searchQuery }}
+          <i class="fas fa-times ms-1" (click)="searchQuery = ''; onSearchChange()" style="cursor: pointer;"></i>
+        </span>
+        <span class="badge bg-secondary" *ngIf="selectedPriority !== 'all'">
+          Priority: {{ selectedPriority }}
+        </span>
+        <span class="badge bg-secondary" *ngIf="selectedRiskLevel !== 'all'">
+          Risk: {{ selectedRiskLevel }}
+        </span>
+        <span class="badge bg-secondary" *ngIf="selectedStatus !== 'all'">
+          Status: {{ selectedStatus }}
+        </span>
+        <button class="btn btn-sm btn-link text-danger" 
+                *ngIf="searchQuery || selectedPriority !== 'all' || selectedRiskLevel !== 'all' || selectedStatus !== 'all'"
+                (click)="clearFilters()">
+          Clear All
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Toggle and Results Count -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <span class="text-muted">Showing {{ filteredEscalations.length }} of {{ escalations.length }} escalations</span>
+    </div>
+    <div class="btn-group" role="group">
+      <button class="btn btn-sm" 
+              [class.btn-danger]="viewMode === 'grid'"
+              [class.btn-outline-danger]="viewMode !== 'grid'"
+              (click)="setViewMode('grid')">
+        <i class="fas fa-th"></i> Grid
+      </button>
+      <button class="btn btn-sm" 
+              [class.btn-danger]="viewMode === 'list'"
+              [class.btn-outline-danger]="viewMode !== 'list'"
+              (click)="setViewMode('list')">
+        <i class="fas fa-list"></i> List
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading escalations...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !loading" class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && !errorMessage && filteredEscalations.length === 0" class="text-center py-5">
+    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+    <h5 class="text-muted">No escalations found</h5>
+    <p class="text-muted">Try adjusting your filters or search criteria</p>
+    <button class="btn btn-outline-danger" (click)="clearFilters()">
+      <i class="fas fa-redo me-2"></i>
+      Clear Filters
+    </button>
+  </div>
+
+  <!-- Grid View -->
+  <div *ngIf="!loading && !errorMessage && filteredEscalations.length > 0 && viewMode === 'grid'" 
+       class="row g-4">
+    <div class="col-lg-6 col-xl-4" *ngFor="let escalation of filteredEscalations">
+      <div class="card card-custom escalation-card">
+        <div class="card-body">
+          <!-- Priority Badge -->
+          <div class="d-flex align-items-start justify-content-between mb-3">
+            <span class="priority-badge" 
+                  [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
+              <i class="fas fa-exclamation-circle me-1"></i>
+              {{ getPriorityLevel(escalation) }}
+            </span>
+            <span [class]="getRiskBadgeClass(escalation.riskLevel)">
+              {{ escalation.riskLevel }}
+            </span>
+          </div>
+
+          <!-- Applicant Info -->
+          <h5 class="card-title mb-2">{{ escalation.applicantName }}</h5>
+          <p class="text-muted small mb-3">
+            <i class="fas fa-id-card me-1"></i>
+            Applicant ID: {{ escalation.applicantId }}
+          </p>
+
+          <!-- Loan Details -->
+          <div class="loan-details mb-3">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Loan Type:</span>
+              <span class="fw-semibold">{{ escalation.loanType }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Amount:</span>
+              <span class="fw-semibold text-danger">{{ formatCurrency(escalation.loanAmount) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Risk Score:</span>
+              <span class="fw-semibold">{{ escalation.riskScore }}/100</span>
+            </div>
+          </div>
+
+          <!-- Risk Progress Bar -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">Risk Level</span>
+              <span class="fw-semibold">{{ escalation.riskScore }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar" 
+                   [class.bg-success]="escalation.riskLevel === 'LOW'"
+                   [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
+                   [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
+                   [style.width.%]="escalation.riskScore"
+                   role="progressbar"></div>
+            </div>
+          </div>
+
+          <!-- Status and Date -->
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <span [class]="getStatusBadgeClass(escalation.status)">
+              {{ escalation.status }}
+            </span>
+            <small class="text-muted">
+              <i class="fas fa-clock me-1"></i>
+              {{ formatDate(escalation.assignedAt) }}
+            </small>
+          </div>
+
+          <!-- Action Button -->
+          <button class="btn btn-danger w-100" 
+                  [routerLink]="['/compliance-officer/review', escalation.assignmentId]">
+            <i class="fas fa-gavel me-2"></i>
+            Review & Decide
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div *ngIf="!loading && !errorMessage && filteredEscalations.length > 0 && viewMode === 'list'" 
+       class="card card-custom">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Applicant</th>
+            <th>Loan Type</th>
+            <th>Amount</th>
+            <th>Risk Level</th>
+            <th>Risk Score</th>
+            <th>Status</th>
+            <th>Escalated At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let escalation of filteredEscalations" class="escalation-row">
+            <td>
+              <span class="priority-badge" 
+                    [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
+                {{ getPriorityLevel(escalation) }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ escalation.applicantName }}</div>
+              <small class="text-muted">ID: {{ escalation.applicantId }}</small>
+            </td>
+            <td>{{ escalation.loanType }}</td>
+            <td class="fw-semibold text-danger">{{ formatCurrency(escalation.loanAmount) }}</td>
+            <td>
+              <span [class]="getRiskBadgeClass(escalation.riskLevel)">
+                {{ escalation.riskLevel }}
+              </span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">{{ escalation.riskScore }}</span>
+                <div class="progress flex-grow-1" style="height: 6px; min-width: 60px;">
+                  <div class="progress-bar" 
+                       [class.bg-success]="escalation.riskLevel === 'LOW'"
+                       [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
+                       [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
+                       [style.width.%]="escalation.riskScore"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span [class]="getStatusBadgeClass(escalation.status)">
+                {{ escalation.status }}
+              </span>
+            </td>
+            <td>
+              <small>{{ formatDate(escalation.assignedAt) }}</small>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-danger" 
+                      [routerLink]="['/compliance-officer/review', escalation.assignmentId]">
+                <i class="fas fa-gavel me-1"></i>
+                Review
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

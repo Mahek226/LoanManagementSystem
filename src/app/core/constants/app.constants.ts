@@ -27,7 +27,7 @@ export const APP_CONSTANTS = {
     RESET_PASSWORD: '/auth/reset-password',
     ADMIN_DASHBOARD: '/admin/dashboard',
     LOAN_OFFICER_DASHBOARD: '/loan-officer/dashboard',
-    COMPLIANCE_DASHBOARD: '/compliance/dashboard',
+    COMPLIANCE_DASHBOARD: '/compliance-officer/dashboard',
     APPLICANT_DASHBOARD: '/applicant/dashboard'
   },
   

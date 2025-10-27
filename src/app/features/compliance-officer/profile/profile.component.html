@@ -1,0 +1,219 @@
+<div class="profile-container">
+  <h2 class="mb-4">
+    <i class="fas fa-user-shield me-2 text-danger"></i>
+    Compliance Officer Profile
+  </h2>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ successMessage }}
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <div class="row g-4">
+    <!-- Profile Summary Card -->
+    <div class="col-md-4">
+      <div class="card card-custom profile-card">
+        <div class="card-body text-center">
+          <div class="profile-avatar mb-3">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <h4 class="mb-1">{{ officer?.firstName }} {{ officer?.lastName }}</h4>
+          <p class="text-muted mb-3">Compliance Officer</p>
+          
+          <div class="profile-stats">
+            <div class="stat-item">
+              <div class="stat-value">{{ getOfficerId() }}</div>
+              <div class="stat-label">Officer ID</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ getMemberSince() }}</div>
+              <div class="stat-label">Member Since</div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <span class="badge bg-success mb-2">
+              <i class="fas fa-check-circle me-1"></i>
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Card -->
+      <div class="card card-custom mt-4">
+        <div class="card-body">
+          <h6 class="card-title mb-3">
+            <i class="fas fa-bolt me-2 text-danger"></i>
+            Quick Actions
+          </h6>
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-key me-2"></i>
+              Change Password
+            </button>
+            <button class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-shield-alt me-2"></i>
+              Security Settings
+            </button>
+            <button class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-bell me-2"></i>
+              Notification Preferences
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Details Card -->
+    <div class="col-md-8">
+      <div class="card card-custom">
+        <div class="card-header bg-transparent border-0 pt-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <h5 class="mb-0">
+              <i class="fas fa-info-circle me-2 text-danger"></i>
+              Personal Information
+            </h5>
+            <button class="btn btn-sm" 
+                    [class.btn-danger]="!editMode"
+                    [class.btn-secondary]="editMode"
+                    (click)="toggleEditMode()">
+              <i class="fas" [class.fa-edit]="!editMode" [class.fa-times]="editMode" class="me-2"></i>
+              {{ editMode ? 'Cancel' : 'Edit Profile' }}
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <form>
+            <div class="row g-3">
+              <!-- First Name -->
+              <div class="col-md-6">
+                <label class="form-label">First Name</label>
+                <input type="text" 
+                       class="form-control"
+                       [(ngModel)]="profileData.firstName"
+                       name="firstName"
+                       [readonly]="!editMode"
+                       [class.form-control-plaintext]="!editMode">
+              </div>
+
+              <!-- Last Name -->
+              <div class="col-md-6">
+                <label class="form-label">Last Name</label>
+                <input type="text" 
+                       class="form-control"
+                       [(ngModel)]="profileData.lastName"
+                       name="lastName"
+                       [readonly]="!editMode"
+                       [class.form-control-plaintext]="!editMode">
+              </div>
+
+              <!-- Email -->
+              <div class="col-md-6">
+                <label class="form-label">Email Address</label>
+                <input type="email" 
+                       class="form-control"
+                       [(ngModel)]="profileData.email"
+                       name="email"
+                       readonly
+                       class="form-control-plaintext">
+                <small class="text-muted">Email cannot be changed</small>
+              </div>
+
+              <!-- Username -->
+              <div class="col-md-6">
+                <label class="form-label">Username</label>
+                <input type="text" 
+                       class="form-control"
+                       [(ngModel)]="profileData.username"
+                       name="username"
+                       readonly
+                       class="form-control-plaintext">
+                <small class="text-muted">Username cannot be changed</small>
+              </div>
+
+              <!-- Role -->
+              <div class="col-md-6">
+                <label class="form-label">Role</label>
+                <input type="text" 
+                       class="form-control-plaintext"
+                       value="Compliance Officer"
+                       readonly>
+              </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="mt-4" *ngIf="editMode">
+              <button type="button" 
+                      class="btn btn-danger"
+                      (click)="saveProfile()"
+                      [disabled]="loading">
+                <span *ngIf="!loading">
+                  <i class="fas fa-save me-2"></i>
+                  Save Changes
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Saving...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Account Security Card -->
+      <div class="card card-custom mt-4">
+        <div class="card-body">
+          <h5 class="card-title mb-4">
+            <i class="fas fa-lock me-2 text-danger"></i>
+            Account Security
+          </h5>
+          <div class="security-item">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="mb-1">Password</h6>
+                <small class="text-muted">Last changed 30 days ago</small>
+              </div>
+              <button class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-key me-2"></i>
+                Change
+              </button>
+            </div>
+          </div>
+          <div class="security-item">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="mb-1">Two-Factor Authentication</h6>
+                <small class="text-muted">Add an extra layer of security</small>
+              </div>
+              <button class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-shield-alt me-2"></i>
+                Enable
+              </button>
+            </div>
+          </div>
+          <div class="security-item mb-0">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="mb-1">Active Sessions</h6>
+                <small class="text-muted">Manage your active sessions</small>
+              </div>
+              <button class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-desktop me-2"></i>
+                View
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
