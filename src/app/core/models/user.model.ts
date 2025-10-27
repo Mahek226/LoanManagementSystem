@@ -1,5 +1,8 @@
 export interface User {
   id: number;
+  userId?: number; // For compatibility
+  applicantId?: number; // For applicant users
+  officerId?: number; // For loan officer users
   username?: string;
   email: string;
   firstName?: string;
@@ -14,6 +17,8 @@ export interface LoginRequest {
 
 export interface CommonLoginResponse {
   userId: number;
+  applicantId?: number; // For applicant users
+  officerId?: number; // For loan officer users
   username?: string;
   firstName?: string;
   lastName?: string;

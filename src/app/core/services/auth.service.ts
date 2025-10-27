@@ -185,6 +185,9 @@ export class AuthService {
     // Create user object
     const user: User = {
       id: response.userId,
+      userId: response.userId,
+      applicantId: response.applicantId,
+      officerId: response.officerId,
       username: response.username,
       firstName: response.firstName,
       lastName: response.lastName,

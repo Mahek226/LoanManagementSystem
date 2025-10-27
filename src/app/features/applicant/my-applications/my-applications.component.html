@@ -1,0 +1,184 @@
+<div class="min-h-screen" style="background-color: var(--bg-secondary);">
+  <div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+      <div>
+        <button class="btn btn-outline-secondary btn-sm mb-2" (click)="goBack()">
+          <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </button>
+        <h2 class="h4 fw-bold mb-1" style="color: var(--text-primary);">
+          <i class="fas fa-list-alt me-2"></i>My Loan Applications
+        </h2>
+        <p class="mb-0" style="color: var(--text-secondary);">View and track all your loan applications</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" (click)="exportToCsv()">
+          <i class="fas fa-download me-1"></i>Export CSV
+        </button>
+        <button class="btn btn-primary" (click)="applyForNew()">
+          <i class="fas fa-plus me-1"></i>New Application
+        </button>
+      </div>
+    </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6">
+            <div class="position-relative">
+              <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3" style="color: var(--text-muted);"></i>
+              <input type="text" class="form-control ps-5" [(ngModel)]="searchQuery"
+                     (input)="applyFilters()" placeholder="Search by loan ID, type, or status..."
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            </div>
+          </div>
+          <div class="col-lg-3">
+            <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilters()"
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+              <option value="">All Status</option>
+              <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+            </select>
+          </div>
+          <div class="col-lg-3">
+            <select class="form-select" [(ngModel)]="selectedType" (change)="applyFilters()"
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+              <option value="">All Types</option>
+              <option *ngFor="let type of loanTypes" [value]="type">{{ type }}</option>
+            </select>
+          </div>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.9rem;">
+          Showing {{ filteredApplications.length }} of {{ applications.length }} applications
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3" style="color: var(--text-secondary);">Loading applications...</p>
+    </div>
+
+    <!-- Applications Grid -->
+    <div *ngIf="!loading" class="row g-4">
+      <div *ngIf="filteredApplications.length === 0" class="col-12">
+        <div class="card border-0 shadow-sm text-center py-5" style="background-color: var(--bg-primary);">
+          <i class="fas fa-inbox fa-4x mb-3" style="color: var(--text-muted);"></i>
+          <h4 style="color: var(--text-secondary);">No applications found</h4>
+          <p class="mb-4" style="color: var(--text-secondary);">Start your loan application journey today!</p>
+          <button class="btn btn-primary" (click)="applyForNew()">
+            <i class="fas fa-plus me-1"></i>Apply for Loan
+          </button>
+        </div>
+      </div>
+
+      <div *ngFor="let app of filteredApplications" class="col-xl-6 col-lg-6 col-md-12">
+        <div class="card border-0 shadow-sm h-100 application-card" style="background-color: var(--bg-primary);">
+          <div class="card-header border-0 d-flex justify-content-between align-items-start" style="background-color: var(--bg-primary);">
+            <div>
+              <h5 class="mb-1" style="color: var(--text-primary);">{{ app.loanType }}</h5>
+              <span style="color: var(--text-muted); font-size: 0.875rem;">Loan ID: #{{ app.loanId }}</span>
+            </div>
+            <span class="badge bg-{{ getStatusColor(app.loanStatus) }}">
+              {{ app.loanStatus }}
+            </span>
+          </div>
+
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="d-flex gap-2 align-items-start">
+                  <i class="fas fa-rupee-sign text-primary fs-5 mt-1"></i>
+                  <div>
+                    <small class="text-muted d-block">Loan Amount</small>
+                    <strong class="d-block" style="color: var(--text-primary);">{{ formatCurrency(app.loanAmount) }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex gap-2 align-items-start">
+                  <i class="fas fa-calendar-alt text-primary fs-5 mt-1"></i>
+                  <div>
+                    <small class="text-muted d-block">Tenure</small>
+                    <strong class="d-block" style="color: var(--text-primary);">{{ app.loanTenure }} months</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex gap-2 align-items-start">
+                  <i class="fas fa-percentage text-primary fs-5 mt-1"></i>
+                  <div>
+                    <small class="text-muted d-block">Interest Rate</small>
+                    <strong class="d-block" style="color: var(--text-primary);">{{ app.interestRate }}% p.a.</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-flex gap-2 align-items-start">
+                  <i class="fas fa-shield-alt text-primary fs-5 mt-1"></i>
+                  <div>
+                    <small class="text-muted d-block">Risk Status</small>
+                    <span class="badge bg-{{ getFraudStatusColor(app.fraudStatus) }} d-block mt-1">
+                      {{ app.fraudStatus }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mt-3 p-3 rounded" style="background-color: var(--bg-tertiary);">
+              <div class="d-flex justify-content-between mb-2">
+                <small class="text-muted">Application Progress</small>
+                <small class="text-muted">{{ getProgressPercentage(app.loanStatus) }}%</small>
+              </div>
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-primary" role="progressbar" 
+                     [style.width.%]="getProgressPercentage(app.loanStatus)">
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-2 mt-3">
+              <div class="col-6">
+                <small class="text-muted">
+                  <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}
+                </small>
+              </div>
+              <div class="col-6 text-end">
+                <small class="text-muted">
+                  <i class="fas fa-clock me-1"></i>Updated: {{ formatDate(app.lastUpdated) }}
+                </small>
+              </div>
+            </div>
+
+            <div *ngIf="app.assignedOfficerName" class="mt-3 p-2 rounded d-flex align-items-center gap-2"
+                 style="background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6;">
+              <i class="fas fa-user-tie text-primary"></i>
+              <span style="color: var(--text-primary); font-size: 0.875rem;">
+                Assigned to: <strong>{{ app.assignedOfficerName }}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="card-footer d-flex gap-2" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+            <button class="btn btn-primary flex-fill" (click)="viewDetails(app.loanId)">
+              <i class="fas fa-eye me-1"></i>View Details
+            </button>
+            <button class="btn btn-outline-secondary flex-fill">
+              <i class="fas fa-file-pdf me-1"></i>Download
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

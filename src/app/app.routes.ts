@@ -67,10 +67,23 @@ export const routes: Routes = [
     path: 'loan-officer',
     canActivate: [authGuard, roleGuard],
     data: { roles: [APP_CONSTANTS.ROLES.LOAN_OFFICER] },
+    loadComponent: () => import('./features/loan-officer/loan-officer-layout/loan-officer-layout.component').then(m => m.LoanOfficerLayoutComponent),
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/loan-officer/dashboard/loan-officer-dashboard.component').then(m => m.LoanOfficerDashboardComponent)
+        loadComponent: () => import('./features/loan-officer/dashboard/dashboard.component').then(m => m.LoDashboardComponent)
+      },
+      {
+        path: 'assigned-loans',
+        loadComponent: () => import('./features/loan-officer/assigned-loans/assigned-loans.component').then(m => m.AssignedLoansComponent)
+      },
+      {
+        path: 'review/:id',
+        loadComponent: () => import('./features/loan-officer/loan-review/loan-review.component').then(m => m.LoanReviewComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/loan-officer/profile/lo-profile.component').then(m => m.LoProfileComponent)
       },
       {
         path: '',
@@ -103,10 +116,19 @@ export const routes: Routes = [
     path: 'applicant',
     canActivate: [authGuard, roleGuard],
     data: { roles: [APP_CONSTANTS.ROLES.APPLICANT] },
+    loadComponent: () => import('./features/applicant/applicant-layout/applicant-layout.component').then(m => m.ApplicantLayoutComponent),
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/applicant/dashboard/applicant-dashboard.component').then(m => m.ApplicantDashboardComponent)
+        loadComponent: () => import('./features/applicant/dashboard/enhanced-dashboard/enhanced-dashboard.component').then(m => m.EnhancedDashboardComponent)
+      },
+      {
+        path: 'applications',
+        loadComponent: () => import('./features/applicant/my-applications/my-applications.component').then(m => m.MyApplicationsComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/applicant/profile/profile.component').then(m => m.ProfileComponent)
       },
       {
         path: 'apply-loan',

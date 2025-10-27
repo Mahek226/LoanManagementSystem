@@ -1,0 +1,83 @@
+<div class="loan-officer-layout min-h-screen" style="background-color: var(--bg-secondary);">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 border-b" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+    <div class="container-fluid px-4 py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <img src="assets/images/logo.jpeg" alt="Logo" 
+               class="w-10 h-10 rounded-lg object-cover shadow-sm" 
+               (error)="onImageError()"
+               [style.display]="showFallbackLogo ? 'none' : 'block'">
+          
+          <div class="w-10 h-10 bg-blue-100 rounded-lg d-flex align-items-center justify-content-center" 
+               *ngIf="showFallbackLogo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
+          
+          <div>
+            <h1 class="h5 fw-bold mb-0" style="color: var(--text-primary);">Loan Officer Portal</h1>
+            <p class="small mb-0" style="color: var(--text-secondary);">Loan Management System</p>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <!-- User Profile -->
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
+                    type="button" 
+                    data-bs-toggle="dropdown">
+              <i class="fas fa-user-tie"></i>
+              {{ officerName }}
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" (click)="setActiveTab('profile')"><i class="fas fa-user me-2"></i> Profile</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="border-b" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+    <div class="container-fluid px-4">
+      <ul class="nav nav-tabs border-0">
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'dashboard'"
+                  (click)="setActiveTab('dashboard')">
+            <i class="fas fa-chart-line me-2"></i>
+            Dashboard
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'assigned-loans'"
+                  (click)="setActiveTab('assigned-loans')">
+            <i class="fas fa-tasks me-2"></i>
+            Assigned Loans
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'profile'"
+                  (click)="setActiveTab('profile')">
+            <i class="fas fa-user-circle me-2"></i>
+            Profile
+          </button>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+    <router-outlet></router-outlet>
+  </main>
+</div>

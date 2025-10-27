@@ -1,0 +1,191 @@
+<!-- Assigned Loans Content -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted">Loading assigned loans...</p>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="container-fluid py-4">
+  <div class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" *ngIf="!loading">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 animate-fade-in">
+    <div>
+      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+        <i class="fas fa-tasks me-2 text-primary"></i>Assigned Loans
+      </h2>
+      <p class="text-muted mb-0">Review and process your assigned loan applications</p>
+    </div>
+    <button class="btn btn-success" (click)="exportToCSV()" *ngIf="filteredLoans.length > 0">
+      <i class="fas fa-download me-2"></i>Export to CSV
+    </button>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.1s; background-color: var(--bg-primary);">
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold text-muted">Search</label>
+          <input type="text" 
+                 class="form-control" 
+                 placeholder="Search by name, ID..." 
+                 [(ngModel)]="searchQuery"
+                 (ngModelChange)="applyFilters()"
+                 style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold text-muted">Status</label>
+          <select class="form-select" 
+                  [(ngModel)]="statusFilter"
+                  (ngModelChange)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Status</option>
+            <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+
+        <!-- Risk Filter -->
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold text-muted">Risk Level</label>
+          <select class="form-select" 
+                  [(ngModel)]="riskFilter"
+                  (ngModelChange)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Risks</option>
+            <option *ngFor="let risk of riskOptions" [value]="risk">{{ risk }}</option>
+          </select>
+        </div>
+
+        <!-- Loan Type Filter -->
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold text-muted">Loan Type</label>
+          <select class="form-select" 
+                  [(ngModel)]="loanTypeFilter"
+                  (ngModelChange)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Types</option>
+            <option *ngFor="let type of loanTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+
+        <!-- Clear Filters -->
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-outline-secondary w-100" (click)="clearFilters()">
+            <i class="fas fa-times me-2"></i>Clear
+          </button>
+        </div>
+      </div>
+      
+      <div class="mt-3 text-muted small">
+        Showing <strong>{{ filteredLoans.length }}</strong> of <strong>{{ loans.length }}</strong> loans
+      </div>
+    </div>
+  </div>
+
+  <!-- Loans Grid -->
+  <div class="row g-4">
+    <div class="col-lg-6" *ngFor="let loan of filteredLoans; let i = index">
+      <div class="loan-card card border-0 shadow-sm h-100 animate-slide-up" 
+           [style.animation-delay.s]="(i * 0.1) + 0.2"
+           style="background-color: var(--bg-primary);">
+        <div class="card-body">
+          <!-- Header -->
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center">
+                <i class="fas fa-user-circle text-primary fs-3"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-1" style="color: var(--text-primary);">{{ loan.applicantName }}</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-info small">{{ loan.loanType }}</span>
+                  <span class="badge bg-{{ getRiskColor(loan.riskLevel) }} small">{{ loan.riskLevel }} Risk</span>
+                </div>
+              </div>
+            </div>
+            <span class="badge bg-{{ getStatusColor(loan.status) }}">{{ loan.status }}</span>
+          </div>
+
+          <!-- Details -->
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <div class="detail-item">
+                <small class="text-muted d-block">Loan ID</small>
+                <strong style="color: var(--text-primary);">#{{ loan.loanId }}</strong>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="detail-item">
+                <small class="text-muted d-block">Applicant ID</small>
+                <strong style="color: var(--text-primary);">#{{ loan.applicantId }}</strong>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="detail-item">
+                <small class="text-muted d-block">Loan Amount</small>
+                <strong class="text-success">{{ formatCurrency(loan.loanAmount) }}</strong>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="detail-item">
+                <small class="text-muted d-block">Risk Score</small>
+                <strong [class]="'text-' + getRiskColor(loan.riskLevel)">{{ loan.riskScore }}/100</strong>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="detail-item">
+                <small class="text-muted d-block">Assigned Date</small>
+                <strong style="color: var(--text-primary);">{{ formatDate(loan.assignedAt) }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary flex-grow-1" (click)="reviewLoan(loan.assignmentId)">
+              <i class="fas fa-search me-2"></i>Review Application
+            </button>
+            <button class="btn btn-outline-secondary" 
+                    *ngIf="loan.canApproveReject"
+                    title="Quick Actions">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </div>
+
+          <!-- High Risk Warning -->
+          <div class="alert alert-warning mt-3 mb-0 small" *ngIf="loan.riskLevel === 'HIGH'">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>High Risk Alert:</strong> This application requires careful review
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="text-center py-5" *ngIf="filteredLoans.length === 0">
+    <div class="empty-state">
+      <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
+      <h4 class="mt-3 text-muted">No Loans Found</h4>
+      <p class="text-muted">Try adjusting your filters to see more results</p>
+      <button class="btn btn-primary mt-2" (click)="clearFilters()" *ngIf="searchQuery || statusFilter || riskFilter || loanTypeFilter">
+        <i class="fas fa-refresh me-2"></i>Clear All Filters
+      </button>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,215 @@
+<!-- Profile Content -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted">Loading profile...</p>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="container-fluid py-4">
+  <div class="alert alert-danger">
+    <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+  </div>
+</div>
+
+<!-- Success State -->
+<div *ngIf="success" class="container-fluid py-4">
+  <div class="alert alert-success">
+    <i class="fas fa-check-circle me-2"></i>{{ success }}
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" *ngIf="!loading && profile">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+      <button class="btn btn-outline-secondary btn-sm mb-2" (click)="goBack()">
+        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+      </button>
+      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+        <i class="fas fa-user-circle me-2 text-primary"></i>My Profile
+      </h2>
+      <p class="mb-0" style="color: var(--text-secondary);">View and manage your personal information</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button *ngIf="!editMode" class="btn btn-primary" (click)="toggleEditMode()">
+        <i class="fas fa-edit me-1"></i>Edit Profile
+      </button>
+      <button *ngIf="editMode" class="btn btn-success" (click)="saveProfile()">
+        <i class="fas fa-save me-1"></i>Save Changes
+      </button>
+      <button *ngIf="editMode" class="btn btn-secondary" (click)="toggleEditMode()">
+        <i class="fas fa-times me-1"></i>Cancel
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    
+    <!-- Left Column - Profile Summary -->
+    <div class="col-xl-4">
+      
+      <!-- Profile Card -->
+      <div class="card border-0 shadow-sm text-center animate-fade-in" style="background-color: var(--bg-primary);">
+        <div class="card-body p-4">
+          <div class="profile-avatar">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <h4 class="fw-bold mb-1" style="color: var(--text-primary);">
+            {{ profile.firstName }} {{ profile.lastName }}
+          </h4>
+          <p class="text-muted mb-3">{{ '@' + profile.username }}</p>
+          
+          <!-- Officer Badge -->
+          <div class="d-flex justify-content-center">
+            <span class="badge bg-primary fs-6">
+              <i class="fas fa-shield-alt me-1"></i>Loan Officer
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Info Card -->
+      <div class="card border-0 shadow-sm mt-3 animate-fade-in" style="animation-delay: 0.1s; background-color: var(--bg-primary);">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-info-circle me-2"></i>Quick Info
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="info-row">
+            <span class="fw-semibold text-muted">Officer ID</span>
+            <span class="fw-semibold" style="color: var(--text-primary);">#{{ profile.officerId }}</span>
+          </div>
+          <div class="info-row">
+            <span class="fw-semibold text-muted">Specialization</span>
+            <span class="fw-semibold" style="color: var(--text-primary);">{{ profile.loanType }}</span>
+          </div>
+          <div class="info-row">
+            <span class="fw-semibold text-muted">Member Since</span>
+            <span class="fw-semibold" style="color: var(--text-primary);">{{ formatDate(profile.createdAt) }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column - Profile Details -->
+    <div class="col-xl-8">
+      
+      <!-- Personal Information Card -->
+      <div class="card border-0 shadow-sm animate-fade-in" style="animation-delay: 0.2s; background-color: var(--bg-primary);">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-user-edit me-2"></i>Personal Information
+          </h5>
+        </div>
+        
+        <!-- View Mode -->
+        <div *ngIf="!editMode" class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div class="info-item">
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-user me-2 text-primary"></i>First Name
+                </label>
+                <div class="detail-value">{{ profile.firstName || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-item">
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-user me-2 text-primary"></i>Last Name
+                </label>
+                <div class="detail-value">{{ profile.lastName || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-item">
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-at me-2 text-primary"></i>Username
+                </label>
+                <div class="detail-value">{{ profile.username }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-item">
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-envelope me-2 text-primary"></i>Email
+                </label>
+                <div class="detail-value">{{ profile.email }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <form *ngIf="editMode" class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-user me-2 text-primary"></i>First Name
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.firstName"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="firstName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-user me-2 text-primary"></i>Last Name
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.lastName"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="lastName">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-envelope me-2 text-primary"></i>Email
+              </label>
+              <input type="email" class="form-control" [(ngModel)]="editForm.email"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="email" disabled>
+              <small class="text-muted">Email cannot be changed</small>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Account Security Card -->
+      <div class="card border-0 shadow-sm mt-3 animate-fade-in" style="animation-delay: 0.3s; background-color: var(--bg-primary);">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-shield-alt me-2"></i>Account Security
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: var(--bg-secondary);">
+            <div>
+              <h6 class="mb-1">Password</h6>
+              <p class="text-muted mb-0 small">Last changed: Never</p>
+            </div>
+            <button class="btn btn-outline-secondary">
+              <i class="fas fa-key me-1"></i>Change Password
+            </button>
+          </div>
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-secondary);">
+            <div>
+              <h6 class="mb-1">Two-Factor Authentication</h6>
+              <p class="text-muted mb-0 small">Add extra security to your account</p>
+            </div>
+            <button class="btn btn-outline-secondary">
+              <i class="fas fa-lock me-1"></i>Enable 2FA
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
