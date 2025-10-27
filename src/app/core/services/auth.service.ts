@@ -56,9 +56,15 @@ export class AuthService {
    * Login user (Common endpoint for all user types)
    */
   login(credentials: LoginRequest): Observable<CommonLoginResponse> {
+    // Backend expects { username, password } while our form provides { usernameOrEmail, password }
+    const payload = {
+      username: credentials.usernameOrEmail,
+      password: credentials.password
+    };
+
     return this.http.post<CommonLoginResponse>(
       `${this.API_URL}${APP_CONSTANTS.API_ENDPOINTS.AUTH.LOGIN}`,
-      credentials
+      payload
     ).pipe(
       tap(response => this.handleAuthSuccess(response))
     );
