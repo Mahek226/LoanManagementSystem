@@ -433,7 +433,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
                                                          ApplicantLoanDetails loan, 
                                                          LoanScreeningDecision decision) {
         // Check if officer can approve based on risk score
-        if (loan.getRiskScore() >= riskScoreThreshold && !decision.getRequiresManagerApproval()) {
+        if (loan.getRiskScore() >= riskScoreThreshold && 
+            (decision.getRequiresManagerApproval() == null || !decision.getRequiresManagerApproval())) {
             throw new RuntimeException("Cannot approve high-risk loan without manager approval. Please escalate to compliance.");
         }
         

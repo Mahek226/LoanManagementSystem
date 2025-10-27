@@ -26,6 +26,7 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     private final ComplianceOfficerRepository complianceOfficerRepository;
     private final DocumentResubmissionRepository documentResubmissionRepository;
     private final ApplicantRepository applicantRepository;
+    private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final ObjectMapper objectMapper;
     
     @Override
@@ -105,6 +106,21 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         applicant.setApprovalStatus("APPROVED");
         applicant.setIsApproved(true);
         
+        // Update loan details status
+        if (applicant.getLoanDetails() != null && !applicant.getLoanDetails().isEmpty()) {
+            ApplicantLoanDetails loanDetails = applicant.getLoanDetails().get(0);
+            loanDetails.setStatus("APPROVED");
+            loanDetails.setReviewedAt(LocalDateTime.now());
+            // Update risk score if audit score is available
+            if (applicant.getAuditScores() != null && !applicant.getAuditScores().isEmpty()) {
+                AuditScore auditScore = applicant.getAuditScores().get(0);
+                if (auditScore.getCalculatedScore() != null) {
+                    loanDetails.setRiskScore(auditScore.getCalculatedScore());
+                }
+            }
+            loanDetailsRepository.save(loanDetails);
+        }
+        
         assignmentRepository.save(assignment);
         applicantRepository.save(applicant);
         
@@ -132,6 +148,21 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         Applicant applicant = assignment.getApplicant();
         applicant.setApprovalStatus("REJECTED");
         applicant.setIsApproved(false);
+        
+        // Update loan details status
+        if (applicant.getLoanDetails() != null && !applicant.getLoanDetails().isEmpty()) {
+            ApplicantLoanDetails loanDetails = applicant.getLoanDetails().get(0);
+            loanDetails.setStatus("REJECTED");
+            loanDetails.setReviewedAt(LocalDateTime.now());
+            // Update risk score if audit score is available
+            if (applicant.getAuditScores() != null && !applicant.getAuditScores().isEmpty()) {
+                AuditScore auditScore = applicant.getAuditScores().get(0);
+                if (auditScore.getCalculatedScore() != null) {
+                    loanDetails.setRiskScore(auditScore.getCalculatedScore());
+                }
+            }
+            loanDetailsRepository.save(loanDetails);
+        }
         
         assignmentRepository.save(assignment);
         applicantRepository.save(applicant);
