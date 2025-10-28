@@ -195,6 +195,46 @@
       </div>
     </div>
 
+    <!-- Additional Information Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-history fa-2x text-danger mb-3"></i>
+            <h6 class="fw-bold">Fraud History</h6>
+            <p class="text-muted small mb-3">{{ fraudHistory.length }} record(s)</p>
+            <button class="btn btn-sm btn-outline-danger" (click)="openFraudHistoryModal()">
+              <i class="fas fa-eye me-1"></i>View History
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-file-alt fa-2x text-primary mb-3"></i>
+            <h6 class="fw-bold">Documents</h6>
+            <p class="text-muted small mb-3">{{ documents.length }} document(s)</p>
+            <button class="btn btn-sm btn-outline-primary" (click)="openDocumentsModal()">
+              <i class="fas fa-eye me-1"></i>View Documents
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-plus-circle fa-2x text-warning mb-3"></i>
+            <h6 class="fw-bold">Request Documents</h6>
+            <p class="text-muted small mb-3">Additional verification</p>
+            <button class="btn btn-sm btn-outline-warning" (click)="openRequestDocumentsModal()">
+              <i class="fas fa-paper-plane me-1"></i>Request Docs
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Action Buttons -->
     <div class="card card-custom action-card">
       <div class="card-body">
@@ -345,6 +385,176 @@
             <span class="spinner-border spinner-border-sm me-2"></span>
             Processing...
           </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fraud History Modal -->
+<div class="modal fade" id="fraudHistoryModal" tabindex="-1" *ngIf="showFraudHistoryModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-history me-2"></i>
+          Fraud History - {{ escalation?.applicantName }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeFraudHistoryModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="fraudHistory.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+          <p>No fraud history found for this applicant</p>
+        </div>
+        <div *ngFor="let record of fraudHistory" class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h6 class="fw-bold mb-1">{{ record.fraudType }}</h6>
+                <small class="text-muted">Record ID: {{ record.recordId }}</small>
+              </div>
+              <span [class]="getFraudStatusClass(record.status)">{{ record.status }}</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <small class="text-muted d-block">Risk Level</small>
+                <span [class]="getRiskBadgeClass(record.riskLevel)">{{ record.riskLevel }}</span>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Risk Score</small>
+                <strong>{{ record.riskScore }}/100</strong>
+              </div>
+              <div class="col-12" *ngIf="record.fraudTags && record.fraudTags.length > 0">
+                <small class="text-muted d-block mb-2">Fraud Tags</small>
+                <div class="d-flex flex-wrap gap-2">
+                  <span *ngFor="let tag of record.fraudTags" class="badge bg-danger">{{ tag }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Detected At</small>
+                <strong>{{ formatDate(record.detectedAt) }}</strong>
+              </div>
+              <div class="col-md-6" *ngIf="record.resolvedAt">
+                <small class="text-muted d-block">Resolved At</small>
+                <strong>{{ formatDate(record.resolvedAt) }}</strong>
+              </div>
+              <div class="col-12" *ngIf="record.remarks">
+                <small class="text-muted d-block">Remarks</small>
+                <p class="mb-0">{{ record.remarks }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFraudHistoryModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Documents Modal -->
+<div class="modal fade" id="documentsModal" tabindex="-1" *ngIf="showDocumentsModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-file-alt me-2"></i>
+          Loan Documents
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentsModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="documents.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-folder-open fa-3x mb-3"></i>
+          <p>No documents available</p>
+        </div>
+        <div *ngFor="let doc of documents" class="card mb-3">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-7">
+                <h6 class="fw-semibold mb-1">
+                  <i class="fas fa-file-pdf text-danger me-2"></i>{{ formatDocumentType(doc.documentType) }}
+                </h6>
+                <small class="text-muted d-block">{{ doc.documentName }}</small>
+                <div class="mt-2">
+                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                  <small class="text-muted ms-2">Uploaded: {{ formatDate(doc.uploadedAt) }}</small>
+                </div>
+              </div>
+              <div class="col-md-5 text-end">
+                <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye me-1"></i>View Document
+                </a>
+              </div>
+            </div>
+            <div class="mt-3" *ngIf="doc.remarks">
+              <small class="text-muted d-block">Verification Remarks</small>
+              <p class="mb-0">{{ doc.remarks }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request Additional Documents Modal -->
+<div class="modal fade" id="requestDocumentsModal" tabindex="-1" *ngIf="showRequestDocumentsModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-plus-circle me-2"></i>
+          Request Additional Documents
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRequestDocumentsModal()" [disabled]="processing"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Select documents that need to be submitted by the applicant:</p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Document Types <span class="text-danger">*</span></label>
+          <div class="row g-2">
+            <div *ngFor="let docType of availableDocumentTypes" class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" 
+                       [id]="'req-doc-' + docType"
+                       [checked]="selectedDocumentTypes.includes(docType)"
+                       (change)="toggleDocumentType(docType)">
+                <label class="form-check-label" [for]="'req-doc-' + docType">
+                  {{ formatDocumentType(docType) }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Reason for Request <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="4" 
+                    [(ngModel)]="documentRequestReason"
+                    placeholder="Explain why these additional documents are needed for compliance review..."></textarea>
+        </div>
+
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          The request will be routed through the Loan Officer, who will contact the applicant.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeRequestDocumentsModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="requestAdditionalDocuments()" 
+                [disabled]="processing || selectedDocumentTypes.length === 0 || !documentRequestReason.trim()">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          {{ processing ? 'Sending...' : 'Send Request' }}
         </button>
       </div>
     </div>

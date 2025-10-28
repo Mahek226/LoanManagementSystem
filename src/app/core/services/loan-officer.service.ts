@@ -40,6 +40,53 @@ export interface DashboardStats {
   lowRiskCount: number;
 }
 
+export interface LoanDocument {
+  documentId: number;
+  documentType: string;
+  documentName: string;
+  documentUrl: string;
+  uploadedAt: string;
+  verificationStatus: string; // PENDING, VERIFIED, REJECTED
+  verifiedBy?: string;
+  verifiedAt?: string;
+  remarks?: string;
+}
+
+export interface FraudCheckResult {
+  checkId: number;
+  loanId: number;
+  applicantId: number;
+  panNumber?: string;
+  aadhaarNumber?: string;
+  phoneNumber?: string;
+  email?: string;
+  fraudTags: string[];
+  riskLevel: string;
+  riskScore: number;
+  apiRemarks?: string;
+  checkedAt: string;
+  externalApiResponse?: any;
+}
+
+export interface DocumentVerificationRequest {
+  documentId: number;
+  verificationStatus: string; // VERIFIED, REJECTED
+  remarks?: string;
+}
+
+export interface DocumentResubmissionRequest {
+  loanId: number;
+  applicantId: number;
+  documentTypes: string[];
+  reason: string;
+  remarks?: string;
+}
+
+export interface FraudScreeningTriggerRequest {
+  loanId: number;
+  applicantId: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -74,6 +121,31 @@ export class LoanOfficerService {
       null,
       { params }
     );
+  }
+
+  // Get loan documents for verification
+  getLoanDocuments(loanId: number): Observable<LoanDocument[]> {
+    return this.http.get<LoanDocument[]>(`${this.apiUrl}/loan/${loanId}/documents`);
+  }
+
+  // Verify document
+  verifyDocument(officerId: number, request: DocumentVerificationRequest): Observable<LoanDocument> {
+    return this.http.post<LoanDocument>(`${this.apiUrl}/${officerId}/verify-document`, request);
+  }
+
+  // Request document resubmission
+  requestDocumentResubmission(officerId: number, request: DocumentResubmissionRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${officerId}/request-resubmission`, request);
+  }
+
+  // Trigger fraud screening
+  triggerFraudScreening(officerId: number, request: FraudScreeningTriggerRequest): Observable<FraudCheckResult> {
+    return this.http.post<FraudCheckResult>(`${this.apiUrl}/${officerId}/trigger-fraud-check`, request);
+  }
+
+  // Get fraud check results
+  getFraudCheckResults(loanId: number): Observable<FraudCheckResult> {
+    return this.http.get<FraudCheckResult>(`${this.apiUrl}/loan/${loanId}/fraud-check`);
   }
 
   // Calculate dashboard statistics

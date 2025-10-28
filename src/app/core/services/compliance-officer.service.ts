@@ -33,6 +33,28 @@ export interface ComplianceDecisionRequest {
   additionalChecks?: string[];
 }
 
+export interface AdditionalDocumentRequest {
+  loanId: number;
+  applicantId: number;
+  documentTypes: string[];
+  reason: string;
+  remarks?: string;
+}
+
+export interface FraudHistoryRecord {
+  recordId: number;
+  applicantId: number;
+  loanId?: number;
+  fraudType: string;
+  fraudTags: string[];
+  riskLevel: string;
+  riskScore: number;
+  detectedAt: string;
+  resolvedAt?: string;
+  status: string;
+  remarks?: string;
+}
+
 export interface ComplianceDecisionResponse {
   assignmentId: number;
   loanId: number;
@@ -86,6 +108,30 @@ export class ComplianceOfficerService {
       `${this.apiUrl}/${complianceOfficerId}/process-decision`,
       request
     );
+  }
+
+  /**
+   * Request additional documents from applicant
+   */
+  requestAdditionalDocuments(complianceOfficerId: number, request: AdditionalDocumentRequest): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${complianceOfficerId}/request-documents`,
+      request
+    );
+  }
+
+  /**
+   * Get fraud history for an applicant
+   */
+  getFraudHistory(applicantId: number): Observable<FraudHistoryRecord[]> {
+    return this.http.get<FraudHistoryRecord[]>(`${this.apiUrl}/applicant/${applicantId}/fraud-history`);
+  }
+
+  /**
+   * Get loan documents for review
+   */
+  getLoanDocuments(loanId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/loan/${loanId}/documents`);
   }
 
   // ==================== Utility Methods ====================

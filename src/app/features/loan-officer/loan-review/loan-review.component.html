@@ -125,6 +125,74 @@
         </div>
       </div>
 
+      <!-- Documents Section -->
+      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.4s; background-color: var(--bg-primary);">
+        <div class="card-header border-0 d-flex justify-content-between align-items-center" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-file-alt me-2 text-primary"></i>Documents ({{ documents.length }})
+          </h5>
+          <button class="btn btn-sm btn-outline-primary" (click)="openDocumentsModal()">
+            <i class="fas fa-eye me-1"></i>View All
+          </button>
+        </div>
+        <div class="card-body">
+          <div *ngIf="documents.length === 0" class="text-center text-muted py-3">
+            <i class="fas fa-folder-open fa-2x mb-2"></i>
+            <p>No documents uploaded yet</p>
+          </div>
+          <div *ngIf="documents.length > 0" class="row g-3">
+            <div *ngFor="let doc of documents.slice(0, 3)" class="col-md-4">
+              <div class="document-item p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <i class="fas fa-file-pdf text-danger me-2"></i>
+                    <small class="fw-semibold" style="color: var(--text-primary);">{{ formatDocumentType(doc.documentType) }}</small>
+                  </div>
+                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                </div>
+                <small class="text-muted d-block">{{ doc.documentName }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fraud Check Results -->
+      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);" *ngIf="fraudCheckResult">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-shield-alt me-2 text-danger"></i>Fraud Screening Results
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="text-muted small mb-1">Risk Level</label>
+              <h6 class="fw-semibold">
+                <span class="badge bg-{{ getRiskColor(fraudCheckResult.riskLevel) }}">{{ fraudCheckResult.riskLevel }}</span>
+              </h6>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small mb-1">Risk Score</label>
+              <h6 class="fw-semibold" style="color: var(--text-primary);">{{ fraudCheckResult.riskScore }}/100</h6>
+            </div>
+            <div class="col-12" *ngIf="fraudCheckResult.fraudTags && fraudCheckResult.fraudTags.length > 0">
+              <label class="text-muted small mb-2">Fraud Tags</label>
+              <div class="d-flex flex-wrap gap-2">
+                <span *ngFor="let tag of fraudCheckResult.fraudTags" class="badge bg-danger">{{ tag }}</span>
+              </div>
+            </div>
+            <div class="col-12" *ngIf="fraudCheckResult.apiRemarks">
+              <label class="text-muted small mb-1">API Remarks</label>
+              <p class="mb-0" style="color: var(--text-primary);">{{ fraudCheckResult.apiRemarks }}</p>
+            </div>
+            <div class="col-12">
+              <small class="text-muted">Checked at: {{ formatDate(fraudCheckResult.checkedAt) }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Right Column - Risk Assessment & Actions -->
@@ -174,10 +242,32 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);">
+      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);">
         <div class="card-header border-0" style="background-color: var(--bg-primary);">
           <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-tasks me-2 text-primary"></i>Actions
+            <i class="fas fa-tasks me-2 text-primary"></i>Screening Actions
+          </h5>
+        </div>
+        <div class="card-body d-grid gap-2">
+          <button class="btn btn-info btn-sm" 
+                  (click)="openFraudCheckModal()"
+                  [disabled]="fraudCheckTriggered || loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+            <i class="fas fa-shield-alt me-2"></i>{{ fraudCheckTriggered ? 'Fraud Check Completed' : 'Trigger Fraud Screening' }}
+          </button>
+          
+          <button class="btn btn-outline-warning btn-sm" 
+                  (click)="openResubmissionModal()"
+                  [disabled]="loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+            <i class="fas fa-redo me-2"></i>Request Document Resubmission
+          </button>
+        </div>
+      </div>
+
+      <!-- Decision Actions -->
+      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.6s; background-color: var(--bg-primary);">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-gavel me-2 text-primary"></i>Final Decision
           </h5>
         </div>
         <div class="card-body d-grid gap-3">
@@ -271,3 +361,156 @@
   </div>
 </div>
 <div class="modal-backdrop fade" [class.show]="showActionModal" *ngIf="showActionModal"></div>
+
+<!-- Documents Modal -->
+<div class="modal fade" [class.show]="showDocumentsModal" [style.display]="showDocumentsModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-file-alt me-2 text-primary"></i>Document Verification
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDocumentsModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="documents.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-folder-open fa-3x mb-3"></i>
+          <p>No documents available for verification</p>
+        </div>
+        <div *ngFor="let doc of documents" class="card mb-3" style="background-color: var(--bg-secondary);">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <h6 class="fw-semibold mb-1" style="color: var(--text-primary);">
+                  <i class="fas fa-file-pdf text-danger me-2"></i>{{ formatDocumentType(doc.documentType) }}
+                </h6>
+                <small class="text-muted">{{ doc.documentName }}</small>
+                <div class="mt-2">
+                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                  <small class="text-muted ms-2">Uploaded: {{ formatDate(doc.uploadedAt) }}</small>
+                </div>
+              </div>
+              <div class="col-md-6 text-end">
+                <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                  <i class="fas fa-eye me-1"></i>View
+                </a>
+                <button class="btn btn-sm btn-success me-2" 
+                        (click)="verifyDocument(doc, 'VERIFIED')"
+                        [disabled]="doc.verificationStatus === 'VERIFIED' || processing">
+                  <i class="fas fa-check me-1"></i>Verify
+                </button>
+                <button class="btn btn-sm btn-danger" 
+                        (click)="verifyDocument(doc, 'REJECTED')"
+                        [disabled]="doc.verificationStatus === 'REJECTED' || processing">
+                  <i class="fas fa-times me-1"></i>Reject
+                </button>
+              </div>
+            </div>
+            <div class="mt-3" *ngIf="doc.remarks">
+              <small class="text-muted">Remarks: {{ doc.remarks }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showDocumentsModal" *ngIf="showDocumentsModal"></div>
+
+<!-- Fraud Check Modal -->
+<div class="modal fade" [class.show]="showFraudCheckModal" [style.display]="showFraudCheckModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-shield-alt me-2 text-danger"></i>Trigger Fraud Screening
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFraudCheckModal()" [disabled]="fraudCheckLoading"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          This will send applicant identifiers (PAN, Aadhaar, phone, email) to the External Authority API for fraud screening.
+        </div>
+        <p style="color: var(--text-primary);">Are you sure you want to trigger fraud screening for this application?</p>
+        <ul class="text-muted small">
+          <li>Applicant: <strong>{{ loan?.applicantName }}</strong></li>
+          <li>Loan ID: <strong>#{{ loan?.loanId }}</strong></li>
+          <li>Loan Amount: <strong>{{ formatCurrency(loan?.loanAmount || 0) }}</strong></li>
+        </ul>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeFraudCheckModal()" [disabled]="fraudCheckLoading">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="triggerFraudCheck()" [disabled]="fraudCheckLoading">
+          <span *ngIf="fraudCheckLoading" class="spinner-border spinner-border-sm me-2"></span>
+          {{ fraudCheckLoading ? 'Processing...' : 'Trigger Fraud Check' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showFraudCheckModal" *ngIf="showFraudCheckModal"></div>
+
+<!-- Document Resubmission Modal -->
+<div class="modal fade" [class.show]="showResubmissionModal" [style.display]="showResubmissionModal ? 'block' : 'none'" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-redo me-2 text-warning"></i>Request Document Resubmission
+        </h5>
+        <button type="button" class="btn-close" (click)="closeResubmissionModal()" [disabled]="processing"></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-primary);">Select documents that need to be resubmitted:</p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Document Types *</label>
+          <div class="row g-2">
+            <div *ngFor="let docType of availableDocumentTypes" class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" 
+                       [id]="'doc-' + docType"
+                       [checked]="selectedDocumentTypes.includes(docType)"
+                       (change)="toggleDocumentType(docType)">
+                <label class="form-check-label" [for]="'doc-' + docType" style="color: var(--text-primary);">
+                  {{ formatDocumentType(docType) }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Reason for Resubmission *</label>
+          <textarea class="form-control" rows="3" 
+                    [(ngModel)]="resubmissionReason"
+                    placeholder="Explain why these documents need to be resubmitted..."
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+        </div>
+
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          The applicant will receive an email alert to resubmit the selected documents.
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeResubmissionModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="requestResubmission()" 
+                [disabled]="processing || selectedDocumentTypes.length === 0 || !resubmissionReason">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          {{ processing ? 'Sending...' : 'Send Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showResubmissionModal" *ngIf="showResubmissionModal"></div>
