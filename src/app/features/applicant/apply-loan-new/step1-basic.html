@@ -1,0 +1,136 @@
+<!-- Step 1: Basic Details -->
+<div class="step-content" *ngIf="currentStep === 1">
+  <div class="step-header">
+    <h3><i class="fas fa-info-circle me-2"></i>Basic Loan Details</h3>
+    <p class="text-muted">Tell us about your loan requirements</p>
+  </div>
+
+  <form [formGroup]="basicDetailsForm" class="loan-form">
+    <div class="row g-4">
+      <!-- Loan Type -->
+      <div class="col-md-6">
+        <label class="form-label required">Loan Type</label>
+        <select class="form-select" formControlName="loanType" [disabled]="selectedLoanType">
+          <option value="">Select Loan Type</option>
+          <option value="PERSONAL">Personal Loan</option>
+          <option value="HOME">Home Loan</option>
+          <option value="VEHICLE">Vehicle Loan</option>
+          <option value="EDUCATION">Education Loan</option>
+          <option value="BUSINESS">Business Loan</option>
+        </select>
+      </div>
+
+      <!-- Loan Amount -->
+      <div class="col-md-6">
+        <label class="form-label required">Loan Amount (₹)</label>
+        <input type="number" class="form-control" formControlName="loanAmount" 
+               placeholder="Enter amount" min="1000">
+        <small class="text-muted" *ngIf="emiCalculation">
+          EMI: {{ formatCurrency(emiCalculation.emi) }}/month
+        </small>
+      </div>
+
+      <!-- Tenure -->
+      <div class="col-md-6">
+        <label class="form-label required">Tenure (Months)</label>
+        <input type="number" class="form-control" formControlName="tenure" 
+               placeholder="Enter tenure" min="6" max="360">
+        <input type="range" class="form-range mt-2" formControlName="tenure" 
+               min="6" max="360" step="6">
+      </div>
+
+      <!-- Purpose -->
+      <div class="col-md-6">
+        <label class="form-label required">Purpose of Loan</label>
+        <textarea class="form-control" formControlName="purpose" rows="3" 
+                  placeholder="Describe the purpose"></textarea>
+      </div>
+
+      <!-- Co-Applicant -->
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="hasCoApplicant" id="coApplicant">
+          <label class="form-check-label" for="coApplicant">
+            I have a co-applicant
+          </label>
+        </div>
+      </div>
+
+      <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCoApplicant')?.value">
+        <label class="form-label required">Co-Applicant Name</label>
+        <input type="text" class="form-control" formControlName="coApplicantName">
+      </div>
+
+      <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCoApplicant')?.value">
+        <label class="form-label required">Relation</label>
+        <select class="form-select" formControlName="coApplicantRelation">
+          <option value="">Select Relation</option>
+          <option value="SPOUSE">Spouse</option>
+          <option value="PARENT">Parent</option>
+          <option value="SIBLING">Sibling</option>
+          <option value="CHILD">Child</option>
+        </select>
+      </div>
+
+      <!-- Collateral -->
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="hasCollateral" id="collateral">
+          <label class="form-check-label" for="collateral">
+            I am offering collateral
+          </label>
+        </div>
+      </div>
+
+      <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCollateral')?.value">
+        <label class="form-label required">Collateral Type</label>
+        <select class="form-select" formControlName="collateralType">
+          <option value="">Select Type</option>
+          <option value="PROPERTY">Property</option>
+          <option value="VEHICLE">Vehicle</option>
+          <option value="GOLD">Gold</option>
+          <option value="FD">Fixed Deposit</option>
+        </select>
+      </div>
+
+      <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCollateral')?.value">
+        <label class="form-label required">Estimated Value (₹)</label>
+        <input type="number" class="form-control" formControlName="collateralValue">
+      </div>
+    </div>
+
+    <!-- EMI Preview -->
+    <div class="emi-preview mt-4" *ngIf="emiCalculation">
+      <div class="emi-card">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h5>Monthly EMI: {{ formatCurrency(emiCalculation.emi) }}</h5>
+            <p class="mb-0">Total Interest: {{ formatCurrency(emiCalculation.totalInterest) }}</p>
+            <p class="mb-0">Total Amount: {{ formatCurrency(emiCalculation.totalAmount) }}</p>
+            <p class="mb-0" [ngClass]="getDTIClass()">
+              DTI Ratio: {{ emiCalculation.dti }}% - {{ emiCalculation.affordabilityStatus }}
+            </p>
+          </div>
+          <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleEMIDetails()">
+              <i class="fas" [ngClass]="showEMIDetails ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              {{ showEMIDetails ? 'Hide' : 'Show' }} Details
+            </button>
+          </div>
+        </div>
+        
+        <div class="emi-details mt-3" *ngIf="showEMIDetails">
+          <h6>How we calculated this:</h6>
+          <p class="small">
+            Principal (P) = {{ formatCurrency(emiCalculation.principal) }}<br>
+            Annual Interest Rate = {{ emiCalculation.annualInterestRate }}%<br>
+            Monthly Rate (r) = {{ (emiCalculation.monthlyRate * 100).toFixed(4) }}%<br>
+            Tenure (n) = {{ emiCalculation.tenureMonths }} months<br>
+            <br>
+            Formula: EMI = P × r × (1 + r)^n ÷ ((1 + r)^n − 1)
+          </p>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

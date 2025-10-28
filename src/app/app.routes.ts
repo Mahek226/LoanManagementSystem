@@ -133,10 +133,18 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/applicant/dashboard/enhanced-dashboard/enhanced-dashboard.component').then(m => m.EnhancedDashboardComponent)
+        loadComponent: () => import('./features/applicant/dashboard/enhanced-dashboard.component').then(m => m.EnhancedDashboardComponent)
+      },
+      {
+        path: 'loan-types',
+        loadComponent: () => import('./features/applicant/loan-types/loan-types.component').then(m => m.LoanTypesComponent)
       },
       {
         path: 'applications',
+        loadComponent: () => import('./features/applicant/my-applications/my-applications.component').then(m => m.MyApplicationsComponent)
+      },
+      {
+        path: 'applications/:id',
         loadComponent: () => import('./features/applicant/my-applications/my-applications.component').then(m => m.MyApplicationsComponent)
       },
       {
@@ -145,7 +153,7 @@ export const routes: Routes = [
       },
       {
         path: 'apply-loan',
-        loadComponent: () => import('./features/applicant/apply-loan/apply-loan.component').then(m => m.ApplyLoanComponent)
+        loadComponent: () => import('./features/applicant/apply-loan-new/apply-loan-new.component').then(m => m.ApplyLoanNewComponent)
       },
       {
         path: 'documents',

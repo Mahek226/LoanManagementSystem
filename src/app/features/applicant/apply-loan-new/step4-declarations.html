@@ -1,0 +1,83 @@
+<!-- Step 4: Declarations & Consent -->
+<div class="step-content" *ngIf="currentStep === 4">
+  <div class="step-header">
+    <h3><i class="fas fa-check-square me-2"></i>Declarations & Consent</h3>
+    <p class="text-muted">Please review and accept the following declarations</p>
+  </div>
+
+  <form [formGroup]="declarationsForm" class="loan-form">
+    <div class="declarations-list">
+      <!-- KYC Consent -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="kycConsent" id="kycConsent" required>
+          <label class="form-check-label" for="kycConsent">
+            <strong>KYC Verification Consent</strong>
+            <p class="mb-0 text-muted">I authorize the lender to verify my identity through KYC (Know Your Customer) checks including Aadhaar, PAN, and other government databases.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- Credit Bureau Consent -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="creditBureauConsent" id="creditConsent" required>
+          <label class="form-check-label" for="creditConsent">
+            <strong>Credit Bureau Check Consent</strong>
+            <p class="mb-0 text-muted">I consent to the lender accessing my credit information from credit bureaus (CIBIL, Experian, Equifax, CRIF) for assessing my creditworthiness.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bank Statement Consent -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="bankStatementConsent" id="bankStmtConsent" required>
+          <label class="form-check-label" for="bankStmtConsent">
+            <strong>Bank Statement Retrieval Consent</strong>
+            <p class="mb-0 text-muted">I authorize the lender to retrieve and analyze my bank statements for income verification and financial assessment purposes.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- Terms & Conditions -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="termsAccepted" id="terms" required>
+          <label class="form-check-label" for="terms">
+            <strong>Terms & Conditions</strong>
+            <p class="mb-0 text-muted">I have read and agree to the <a href="#" target="_blank">Terms & Conditions</a> of the loan application and disbursement process.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- Privacy Policy -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="privacyPolicyAccepted" id="privacy" required>
+          <label class="form-check-label" for="privacy">
+            <strong>Privacy Policy</strong>
+            <p class="mb-0 text-muted">I acknowledge that I have read and understood the <a href="#" target="_blank">Privacy Policy</a> regarding the collection, use, and protection of my personal data.</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- eSign Consent (Optional) -->
+      <div class="declaration-item">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="eSignConsent" id="esign">
+          <label class="form-check-label" for="esign">
+            <strong>Electronic Signature Consent (Optional)</strong>
+            <p class="mb-0 text-muted">I consent to use electronic signatures for signing loan documents and agreements.</p>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Declaration Statement -->
+    <div class="alert alert-warning mt-4">
+      <h6><i class="fas fa-exclamation-triangle me-2"></i>Declaration</h6>
+      <p class="mb-0">I hereby declare that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that any false or misleading information may result in rejection of my application or legal action.</p>
+    </div>
+  </form>
+</div>

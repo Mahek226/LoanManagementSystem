@@ -52,6 +52,67 @@ export interface DashboardStats {
   recentApplications: LoanApplication[];
 }
 
+export interface PreQualificationStatus {
+  isEligible: boolean;
+  status: 'ELIGIBLE' | 'NEEDS_DOCUMENTS' | 'NOT_ELIGIBLE' | 'PENDING_VERIFICATION';
+  message: string;
+  requiredDocuments: string[];
+  estimatedMaxLoan: number;
+  creditScore?: number;
+  verifiedFields: {
+    email: boolean;
+    phone: boolean;
+    identity: boolean;
+    income: boolean;
+    employment: boolean;
+  };
+}
+
+export interface LoanType {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  minAmount: number;
+  maxAmount: number;
+  minTenure: number;
+  maxTenure: number;
+  interestRateMin: number;
+  interestRateMax: number;
+  requiredDocuments: string[];
+  features: string[];
+  eligibilityCriteria: string[];
+  processingTime: string;
+  color: string;
+}
+
+export interface Notification {
+  id: number;
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION_REQUIRED';
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  actionUrl?: string;
+  actionText?: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+}
+
+export interface ApplicationProgress {
+  loanId: number;
+  currentStep: number;
+  totalSteps: number;
+  steps: {
+    stepNumber: number;
+    stepName: string;
+    status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'FAILED';
+    completedAt?: string;
+    description: string;
+  }[];
+  overallProgress: number;
+  estimatedCompletion?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -160,5 +221,204 @@ export class ApplicantService {
       'CLEARED': 'success'
     };
     return colors[status] || 'secondary';
+  }
+
+  // Get pre-qualification status
+  getPreQualificationStatus(applicantId: number): Observable<PreQualificationStatus> {
+    return this.http.get<PreQualificationStatus>(`${this.API_URL}/applicant/${applicantId}/pre-qualification`);
+  }
+
+  // Get all loan types
+  getLoanTypes(): LoanType[] {
+    return [
+      {
+        id: 'PERSONAL',
+        name: 'Personal Loan',
+        description: 'Flexible personal loans for any purpose - medical, education, travel, or emergencies',
+        icon: 'fa-user',
+        minAmount: 50000,
+        maxAmount: 2000000,
+        minTenure: 12,
+        maxTenure: 60,
+        interestRateMin: 10.5,
+        interestRateMax: 18.0,
+        requiredDocuments: ['Identity Proof', 'Address Proof', 'Income Proof', 'Bank Statements (6 months)'],
+        features: ['Quick approval', 'Minimal documentation', 'Flexible repayment', 'No collateral required'],
+        eligibilityCriteria: ['Age: 21-60 years', 'Minimum income: ₹25,000/month', 'Credit score: 650+', 'Employment: 2+ years'],
+        processingTime: '2-3 business days',
+        color: '#3b82f6'
+      },
+      {
+        id: 'HOME',
+        name: 'Home Loan',
+        description: 'Realize your dream of owning a home with our competitive home loan rates',
+        icon: 'fa-home',
+        minAmount: 500000,
+        maxAmount: 50000000,
+        minTenure: 60,
+        maxTenure: 300,
+        interestRateMin: 8.5,
+        interestRateMax: 11.0,
+        requiredDocuments: ['Property documents', 'Identity Proof', 'Income Proof', 'Bank Statements (12 months)', 'Property valuation report'],
+        features: ['Low interest rates', 'Long tenure options', 'Tax benefits', 'Balance transfer facility'],
+        eligibilityCriteria: ['Age: 23-65 years', 'Minimum income: ₹50,000/month', 'Credit score: 700+', 'Property value verification'],
+        processingTime: '7-10 business days',
+        color: '#10b981'
+      },
+      {
+        id: 'VEHICLE',
+        name: 'Vehicle Loan',
+        description: 'Drive your dream car or bike with our easy vehicle financing options',
+        icon: 'fa-car',
+        minAmount: 100000,
+        maxAmount: 5000000,
+        minTenure: 12,
+        maxTenure: 84,
+        interestRateMin: 9.0,
+        interestRateMax: 14.0,
+        requiredDocuments: ['Identity Proof', 'Address Proof', 'Income Proof', 'Vehicle quotation', 'Bank Statements (6 months)'],
+        features: ['Up to 90% financing', 'Quick processing', 'Flexible EMI options', 'Insurance included'],
+        eligibilityCriteria: ['Age: 21-65 years', 'Minimum income: ₹30,000/month', 'Credit score: 650+', 'Valid driving license'],
+        processingTime: '3-5 business days',
+        color: '#f59e0b'
+      },
+      {
+        id: 'EDUCATION',
+        name: 'Education Loan',
+        description: 'Invest in your future with our comprehensive education loan solutions',
+        icon: 'fa-graduation-cap',
+        minAmount: 100000,
+        maxAmount: 10000000,
+        minTenure: 60,
+        maxTenure: 180,
+        interestRateMin: 9.5,
+        interestRateMax: 13.5,
+        requiredDocuments: ['Admission letter', 'Fee structure', 'Identity Proof', 'Income Proof', 'Academic records', 'Co-applicant documents'],
+        features: ['Moratorium period', 'Tax benefits', 'Covers tuition & living expenses', 'Flexible repayment'],
+        eligibilityCriteria: ['Age: 18-35 years', 'Admission to recognized institution', 'Co-applicant required', 'Academic performance'],
+        processingTime: '5-7 business days',
+        color: '#8b5cf6'
+      },
+      {
+        id: 'BUSINESS',
+        name: 'Business Loan',
+        description: 'Grow your business with our tailored business financing solutions',
+        icon: 'fa-briefcase',
+        minAmount: 200000,
+        maxAmount: 20000000,
+        minTenure: 12,
+        maxTenure: 120,
+        interestRateMin: 11.0,
+        interestRateMax: 16.0,
+        requiredDocuments: ['Business registration', 'GST returns', 'ITR (2 years)', 'Bank Statements (12 months)', 'Business plan', 'Financial statements'],
+        features: ['Working capital support', 'Equipment financing', 'Business expansion', 'Overdraft facility'],
+        eligibilityCriteria: ['Business vintage: 2+ years', 'Annual turnover: ₹10 lakhs+', 'Credit score: 700+', 'Profitable operations'],
+        processingTime: '7-14 business days',
+        color: '#ef4444'
+      }
+    ];
+  }
+
+  // Get notifications
+  getNotifications(applicantId: number): Observable<Notification[]> {
+    return this.http.get<Notification[]>(`${this.API_URL}/applicant/${applicantId}/notifications`);
+  }
+
+  // Mark notification as read
+  markNotificationRead(notificationId: number): Observable<any> {
+    return this.http.put(`${this.API_URL}/applicant/notifications/${notificationId}/read`, {});
+  }
+
+  // Get application progress
+  getApplicationProgress(loanId: number): Observable<ApplicationProgress> {
+    return this.http.get<ApplicationProgress>(`${this.API_URL}/loan-applications/${loanId}/progress`);
+  }
+
+  // Calculate pre-qualification locally (mock for now)
+  calculatePreQualification(profile: ApplicantProfile, applications: LoanApplication[]): PreQualificationStatus {
+    const verifiedFields = {
+      email: profile.isEmailVerified,
+      phone: !!profile.phone,
+      identity: profile.isApproved,
+      income: applications.some(app => app.monthlyIncome > 0),
+      employment: applications.some(app => app.employmentType && app.employerName)
+    };
+
+    const verifiedCount = Object.values(verifiedFields).filter(v => v).length;
+    const totalFields = Object.keys(verifiedFields).length;
+    
+    let status: 'ELIGIBLE' | 'NEEDS_DOCUMENTS' | 'NOT_ELIGIBLE' | 'PENDING_VERIFICATION';
+    let message: string;
+    let requiredDocuments: string[] = [];
+    let estimatedMaxLoan = 0;
+
+    if (verifiedCount === totalFields) {
+      status = 'ELIGIBLE';
+      message = 'Congratulations! You are pre-qualified for a loan.';
+      estimatedMaxLoan = 2000000;
+    } else if (verifiedCount >= 3) {
+      status = 'NEEDS_DOCUMENTS';
+      message = 'Please complete your profile and upload required documents to proceed.';
+      if (!verifiedFields.email) requiredDocuments.push('Email Verification');
+      if (!verifiedFields.phone) requiredDocuments.push('Phone Verification');
+      if (!verifiedFields.identity) requiredDocuments.push('Identity Proof');
+      if (!verifiedFields.income) requiredDocuments.push('Income Proof');
+      if (!verifiedFields.employment) requiredDocuments.push('Employment Details');
+      estimatedMaxLoan = 500000;
+    } else if (verifiedCount >= 1) {
+      status = 'PENDING_VERIFICATION';
+      message = 'Your profile is under verification. Please complete all required fields.';
+      requiredDocuments = ['Identity Proof', 'Address Proof', 'Income Proof'];
+      estimatedMaxLoan = 0;
+    } else {
+      status = 'NOT_ELIGIBLE';
+      message = 'Please complete your profile to check eligibility.';
+      requiredDocuments = ['Identity Proof', 'Address Proof', 'Income Proof', 'Employment Details'];
+      estimatedMaxLoan = 0;
+    }
+
+    return {
+      isEligible: status === 'ELIGIBLE',
+      status,
+      message,
+      requiredDocuments,
+      estimatedMaxLoan,
+      verifiedFields
+    };
+  }
+
+  // Get mock notifications
+  getMockNotifications(): Notification[] {
+    return [
+      {
+        id: 1,
+        type: 'ACTION_REQUIRED',
+        title: 'Upload Salary Slip',
+        message: 'Please upload your latest salary slip to proceed with your loan application.',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        actionUrl: '/applicant/documents',
+        actionText: 'Upload Now',
+        priority: 'HIGH'
+      },
+      {
+        id: 2,
+        type: 'INFO',
+        title: 'Application Under Review',
+        message: 'Your loan application #12345 is currently under review by our team.',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        isRead: false,
+        priority: 'MEDIUM'
+      },
+      {
+        id: 3,
+        type: 'SUCCESS',
+        title: 'Document Verified',
+        message: 'Your identity proof has been successfully verified.',
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+        isRead: true,
+        priority: 'LOW'
+      }
+    ];
   }
 }

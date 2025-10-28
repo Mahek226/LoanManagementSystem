@@ -2,7 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ComplianceOfficerService, ComplianceEscalation, ComplianceDecisionRequest } from '../../../core/services/compliance-officer.service';
+import { 
+  ComplianceOfficerService, 
+  ComplianceEscalation, 
+  ComplianceDecisionRequest,
+  FraudHistoryRecord,
+  AdditionalDocumentRequest
+} from '../../../core/services/compliance-officer.service';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -14,23 +20,31 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class ReviewEscalationComponent implements OnInit {
   escalation: ComplianceEscalation | null = null;
-  loading: boolean = true;
-  errorMessage: string = '';
-  successMessage: string = '';
+  fraudHistory: FraudHistoryRecord[] = [];
+  documents: any[] = [];
+  loading = false;
+  processing = false;
+  errorMessage = '';
+  successMessage = '';
 
   // Decision form
   selectedAction: 'APPROVE' | 'REJECT' | 'REQUEST_MORE_INFO' | null = null;
-  remarks: string = '';
-  rejectionReason: string = '';
+  remarks = '';
+  rejectionReason = '';
   additionalChecks: string[] = [];
 
   // Modal states
-  showApproveModal: boolean = false;
-  showRejectModal: boolean = false;
-  showRequestInfoModal: boolean = false;
+  showApproveModal = false;
+  showRejectModal = false;
+  showRequestInfoModal = false;
+  showFraudHistoryModal = false;
+  showDocumentsModal = false;
+  showRequestDocumentsModal = false;
 
-  // Processing state
-  processing: boolean = false;
+  // Additional document request
+  selectedDocumentTypes: string[] = [];
+  documentRequestReason = '';
+  availableDocumentTypes = ['PAN_CARD', 'AADHAAR_CARD', 'INCOME_PROOF', 'BANK_STATEMENT', 'PROPERTY_DOCUMENTS', 'EMPLOYMENT_PROOF', 'CREDIT_REPORT'];
 
   constructor(
     private complianceService: ComplianceOfficerService,
@@ -49,12 +63,41 @@ export class ReviewEscalationComponent implements OnInit {
     }
   }
 
+  loadFraudHistory(): void {
+    if (!this.escalation) return;
+    
+    this.complianceService.getFraudHistory(this.escalation.applicantId).subscribe({
+      next: (history) => {
+        this.fraudHistory = history;
+      },
+      error: (err) => {
+        console.error('Error loading fraud history:', err);
+      }
+    });
+  }
+
+  loadDocuments(): void {
+    if (!this.escalation) return;
+    
+    this.complianceService.getLoanDocuments(this.escalation.loanId).subscribe({
+      next: (docs) => {
+        this.documents = docs;
+      },
+      error: (err) => {
+        console.error('Error loading documents:', err);
+      }
+    });
+  }
+
   loadEscalationDetails(assignmentId: number): void {
     this.loading = true;
     this.complianceService.getEscalationDetails(assignmentId).subscribe({
       next: (escalation) => {
         this.escalation = escalation;
         this.loading = false;
+        // Load additional data
+        this.loadFraudHistory();
+        this.loadDocuments();
       },
       error: (error) => {
         console.error('Error loading escalation details:', error);
@@ -191,5 +234,105 @@ export class ReviewEscalationComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/compliance-officer/escalations']);
+  }
+
+  // Fraud History
+  openFraudHistoryModal(): void {
+    this.showFraudHistoryModal = true;
+    this.loadFraudHistory();
+  }
+
+  closeFraudHistoryModal(): void {
+    this.showFraudHistoryModal = false;
+  }
+
+  // Documents
+  openDocumentsModal(): void {
+    this.showDocumentsModal = true;
+    this.loadDocuments();
+  }
+
+  closeDocumentsModal(): void {
+    this.showDocumentsModal = false;
+  }
+
+  // Request Additional Documents
+  openRequestDocumentsModal(): void {
+    this.showRequestDocumentsModal = true;
+    this.selectedDocumentTypes = [];
+    this.documentRequestReason = '';
+  }
+
+  closeRequestDocumentsModal(): void {
+    this.showRequestDocumentsModal = false;
+    this.selectedDocumentTypes = [];
+    this.documentRequestReason = '';
+  }
+
+  toggleDocumentType(docType: string): void {
+    const index = this.selectedDocumentTypes.indexOf(docType);
+    if (index > -1) {
+      this.selectedDocumentTypes.splice(index, 1);
+    } else {
+      this.selectedDocumentTypes.push(docType);
+    }
+  }
+
+  requestAdditionalDocuments(): void {
+    if (!this.escalation || this.selectedDocumentTypes.length === 0 || !this.documentRequestReason) {
+      this.errorMessage = 'Please select documents and provide a reason';
+      return;
+    }
+
+    const user = this.authService.currentUserValue;
+    if (!user || !user.id) {
+      this.errorMessage = 'User not authenticated';
+      return;
+    }
+
+    const request: AdditionalDocumentRequest = {
+      loanId: this.escalation.loanId,
+      applicantId: this.escalation.applicantId,
+      documentTypes: this.selectedDocumentTypes,
+      reason: this.documentRequestReason,
+      remarks: this.remarks
+    };
+
+    this.processing = true;
+    this.complianceService.requestAdditionalDocuments(user.id, request).subscribe({
+      next: () => {
+        this.successMessage = 'Document request sent to applicant via Loan Officer!';
+        this.closeRequestDocumentsModal();
+        setTimeout(() => this.successMessage = '', 3000);
+        this.processing = false;
+      },
+      error: (err) => {
+        this.errorMessage = err.error?.message || 'Failed to request documents';
+        this.processing = false;
+      }
+    });
+  }
+
+  formatDocumentType(type: string): string {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  getDocumentStatusClass(status: string): string {
+    const classes: any = {
+      'PENDING': 'badge bg-warning',
+      'VERIFIED': 'badge bg-success',
+      'REJECTED': 'badge bg-danger'
+    };
+    return classes[status] || 'badge bg-secondary';
+  }
+
+  getFraudStatusClass(status: string): string {
+    const classes: any = {
+      'DETECTED': 'badge bg-danger',
+      'RESOLVED': 'badge bg-success',
+      'UNDER_INVESTIGATION': 'badge bg-warning',
+      'CLEARED': 'badge bg-info'
+    };
+    return classes[status] || 'badge bg-secondary';
   }
 }

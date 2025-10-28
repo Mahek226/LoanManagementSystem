@@ -22,6 +22,7 @@ interface Activity {
   description: string;
   timestamp: Date;
   type: 'success' | 'warning' | 'info' | 'danger';
+  icon: string;
 }
 
 @Component({
@@ -121,44 +122,103 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadRecentActivities(): void {
-    // Mock data for demonstration
-    this.recentActivities = [
-      {
-        id: 1,
-        title: 'New Loan Application',
-        description: 'John Doe submitted a new loan application for $50,000',
-        timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-        type: 'info'
+    // Load real activity logs from backend
+    this.adminService.getRecentActivityLogs().subscribe({
+      next: (logs) => {
+        console.log('Recent activity logs received:', logs);
+        this.recentActivities = logs.map(log => this.mapActivityLogToActivity(log));
       },
-      {
-        id: 2,
-        title: 'Application Approved',
-        description: 'Loan application #LA-2024-001 has been approved',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-        type: 'success'
-      },
-      {
-        id: 3,
-        title: 'Document Upload',
-        description: 'Sarah Smith uploaded required documents',
-        timestamp: new Date(Date.now() - 45 * 60 * 1000), // 45 minutes ago
-        type: 'info'
-      },
-      {
-        id: 4,
-        title: 'Application Rejected',
-        description: 'Loan application #LA-2024-002 was rejected due to insufficient income',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        type: 'danger'
-      },
-      {
-        id: 5,
-        title: 'System Maintenance',
-        description: 'Scheduled system maintenance completed successfully',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        type: 'warning'
+      error: (error) => {
+        console.error('Error loading recent activities:', error);
+        // Fallback to empty array if backend fails
+        this.recentActivities = [];
       }
-    ];
+    });
+  }
+
+  private mapActivityLogToActivity(log: any): Activity {
+    // Map activity type to visual type and icon
+    const typeMapping: { [key: string]: { type: 'success' | 'warning' | 'info' | 'danger', icon: string } } = {
+      'LOGIN': { type: 'info', icon: 'fa-sign-in-alt' },
+      'LOGOUT': { type: 'info', icon: 'fa-sign-out-alt' },
+      'CREATE': { type: 'success', icon: 'fa-plus-circle' },
+      'UPDATE': { type: 'info', icon: 'fa-edit' },
+      'DELETE': { type: 'danger', icon: 'fa-trash' },
+      'APPROVE': { type: 'success', icon: 'fa-check-circle' },
+      'REJECT': { type: 'danger', icon: 'fa-times-circle' },
+      'SUBMIT': { type: 'info', icon: 'fa-paper-plane' },
+      'UPLOAD': { type: 'info', icon: 'fa-upload' },
+      'DOWNLOAD': { type: 'info', icon: 'fa-download' },
+      'MAINTENANCE': { type: 'warning', icon: 'fa-tools' }
+    };
+
+    const mapping = typeMapping[log.activityType] || { type: 'info', icon: 'fa-info-circle' };
+
+    return {
+      id: log.logId,
+      title: this.formatActivityTitle(log),
+      description: log.description || this.generateDescription(log),
+      timestamp: new Date(log.timestamp),
+      type: log.status === 'FAILED' ? 'danger' : mapping.type,
+      icon: mapping.icon
+    };
+  }
+
+  private formatActivityTitle(log: any): string {
+    const activityTypeFormatted = log.activityType.replace(/_/g, ' ').toLowerCase()
+      .split(' ')
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    if (log.entityType) {
+      const entityTypeFormatted = log.entityType.replace(/_/g, ' ').toLowerCase()
+        .split(' ')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      return `${activityTypeFormatted} ${entityTypeFormatted}`;
+    }
+
+    return activityTypeFormatted;
+  }
+
+  private generateDescription(log: any): string {
+    let description = `${log.performedBy}`;
+    
+    if (log.activityType === 'LOGIN') {
+      description += ' logged into the system';
+    } else if (log.activityType === 'LOGOUT') {
+      description += ' logged out of the system';
+    } else if (log.activityType === 'CREATE' && log.entityType) {
+      description += ` created a new ${log.entityType.toLowerCase()}`;
+    } else if (log.activityType === 'UPDATE' && log.entityType) {
+      description += ` updated ${log.entityType.toLowerCase()}`;
+      if (log.entityId) {
+        description += ` #${log.entityId}`;
+      }
+    } else if (log.activityType === 'DELETE' && log.entityType) {
+      description += ` deleted ${log.entityType.toLowerCase()}`;
+      if (log.entityId) {
+        description += ` #${log.entityId}`;
+      }
+    } else if (log.activityType === 'APPROVE' && log.entityType) {
+      description += ` approved ${log.entityType.toLowerCase()}`;
+      if (log.entityId) {
+        description += ` #${log.entityId}`;
+      }
+    } else if (log.activityType === 'REJECT' && log.entityType) {
+      description += ` rejected ${log.entityType.toLowerCase()}`;
+      if (log.entityId) {
+        description += ` #${log.entityId}`;
+      }
+    } else {
+      description += ` performed ${log.activityType.toLowerCase()}`;
+    }
+
+    if (log.status === 'FAILED') {
+      description += ' (Failed)';
+    }
+
+    return description;
   }
 
   private initializeCharts(): void {

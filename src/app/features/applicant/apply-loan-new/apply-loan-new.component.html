@@ -1,0 +1,586 @@
+<div class="apply-loan-container">
+  <!-- Progress Bar -->
+  <div class="progress-section">
+    <div class="container-fluid px-4 py-3">
+      <div class="steps-indicator">
+        <div class="step-item" *ngFor="let step of [1,2,3,4,5]" 
+             [class.active]="currentStep === step"
+             [class.completed]="isStepCompleted(step)"
+             (click)="goToStep(step)">
+          <div class="step-circle">
+            <span class="step-number" *ngIf="!isStepCompleted(step)">{{ step }}</span>
+            <i class="fas fa-check" *ngIf="isStepCompleted(step)"></i>
+          </div>
+          <span class="step-label">{{ getStepTitle(step) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="container-fluid px-4">
+    <div class="alert alert-danger alert-dismissible fade show" *ngIf="error">
+      <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+      <button type="button" class="btn-close" (click)="clearError()"></button>
+    </div>
+    <div class="alert alert-success alert-dismissible fade show" *ngIf="success">
+      <i class="fas fa-check-circle me-2"></i>{{ success }}
+      <button type="button" class="btn-close" (click)="clearSuccess()"></button>
+    </div>
+  </div>
+
+  <!-- Form Container -->
+  <div class="container-fluid px-4 py-4">
+    <div class="form-card">
+      <!-- Step 1: Basic Details -->
+      <div class="step-content" *ngIf="currentStep === 1">
+        <div class="step-header">
+          <h3><i class="fas fa-info-circle me-2"></i>Basic Loan Details</h3>
+          <p class="text-muted">Tell us about your loan requirements</p>
+        </div>
+
+        <form [formGroup]="basicDetailsForm" class="loan-form">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label required">Loan Type</label>
+              <select class="form-select" formControlName="loanType" [disabled]="!!selectedLoanType">
+                <option value="">Select Loan Type</option>
+                <option value="PERSONAL">Personal Loan</option>
+                <option value="HOME">Home Loan</option>
+                <option value="VEHICLE">Vehicle Loan</option>
+                <option value="EDUCATION">Education Loan</option>
+                <option value="BUSINESS">Business Loan</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label required">Loan Amount (₹)</label>
+              <input type="number" class="form-control" formControlName="loanAmount" 
+                     placeholder="Enter amount" min="1000">
+              <small class="text-muted" *ngIf="emiCalculation">
+                EMI: {{ formatCurrency(emiCalculation.emi) }}/month
+              </small>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label required">Tenure (Months)</label>
+              <input type="number" class="form-control" formControlName="tenure" 
+                     placeholder="Enter tenure" min="6" max="360">
+              <input type="range" class="form-range mt-2" formControlName="tenure" 
+                     min="6" max="360" step="6">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label required">Purpose of Loan</label>
+              <textarea class="form-control" formControlName="purpose" rows="3" 
+                        placeholder="Describe the purpose"></textarea>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="hasCoApplicant" id="coApplicant">
+                <label class="form-check-label" for="coApplicant">I have a co-applicant</label>
+              </div>
+            </div>
+
+            <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCoApplicant')?.value">
+              <label class="form-label required">Co-Applicant Name</label>
+              <input type="text" class="form-control" formControlName="coApplicantName">
+            </div>
+
+            <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCoApplicant')?.value">
+              <label class="form-label required">Relation</label>
+              <select class="form-select" formControlName="coApplicantRelation">
+                <option value="">Select Relation</option>
+                <option value="SPOUSE">Spouse</option>
+                <option value="PARENT">Parent</option>
+                <option value="SIBLING">Sibling</option>
+                <option value="CHILD">Child</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="hasCollateral" id="collateral">
+                <label class="form-check-label" for="collateral">I am offering collateral</label>
+              </div>
+            </div>
+
+            <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCollateral')?.value">
+              <label class="form-label required">Collateral Type</label>
+              <select class="form-select" formControlName="collateralType">
+                <option value="">Select Type</option>
+                <option value="PROPERTY">Property</option>
+                <option value="VEHICLE">Vehicle</option>
+                <option value="GOLD">Gold</option>
+                <option value="FD">Fixed Deposit</option>
+              </select>
+            </div>
+
+            <div class="col-md-6" *ngIf="basicDetailsForm.get('hasCollateral')?.value">
+              <label class="form-label required">Estimated Value (₹)</label>
+              <input type="number" class="form-control" formControlName="collateralValue">
+            </div>
+          </div>
+
+          <div class="emi-preview mt-4" *ngIf="emiCalculation">
+            <div class="emi-card">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h5>Monthly EMI: {{ formatCurrency(emiCalculation.emi) }}</h5>
+                  <p class="mb-0">Total Interest: {{ formatCurrency(emiCalculation.totalInterest) }}</p>
+                  <p class="mb-0">Total Amount: {{ formatCurrency(emiCalculation.totalAmount) }}</p>
+                  <p class="mb-0" [ngClass]="getDTIClass()">
+                    DTI Ratio: {{ emiCalculation.dti }}% - {{ emiCalculation.affordabilityStatus }}
+                  </p>
+                </div>
+                <div class="col-md-4 text-end">
+                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleEMIDetails()">
+                    <i class="fas" [ngClass]="showEMIDetails ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    {{ showEMIDetails ? 'Hide' : 'Show' }} Details
+                  </button>
+                </div>
+              </div>
+              
+              <div class="emi-details mt-3" *ngIf="showEMIDetails">
+                <h6>How we calculated this:</h6>
+                <p class="small">
+                  Principal (P) = {{ formatCurrency(emiCalculation.principal) }}<br>
+                  Annual Interest Rate = {{ emiCalculation.annualInterestRate }}%<br>
+                  Monthly Rate (r) = {{ (emiCalculation.monthlyRate * 100).toFixed(4) }}%<br>
+                  Tenure (n) = {{ emiCalculation.tenureMonths }} months<br>
+                  <br>
+                  Formula: EMI = P × r × (1 + r)^n ÷ ((1 + r)^n − 1)
+                </p>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Financial Details -->
+      <div class="step-content" *ngIf="currentStep === 2">
+        <div class="step-header">
+          <h3><i class="fas fa-money-bill-wave me-2"></i>Financial Information</h3>
+          <p class="text-muted">Provide your income and employment details</p>
+        </div>
+
+        <form [formGroup]="financialDetailsForm" class="loan-form">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label required">Employment Type</label>
+              <select class="form-select" formControlName="employmentType">
+                <option value="SALARIED">Salaried</option>
+                <option value="SELF_EMPLOYED">Self Employed</option>
+                <option value="BUSINESS">Business Owner</option>
+                <option value="PROFESSIONAL">Professional</option>
+                <option value="RETIRED">Retired</option>
+              </select>
+            </div>
+
+            <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SALARIED'">
+              <div class="col-md-6">
+                <label class="form-label required">Employer Name</label>
+                <input type="text" class="form-control" formControlName="employerName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label required">Designation</label>
+                <input type="text" class="form-control" formControlName="designation">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Work Experience (Years)</label>
+                <input type="number" class="form-control" formControlName="workExperience" min="0">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label required">Monthly Gross Salary (₹)</label>
+                <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Monthly Net Salary (₹)</label>
+                <input type="number" class="form-control" formControlName="monthlyNetSalary">
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SELF_EMPLOYED' || 
+                                 financialDetailsForm.get('employmentType')?.value === 'BUSINESS'">
+              <div class="col-md-6">
+                <label class="form-label required">Business Name</label>
+                <input type="text" class="form-control" formControlName="businessName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Business Type</label>
+                <input type="text" class="form-control" formControlName="businessType">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label required">Annual Turnover (₹)</label>
+                <input type="number" class="form-control" formControlName="annualTurnover">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Monthly Gross Income (₹)</label>
+                <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+              </div>
+            </ng-container>
+
+            <div class="col-md-6">
+              <label class="form-label">Other Income Sources</label>
+              <input type="text" class="form-control" formControlName="otherIncomeSources" 
+                     placeholder="Rental, Investment, etc.">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Other Income Amount (₹/month)</label>
+              <input type="number" class="form-control" formControlName="otherIncomeAmount">
+            </div>
+
+            <div class="col-12"><hr><h5>Monthly Obligations</h5></div>
+            <div class="col-md-4">
+              <label class="form-label">Existing Loan EMI (₹)</label>
+              <input type="number" class="form-control" formControlName="existingLoanEMI">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Credit Card Payment (₹)</label>
+              <input type="number" class="form-control" formControlName="creditCardPayment">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Other Obligations (₹)</label>
+              <input type="number" class="form-control" formControlName="otherObligations">
+            </div>
+
+            <div class="col-12"><hr><h5>Bank Account for Disbursal</h5></div>
+            <div class="col-md-6">
+              <label class="form-label required">Bank Name</label>
+              <input type="text" class="form-control" formControlName="bankName">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label required">Account Number</label>
+              <input type="text" class="form-control" formControlName="accountNumber">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label required">IFSC Code</label>
+              <input type="text" class="form-control" formControlName="ifscCode" 
+                     placeholder="XXXX0XXXXXX" style="text-transform: uppercase;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label required">Account Type</label>
+              <select class="form-select" formControlName="accountType">
+                <option value="SAVINGS">Savings</option>
+                <option value="CURRENT">Current</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="bankStatementConsent" 
+                       id="bankConsent" required>
+                <label class="form-check-label" for="bankConsent">
+                  I consent to share my bank statements for verification purposes
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 3: Upload Documents -->
+      <div class="step-content" *ngIf="currentStep === 3">
+        <div class="step-header">
+          <h3><i class="fas fa-file-upload me-2"></i>Upload Documents</h3>
+          <p class="text-muted">Upload all required documents for verification</p>
+        </div>
+
+        <div class="documents-section">
+          <div class="row g-4">
+            <div class="col-lg-6" *ngFor="let docReq of requiredDocuments">
+              <div class="document-card" [class.uploaded]="isDocumentUploaded(docReq.documentType)">
+                <div class="doc-header">
+                  <div class="d-flex align-items-center">
+                    <i class="fas {{ docReq.icon }} me-2"></i>
+                    <div>
+                      <h6 class="mb-0">{{ docReq.displayName }}</h6>
+                      <small class="text-muted">{{ docReq.description }}</small>
+                    </div>
+                  </div>
+                  <span class="badge" [class.bg-success]="isDocumentUploaded(docReq.documentType)"
+                        [class.bg-warning]="!isDocumentUploaded(docReq.documentType) && docReq.required">
+                    {{ isDocumentUploaded(docReq.documentType) ? 'Uploaded' : (docReq.required ? 'Required' : 'Optional') }}
+                  </span>
+                </div>
+
+                <div class="doc-body">
+                  <div class="upload-area" 
+                       [class.drag-over]="dragOver"
+                       (dragover)="onDragOver($event)"
+                       (dragleave)="onDragLeave($event)"
+                       (drop)="onDrop($event, docReq.documentType)"
+                       *ngIf="!isDocumentUploaded(docReq.documentType)">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop or click to upload</p>
+                    <small>{{ docReq.acceptedFormats.join(', ') }}</small>
+                    <small>Max size: {{ (docReq.maxSize / (1024 * 1024)).toFixed(0) }}MB</small>
+                    <input type="file" 
+                           [accept]="docReq.acceptedFormats.join(',')"
+                           (change)="onFileSelected($event, docReq.documentType)"
+                           style="display: none;"
+                           #fileInput>
+                    <button type="button" class="btn btn-sm btn-primary mt-2" (click)="fileInput.click()">
+                      <i class="fas fa-upload me-1"></i>Choose File
+                    </button>
+                  </div>
+
+                  <div class="uploaded-file" *ngIf="isDocumentUploaded(docReq.documentType)">
+                    <ng-container *ngFor="let doc of uploadedDocuments">
+                      <div class="file-item" *ngIf="doc.documentType === docReq.documentType">
+                        <div class="d-flex align-items-center justify-content-between">
+                          <div class="d-flex align-items-center">
+                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                            <div>
+                              <p class="mb-0">{{ doc.fileName }}</p>
+                              <small class="text-muted">{{ (doc.fileSize / 1024).toFixed(0) }} KB</small>
+                            </div>
+                          </div>
+                          <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeDocument(doc.fileName)">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+
+                  <div class="upload-progress" *ngIf="uploadProgress[docReq.documentType]">
+                    <div class="progress">
+                      <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                           [style.width.%]="uploadProgress[docReq.documentType].progress">
+                        {{ uploadProgress[docReq.documentType].progress }}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-lightbulb me-2"></i>Upload Tips:</h6>
+            <ul class="mb-0">
+              <li>Ensure documents are clear and readable</li>
+              <li>All text should be visible without glare or shadows</li>
+              <li>For photos, use good lighting and avoid blurry images</li>
+              <li>Accepted formats: PDF, JPG, PNG</li>
+              <li>You can use your mobile camera to capture documents</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Declarations -->
+      <div class="step-content" *ngIf="currentStep === 4">
+        <div class="step-header">
+          <h3><i class="fas fa-check-square me-2"></i>Declarations & Consent</h3>
+          <p class="text-muted">Please review and accept the following declarations</p>
+        </div>
+
+        <form [formGroup]="declarationsForm" class="loan-form">
+          <div class="declarations-list">
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="kycConsent" id="kycConsent" required>
+                <label class="form-check-label" for="kycConsent">
+                  <strong>KYC Verification Consent</strong>
+                  <p class="mb-0 text-muted">I authorize the lender to verify my identity through KYC checks.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="creditBureauConsent" id="creditConsent" required>
+                <label class="form-check-label" for="creditConsent">
+                  <strong>Credit Bureau Check Consent</strong>
+                  <p class="mb-0 text-muted">I consent to accessing my credit information from credit bureaus.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="bankStatementConsent" id="bankStmtConsent" required>
+                <label class="form-check-label" for="bankStmtConsent">
+                  <strong>Bank Statement Retrieval Consent</strong>
+                  <p class="mb-0 text-muted">I authorize retrieval and analysis of my bank statements.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="termsAccepted" id="terms" required>
+                <label class="form-check-label" for="terms">
+                  <strong>Terms & Conditions</strong>
+                  <p class="mb-0 text-muted">I have read and agree to the Terms & Conditions.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="privacyPolicyAccepted" id="privacy" required>
+                <label class="form-check-label" for="privacy">
+                  <strong>Privacy Policy</strong>
+                  <p class="mb-0 text-muted">I acknowledge the Privacy Policy.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="declaration-item">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" formControlName="eSignConsent" id="esign">
+                <label class="form-check-label" for="esign">
+                  <strong>Electronic Signature Consent (Optional)</strong>
+                  <p class="mb-0 text-muted">I consent to use electronic signatures.</p>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-warning mt-4">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Declaration</h6>
+            <p class="mb-0">I declare that all information provided is true and accurate.</p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 5: Review & Submit -->
+      <div class="step-content" *ngIf="currentStep === 5">
+        <div class="step-header">
+          <h3><i class="fas fa-eye me-2"></i>Review Your Application</h3>
+          <p class="text-muted">Please review all details before submitting</p>
+        </div>
+
+        <div class="review-section" *ngIf="application">
+          <div class="review-card">
+            <div class="review-header">
+              <h5><i class="fas fa-info-circle me-2"></i>Basic Loan Details</h5>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="goToStep(1)">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+            </div>
+            <div class="review-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label>Loan Type:</label>
+                  <p>{{ application.basicDetails.loanType }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label>Loan Amount:</label>
+                  <p>{{ formatCurrency(application.basicDetails.loanAmount) }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label>Tenure:</label>
+                  <p>{{ application.basicDetails.tenure }} months</p>
+                </div>
+                <div class="col-md-6">
+                  <label>Purpose:</label>
+                  <p>{{ application.basicDetails.purpose }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-card">
+            <div class="review-header">
+              <h5><i class="fas fa-money-bill-wave me-2"></i>Financial Information</h5>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="goToStep(2)">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+            </div>
+            <div class="review-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label>Employment Type:</label>
+                  <p>{{ application.financialDetails.employmentType }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label>Monthly Income:</label>
+                  <p>{{ formatCurrency(application.financialDetails.monthlyGrossSalary || 0) }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label>Bank Account:</label>
+                  <p>{{ application.financialDetails.bankName }} - {{ application.financialDetails.accountNumber }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-card">
+            <div class="review-header">
+              <h5><i class="fas fa-file-upload me-2"></i>Uploaded Documents</h5>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="goToStep(3)">
+                <i class="fas fa-edit"></i> Edit
+              </button>
+            </div>
+            <div class="review-body">
+              <div class="documents-list">
+                <div class="document-item" *ngFor="let doc of application.documents">
+                  <i class="fas {{ getDocumentIcon(doc.documentType) }} me-2"></i>
+                  <span>{{ doc.fileName }}</span>
+                  <span class="badge bg-success ms-2">Uploaded</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-card emi-summary" *ngIf="emiCalculation">
+            <h5><i class="fas fa-calculator me-2"></i>EMI Summary</h5>
+            <div class="emi-details-grid">
+              <div class="emi-item">
+                <label>Monthly EMI:</label>
+                <h4>{{ formatCurrency(emiCalculation.emi) }}</h4>
+              </div>
+              <div class="emi-item">
+                <label>Total Interest:</label>
+                <p>{{ formatCurrency(emiCalculation.totalInterest) }}</p>
+              </div>
+              <div class="emi-item">
+                <label>Total Amount:</label>
+                <p>{{ formatCurrency(emiCalculation.totalAmount) }}</p>
+              </div>
+              <div class="emi-item">
+                <label>DTI Ratio:</label>
+                <p [ngClass]="getDTIClass()">{{ emiCalculation.dti }}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>What happens next?</h6>
+            <ul class="mb-0">
+              <li>Your application will be assigned a unique Application ID</li>
+              <li>Our team will verify your documents (typically 2-3 business days)</li>
+              <li>You'll receive email/SMS updates at each stage</li>
+              <li>A loan officer may contact you for additional information</li>
+              <li>Final decision will be communicated within 7-10 business days</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="form-actions mt-4">
+      <button type="button" class="btn btn-secondary" (click)="previousStep()" *ngIf="currentStep > 1">
+        <i class="fas fa-arrow-left me-2"></i>Previous
+      </button>
+      <button type="button" class="btn btn-outline-danger" (click)="cancelApplication()">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" (click)="nextStep()" *ngIf="currentStep < 5">
+        Next<i class="fas fa-arrow-right ms-2"></i>
+      </button>
+      <button type="button" class="btn btn-success" (click)="submitApplication()" 
+              *ngIf="currentStep === 5" [disabled]="submitting">
+        <i class="fas fa-check me-2"></i>
+        <span *ngIf="submitting">Submitting...</span>
+        <span *ngIf="!submitting">Submit Application</span>
+      </button>
+    </div>
+  </div>
+</div>

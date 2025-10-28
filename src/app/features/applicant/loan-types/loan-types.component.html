@@ -1,0 +1,213 @@
+<div class="loan-types-page">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="container-fluid px-4 py-4">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="page-title mb-2">Choose Your Loan Type</h2>
+          <p class="page-subtitle mb-0">Select the loan that best fits your needs. Compare features, rates, and requirements.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <button class="btn btn-outline-primary" routerLink="/applicant/dashboard">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan Types Grid -->
+  <div class="container-fluid px-4 py-4">
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6" *ngFor="let loanType of loanTypes; let i = index">
+        <div class="loan-type-card" [style.animation-delay]="(i * 0.1) + 's'">
+          <div class="loan-type-header" [style.background]="loanType.color">
+            <div class="loan-icon">
+              <i class="fas" [ngClass]="loanType.icon"></i>
+            </div>
+            <h3 class="loan-name">{{ loanType.name }}</h3>
+            <p class="loan-description">{{ loanType.description }}</p>
+          </div>
+          
+          <div class="loan-type-body">
+            <!-- Key Information -->
+            <div class="loan-info-grid">
+              <div class="info-item">
+                <i class="fas fa-money-bill-wave text-primary"></i>
+                <div>
+                  <small class="text-muted d-block">Loan Amount</small>
+                  <strong>{{ formatCurrency(loanType.minAmount) }} - {{ formatCurrency(loanType.maxAmount) }}</strong>
+                </div>
+              </div>
+              
+              <div class="info-item">
+                <i class="fas fa-percentage text-success"></i>
+                <div>
+                  <small class="text-muted d-block">Interest Rate</small>
+                  <strong>{{ getInterestRateRange(loanType) }}</strong>
+                </div>
+              </div>
+              
+              <div class="info-item">
+                <i class="fas fa-calendar-alt text-warning"></i>
+                <div>
+                  <small class="text-muted d-block">Tenure</small>
+                  <strong>{{ getTenureRange(loanType) }}</strong>
+                </div>
+              </div>
+              
+              <div class="info-item">
+                <i class="fas fa-clock text-info"></i>
+                <div>
+                  <small class="text-muted d-block">Processing Time</small>
+                  <strong>{{ loanType.processingTime }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Features -->
+            <div class="features-section mt-4">
+              <h6 class="section-title">
+                <i class="fas fa-check-circle me-2"></i>Key Features
+              </h6>
+              <ul class="features-list">
+                <li *ngFor="let feature of loanType.features">
+                  <i class="fas fa-check text-success me-2"></i>{{ feature }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons mt-4">
+              <button class="btn btn-primary w-100 mb-2" (click)="applyForLoan(loanType)">
+                <i class="fas fa-paper-plane me-2"></i>Apply Now
+              </button>
+              <button class="btn btn-outline-secondary w-100" (click)="selectLoanType(loanType)">
+                <i class="fas fa-info-circle me-2"></i>View Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Details Modal -->
+<div class="modal fade show" 
+     *ngIf="selectedLoanType" 
+     [style.display]="'block'"
+     tabindex="-1"
+     (click)="closeModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header" [style.background]="selectedLoanType.color">
+        <div class="d-flex align-items-center text-white">
+          <div class="modal-icon me-3">
+            <i class="fas" [ngClass]="selectedLoanType.icon"></i>
+          </div>
+          <div>
+            <h5 class="modal-title mb-0">{{ selectedLoanType.name }}</h5>
+            <p class="mb-0 opacity-75">{{ selectedLoanType.description }}</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Loan Details Grid -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <div class="detail-card">
+              <i class="fas fa-money-bill-wave text-primary"></i>
+              <div>
+                <small class="text-muted d-block">Loan Amount Range</small>
+                <strong>{{ formatCurrency(selectedLoanType.minAmount) }} - {{ formatCurrency(selectedLoanType.maxAmount) }}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="detail-card">
+              <i class="fas fa-percentage text-success"></i>
+              <div>
+                <small class="text-muted d-block">Interest Rate</small>
+                <strong>{{ getInterestRateRange(selectedLoanType) }} p.a.</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="detail-card">
+              <i class="fas fa-calendar-alt text-warning"></i>
+              <div>
+                <small class="text-muted d-block">Tenure Options</small>
+                <strong>{{ getTenureRange(selectedLoanType) }}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="detail-card">
+              <i class="fas fa-clock text-info"></i>
+              <div>
+                <small class="text-muted d-block">Processing Time</small>
+                <strong>{{ selectedLoanType.processingTime }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="mb-4">
+          <h6 class="section-title">
+            <i class="fas fa-star text-warning me-2"></i>Key Features
+          </h6>
+          <div class="row g-2">
+            <div class="col-md-6" *ngFor="let feature of selectedLoanType.features">
+              <div class="feature-badge">
+                <i class="fas fa-check-circle text-success me-2"></i>{{ feature }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Eligibility Criteria -->
+        <div class="mb-4">
+          <h6 class="section-title">
+            <i class="fas fa-user-check text-primary me-2"></i>Eligibility Criteria
+          </h6>
+          <ul class="eligibility-list">
+            <li *ngFor="let criteria of selectedLoanType.eligibilityCriteria">
+              <i class="fas fa-chevron-right text-primary me-2"></i>{{ criteria }}
+            </li>
+          </ul>
+        </div>
+
+        <!-- Required Documents -->
+        <div>
+          <h6 class="section-title">
+            <i class="fas fa-file-alt text-danger me-2"></i>Required Documents
+          </h6>
+          <div class="row g-2">
+            <div class="col-md-6" *ngFor="let doc of selectedLoanType.requiredDocuments">
+              <div class="document-badge">
+                <i class="fas fa-file-pdf text-danger me-2"></i>{{ doc }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" (click)="applyForLoan(selectedLoanType)">
+          <i class="fas fa-paper-plane me-2"></i>Apply for This Loan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="selectedLoanType" (click)="closeModal()"></div>

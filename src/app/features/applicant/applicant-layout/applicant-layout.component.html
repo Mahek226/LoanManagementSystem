@@ -25,6 +25,34 @@
         </div>
 
         <div class="d-flex align-items-center gap-3">
+          <!-- Theme Toggle -->
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
+                    type="button" 
+                    data-bs-toggle="dropdown"
+                    aria-label="Theme selector">
+              <i class="fas" [ngClass]="getThemeIcon()"></i>
+              {{ getThemeLabel() }}
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" (click)="setTheme('light')" [class.active]="currentTheme === 'light'">
+                  <i class="fas fa-sun me-2"></i> Light
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" (click)="setTheme('dark')" [class.active]="currentTheme === 'dark'">
+                  <i class="fas fa-moon me-2"></i> Dark
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" (click)="setTheme('system')" [class.active]="currentTheme === 'system'">
+                  <i class="fas fa-desktop me-2"></i> System
+                </a>
+              </li>
+            </ul>
+          </div>
+
           <!-- User Profile -->
           <div class="dropdown">
             <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
@@ -59,18 +87,18 @@
         </li>
         <li class="nav-item">
           <button class="nav-link" 
-                  [class.active]="activeTab === 'applications'"
-                  (click)="setActiveTab('applications')">
-            <i class="fas fa-list-alt me-2"></i>
-            My Applications
+                  [class.active]="activeTab === 'loan-types'"
+                  (click)="setActiveTab('loan-types')">
+            <i class="fas fa-th-large me-2"></i>
+            Loan Types
           </button>
         </li>
         <li class="nav-item">
           <button class="nav-link" 
-                  [class.active]="activeTab === 'apply-loan'"
-                  (click)="setActiveTab('apply-loan')">
-            <i class="fas fa-plus-circle me-2"></i>
-            Apply for Loan
+                  [class.active]="activeTab === 'applications'"
+                  (click)="setActiveTab('applications')">
+            <i class="fas fa-list-alt me-2"></i>
+            My Applications
           </button>
         </li>
         <li class="nav-item">

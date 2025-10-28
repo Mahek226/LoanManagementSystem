@@ -1,0 +1,128 @@
+<!-- Step 2: Financial Details -->
+<div class="step-content" *ngIf="currentStep === 2">
+  <div class="step-header">
+    <h3><i class="fas fa-money-bill-wave me-2"></i>Financial Information</h3>
+    <p class="text-muted">Provide your income and employment details</p>
+  </div>
+
+  <form [formGroup]="financialDetailsForm" class="loan-form">
+    <div class="row g-4">
+      <!-- Employment Type -->
+      <div class="col-md-6">
+        <label class="form-label required">Employment Type</label>
+        <select class="form-select" formControlName="employmentType">
+          <option value="SALARIED">Salaried</option>
+          <option value="SELF_EMPLOYED">Self Employed</option>
+          <option value="BUSINESS">Business Owner</option>
+          <option value="PROFESSIONAL">Professional</option>
+          <option value="RETIRED">Retired</option>
+        </select>
+      </div>
+
+      <!-- Salaried Fields -->
+      <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SALARIED'">
+        <div class="col-md-6">
+          <label class="form-label required">Employer Name</label>
+          <input type="text" class="form-control" formControlName="employerName">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Designation</label>
+          <input type="text" class="form-control" formControlName="designation">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Work Experience (Years)</label>
+          <input type="number" class="form-control" formControlName="workExperience" min="0">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Monthly Gross Salary (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Monthly Net Salary (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyNetSalary">
+        </div>
+      </ng-container>
+
+      <!-- Self Employed / Business Fields -->
+      <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SELF_EMPLOYED' || 
+                           financialDetailsForm.get('employmentType')?.value === 'BUSINESS'">
+        <div class="col-md-6">
+          <label class="form-label required">Business Name</label>
+          <input type="text" class="form-control" formControlName="businessName">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Business Type</label>
+          <input type="text" class="form-control" formControlName="businessType">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Annual Turnover (₹)</label>
+          <input type="number" class="form-control" formControlName="annualTurnover">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Monthly Gross Income (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+        </div>
+      </ng-container>
+
+      <!-- Other Income -->
+      <div class="col-md-6">
+        <label class="form-label">Other Income Sources</label>
+        <input type="text" class="form-control" formControlName="otherIncomeSources" 
+               placeholder="Rental, Investment, etc.">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Other Income Amount (₹/month)</label>
+        <input type="number" class="form-control" formControlName="otherIncomeAmount">
+      </div>
+
+      <!-- Monthly Obligations -->
+      <div class="col-12"><hr><h5>Monthly Obligations</h5></div>
+      <div class="col-md-4">
+        <label class="form-label">Existing Loan EMI (₹)</label>
+        <input type="number" class="form-control" formControlName="existingLoanEMI">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Credit Card Payment (₹)</label>
+        <input type="number" class="form-control" formControlName="creditCardPayment">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Other Obligations (₹)</label>
+        <input type="number" class="form-control" formControlName="otherObligations">
+      </div>
+
+      <!-- Bank Details -->
+      <div class="col-12"><hr><h5>Bank Account for Disbursal</h5></div>
+      <div class="col-md-6">
+        <label class="form-label required">Bank Name</label>
+        <input type="text" class="form-control" formControlName="bankName">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">Account Number</label>
+        <input type="text" class="form-control" formControlName="accountNumber">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">IFSC Code</label>
+        <input type="text" class="form-control" formControlName="ifscCode" 
+               placeholder="XXXX0XXXXXX" style="text-transform: uppercase;">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">Account Type</label>
+        <select class="form-select" formControlName="accountType">
+          <option value="SAVINGS">Savings</option>
+          <option value="CURRENT">Current</option>
+        </select>
+      </div>
+
+      <!-- Bank Statement Consent -->
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="bankStatementConsent" 
+                 id="bankConsent" required>
+          <label class="form-check-label" for="bankConsent">
+            I consent to share my bank statements for verification purposes
+          </label>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
