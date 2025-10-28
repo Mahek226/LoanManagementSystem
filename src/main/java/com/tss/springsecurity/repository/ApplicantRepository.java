@@ -2,8 +2,10 @@ package com.tss.springsecurity.repository;
 
 import com.tss.springsecurity.entity.Applicant;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +16,17 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
     boolean existsByUsername(String username);
+    long countByApprovalStatus(String approvalStatus);
+    
+    // Add explicit query for debugging
+    @Query("SELECT COUNT(a) FROM Applicant a WHERE a.approvalStatus = ?1")
+    long countByApprovalStatusExplicit(String approvalStatus);
+    
+    // Get monthly application counts for the last 12 months
+    @Query("SELECT MONTH(a.createdAt) as month, COUNT(a) as count " +
+           "FROM Applicant a " +
+           "WHERE YEAR(a.createdAt) = YEAR(CURRENT_DATE) " +
+           "GROUP BY MONTH(a.createdAt) " +
+           "ORDER BY MONTH(a.createdAt)")
+    List<Object[]> countApplicantsByMonth();
 }

@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
-//@Service  // Disabled until Cloudinary dependency is added
+@Service
 public class CloudinaryService {
 
     @Autowired
@@ -41,6 +41,28 @@ public class CloudinaryService {
 
     public String uploadDocument(MultipartFile file, String documentType, String applicantId) throws IOException {
         return uploadFile(file, documentType.toLowerCase(), applicantId);
+    }
+
+    public Map<String, Object> uploadDocumentWithDetails(MultipartFile file, String documentType, String applicantId) throws IOException {
+        // Generate unique filename
+        String originalFilename = file.getOriginalFilename();
+        String fileExtension = originalFilename != null ? 
+            originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
+        String uniqueFilename = applicantId + "_" + UUID.randomUUID().toString() + fileExtension;
+
+        // Upload parameters
+        Map<String, Object> uploadParams = ObjectUtils.asMap(
+            "folder", "loan_documents/" + documentType.toLowerCase(),
+            "public_id", uniqueFilename,
+            "resource_type", "auto",
+            "quality", "auto:good",
+            "fetch_format", "auto"
+        );
+
+        // Upload to Cloudinary
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+        
+        return uploadResult;
     }
 
     public boolean deleteFile(String publicId) {

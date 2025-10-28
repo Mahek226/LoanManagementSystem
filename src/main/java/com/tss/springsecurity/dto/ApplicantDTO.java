@@ -1,5 +1,6 @@
 package com.tss.springsecurity.dto;
 
+import com.tss.springsecurity.validation.ValidAge;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,7 +20,9 @@ public class ApplicantDTO {
     @Size(max = 100, message = "Last name must not exceed 100 characters")
     private String lastName;
     
+    @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
+    @ValidAge(min = 18, max = 80, message = "Applicant must be between 18 and 80 years old")
     private LocalDate dob;
     
     @Pattern(regexp = "Male|Female|Other", message = "Gender must be Male, Female, or Other")

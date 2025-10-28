@@ -1,0 +1,37 @@
+# models.py
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean, BigInteger
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from db import Base
+
+class Applicant(Base):
+    __tablename__ = "applicant"
+    applicant_id = Column(BigInteger, primary_key=True, index=True)
+    first_name = Column(String(150))
+    last_name = Column(String(150))
+    email = Column(String(255))
+    phone = Column(String(50))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    documents = relationship("Document", back_populates="applicant", cascade="all, delete-orphan")
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(BigInteger, primary_key=True, index=True)
+    applicant_id = Column(BigInteger, ForeignKey("applicant.applicant_id"))
+    document_type = Column(String(50))
+    filename = Column(String(255))
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    applicant = relationship("Applicant", back_populates="documents")
+    fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
+
+class ExtractedField(Base):
+    __tablename__ = "extracted_fields"
+    id = Column(BigInteger, primary_key=True, index=True)
+    document_id = Column(BigInteger, ForeignKey("documents.id"))
+    field_name = Column(String(150))
+    field_value = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    document = relationship("Document", back_populates="fields")

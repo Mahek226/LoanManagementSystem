@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/applicant-approvals")
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, allowCredentials = "true")
 @RequiredArgsConstructor
 public class AdminApprovalController {
 
@@ -23,8 +24,10 @@ public class AdminApprovalController {
     }
 
     @PutMapping("/{applicantId}/approve")
-    public ResponseEntity<?> approveApplicant(@PathVariable Long applicantId) {
+    public ResponseEntity<?> approveApplicant(@PathVariable Long applicantId, 
+                                            @RequestBody(required = false) CommentsRequest request) {
         try {
+            String comments = request != null ? request.comments() : null;
             ApprovalResponse response = applicantAuthService.approveApplicant(applicantId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
@@ -34,8 +37,10 @@ public class AdminApprovalController {
     }
 
     @PutMapping("/{applicantId}/reject")
-    public ResponseEntity<?> rejectApplicant(@PathVariable Long applicantId) {
+    public ResponseEntity<?> rejectApplicant(@PathVariable Long applicantId,
+                                           @RequestBody(required = false) CommentsRequest request) {
         try {
+            String comments = request != null ? request.comments() : null;
             ApprovalResponse response = applicantAuthService.rejectApplicant(applicantId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
@@ -45,4 +50,5 @@ public class AdminApprovalController {
     }
 
     private record ErrorResponse(String message) {}
+    private record CommentsRequest(String comments) {}
 }

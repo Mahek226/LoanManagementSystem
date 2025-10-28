@@ -19,6 +19,7 @@ import java.util.Map;
 
 @Configuration
 @ConditionalOnProperty(name = "external-fraud.enabled", havingValue = "true", matchIfMissing = true)
+// @ConditionalOnProperty(name = "external-fraud.enabled", havingValue = "true", matchIfMissing = false)
 @EnableTransactionManagement
 @EnableJpaRepositories(
     basePackages = "com.tss.springsecurity.externalfraud.repository",
@@ -32,6 +33,7 @@ public class ExternalFraudDatabaseConfig {
         return DataSourceBuilder.create()
                 .url("jdbc:mysql://localhost:3306/external_lms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata")
                 .username("root")
+                // .password("Rishit91@#15") // Original password - didn't work
                 .password("Rishit91@#15")
                 .driverClassName("com.mysql.cj.jdbc.Driver")
                 .build();
@@ -43,7 +45,7 @@ public class ExternalFraudDatabaseConfig {
             @Qualifier("externalDataSource") DataSource dataSource) {
         
         Map<String, Object> properties = new HashMap<>();
-        properties.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        // Remove explicit dialect - Hibernate will auto-detect MySQL dialect
         properties.put("hibernate.hbm2ddl.auto", "update"); // Create/update tables in local database
         properties.put("hibernate.show_sql", false);
         properties.put("hibernate.format_sql", true);

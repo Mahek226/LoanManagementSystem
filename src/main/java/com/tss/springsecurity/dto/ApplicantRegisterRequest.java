@@ -19,9 +19,11 @@ public class ApplicantRegisterRequest {
     @Size(max = 100, message = "Last name must not exceed 100 characters")
     private String lastName;
     
+    @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
     private LocalDate dob;
     
+    @NotBlank(message = "Gender is required")
     @Pattern(regexp = "Male|Female|Other", message = "Gender must be Male, Female, or Other")
     private String gender;
     
@@ -30,22 +32,31 @@ public class ApplicantRegisterRequest {
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
     
-    @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^[0-9]{10,20}$", message = "Phone number must be between 10 and 20 digits")
+    @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Phone number must be 10-15 digits, optionally starting with +")
     private String phone;
+    
+    @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    private String username;
     
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
     
+    @NotBlank(message = "Address is required")
+    @Size(min = 10, max = 500, message = "Address must be between 10 and 500 characters")
     private String address;
     
-    @Size(max = 100, message = "City must not exceed 100 characters")
+    @NotBlank(message = "City is required")
+    @Size(min = 2, max = 100, message = "City must be between 2 and 100 characters")
     private String city;
     
-    @Size(max = 100, message = "State must not exceed 100 characters")
+    @NotBlank(message = "State is required")
+    @Size(min = 2, max = 100, message = "State must be between 2 and 100 characters")
     private String state;
     
-    @Size(max = 100, message = "Country must not exceed 100 characters")
+    @NotBlank(message = "Country is required")
+    @Size(min = 2, max = 100, message = "Country must be between 2 and 100 characters")
     private String country;
 }

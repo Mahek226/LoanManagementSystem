@@ -46,4 +46,14 @@ public interface FraudRuleDefinitionRepository extends JpaRepository<FraudRuleDe
      * Check if rule code exists
      */
     boolean existsByRuleCode(String ruleCode);
+    
+    /**
+     * Find rules by category
+     */
+    List<FraudRuleDefinition> findByRuleCategory(String ruleCategory);
+    
+    /**
+     * Count rules by severity
+     */
+    long countBySeverityAndIsActiveTrue(String severity);
 }

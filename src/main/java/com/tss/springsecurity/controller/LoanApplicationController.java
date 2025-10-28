@@ -37,7 +37,7 @@ public class LoanApplicationController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Loan application submitted successfully");
+            response.put("message", "Loan details captured successfully, proceed with document uploading");
             response.put("applicantId", applicant.getApplicantId());
             response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
             response.put("email", applicant.getEmail());

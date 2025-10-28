@@ -13,18 +13,26 @@ import java.util.List;
 @NoArgsConstructor
 public class LoanApplicationResponse {
     
-    private Long applicationId;
+    // Frontend expected fields
+    private Long id;
+    private Long applicantId;
     private String applicantName;
+    private String loanType;
+    private BigDecimal requestedAmount;
+    private String purpose;
+    private String employmentStatus;
+    private Double monthlyIncome;
+    private String status;
+    private String appliedDate;
+    private String reviewedDate;
+    private String reviewedBy;
+    private String comments;
+    
+    // Additional fields
     private String email;
     private String phone;
-    private String loanType;
-    private BigDecimal loanAmount;
     private Integer loanTenure;
     private BigDecimal emiAmount;
-    private String applicationStatus;
-    private LocalDateTime applicationDate;
-    private LocalDateTime lastUpdated;
-    private String remarks;
     
     // Document information
     private List<DocumentInfo> documents;

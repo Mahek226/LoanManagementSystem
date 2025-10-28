@@ -10,7 +10,7 @@ import com.cloudinary.Cloudinary;
 import java.util.HashMap;
 import java.util.Map;
 
-//@Configuration  // Disabled until Cloudinary dependency is added
+@Configuration
 public class CloudinaryConfig {
 
     @Value("${cloudinary.cloud-name}")

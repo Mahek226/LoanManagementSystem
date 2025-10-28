@@ -1,0 +1,196 @@
+===============================================
+JWT AUTHENTICATION GUIDE
+===============================================
+
+JWT (JSON Web Token) authentication has been implemented.
+All protected API endpoints now require a valid JWT token.
+
+===============================================
+PUBLIC ENDPOINTS (No Token Required)
+===============================================
+
+Admin Authentication:
+- POST /api/admin/auth/register
+- POST /api/admin/auth/login
+
+Applicant Authentication:
+- POST /api/applicant/auth/register
+- POST /api/applicant/auth/verify-otp
+- POST /api/applicant/auth/resend-otp
+- POST /api/applicant/auth/login
+
+===============================================
+PROTECTED ENDPOINTS (Token Required)
+===============================================
+
+Admin Operations:
+- POST   /api/admin/officers/loan-officers
+- GET    /api/admin/officers/loan-officers
+- GET    /api/admin/officers/loan-officers/{id}
+- DELETE /api/admin/officers/loan-officers/{id}
+- POST   /api/admin/officers/compliance-officers
+- GET    /api/admin/officers/compliance-officers
+- GET    /api/admin/officers/compliance-officers/{id}
+- DELETE /api/admin/officers/compliance-officers/{id}
+- GET    /api/admin/applicant-approvals/pending
+- PUT    /api/admin/applicant-approvals/{id}/approve
+- PUT    /api/admin/applicant-approvals/{id}/reject
+
+All other /api/** endpoints are protected
+
+===============================================
+HOW TO USE JWT TOKENS
+===============================================
+
+STEP 1: LOGIN AND GET TOKEN
+----------------------------
+
+Admin Login:
+POST http://localhost:8080/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "admin123",
+  "password": "admin123456"
+}
+
+Response:
+{
+  "adminId": 1,
+  "username": "admin123",
+  "email": "admin@example.com",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbjEyMyIsImlhdCI6MTY...",
+  "tokenType": "Bearer"
+}
+
+Copy the "accessToken" value.
+
+----------------------------
+
+Applicant Login:
+POST http://localhost:8080/api/applicant/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+Response:
+{
+  "applicantId": 1,
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY...",
+  "tokenType": "Bearer",
+  "isApproved": true,
+  "approvalStatus": "APPROVED"
+}
+
+Copy the "accessToken" value.
+
+===============================================
+STEP 2: USE TOKEN IN API REQUESTS
+===============================================
+
+For all protected endpoints, include the JWT token in the Authorization header:
+
+Authorization: Bearer <your-token-here>
+
+Example - Get Pending Approvals (Admin):
+-----------------------------------------
+GET http://localhost:8080/api/admin/applicant-approvals/pending
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbjEyMyIsImlhdCI6MTY...
+
+
+Example - Add Loan Officer (Admin):
+------------------------------------
+POST http://localhost:8080/api/admin/officers/loan-officers
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbjEyMyIsImlhdCI6MTY...
+Content-Type: application/json
+
+{
+  "username": "loanofficer1",
+  "email": "loanofficer1@example.com",
+  "password": "officer123",
+  "loanType": "Home Loan"
+}
+
+===============================================
+USING POSTMAN
+===============================================
+
+1. Send login request to get token
+2. Copy the "accessToken" from response
+3. For protected endpoints:
+   - Go to "Authorization" tab
+   - Select "Bearer Token" type
+   - Paste the token in the "Token" field
+4. Send the request
+
+===============================================
+USING CURL
+===============================================
+
+# Login
+curl -X POST http://localhost:8080/api/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usernameOrEmail":"admin123","password":"admin123456"}'
+
+# Use token (replace YOUR_TOKEN with actual token)
+curl -X GET http://localhost:8080/api/admin/applicant-approvals/pending \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+===============================================
+ERROR RESPONSES
+===============================================
+
+401 Unauthorized (No token or invalid token):
+{
+  "error": "Unauthorized",
+  "message": "Authentication required. Please provide a valid JWT token.",
+  "path": "/api/admin/officers/loan-officers"
+}
+
+===============================================
+TOKEN EXPIRATION
+===============================================
+
+JWT tokens are valid for: 24 hours (86400000 milliseconds)
+
+When a token expires:
+- You will receive a 401 Unauthorized error
+- Login again to get a new token
+
+===============================================
+SECURITY BEST PRACTICES
+===============================================
+
+1. Never share your JWT token
+2. Store tokens securely (not in plain text)
+3. Use HTTPS in production
+4. Don't log tokens in console
+5. Implement token refresh mechanism for production
+6. Use different tokens for different users
+7. Logout should invalidate tokens (implement blacklist in production)
+
+===============================================
+TESTING WORKFLOW
+===============================================
+
+1. Register Admin:
+   POST /api/admin/auth/register
+
+2. Login Admin:
+   POST /api/admin/auth/login
+   → Get token
+
+3. Use token to access protected endpoints:
+   GET /api/admin/applicant-approvals/pending
+   (Include: Authorization: Bearer <token>)
+
+4. Try accessing without token:
+   → Should get 401 Unauthorized
+
+===============================================

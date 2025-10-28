@@ -1,6 +1,7 @@
 package com.tss.springsecurity.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,18 +28,27 @@ public class PanDetails {
     @JoinColumn(name = "applicant_id", referencedColumnName = "applicant_id")
     private Applicant applicant;
     
+    @NotBlank(message = "PAN number is required")
+    @Pattern(regexp = "[A-Z]{5}[0-9]{4}[A-Z]{1}", message = "Invalid PAN format. Must be in format ABCDE1234F")
     @Column(name = "pan_number", length = 20)
     private String panNumber;
     
+    @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 150, message = "Name must be between 2 and 150 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s.]+$", message = "Name can only contain letters, spaces, and dots")
     @Column(name = "name", length = 150)
     private String name;
     
+    @Size(min = 2, max = 150, message = "Father's name must be between 2 and 150 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s.]*$", message = "Father's name can only contain letters, spaces, and dots")
     @Column(name = "father_name", length = 150)
     private String fatherName;
     
+    @Past(message = "Date of birth must be in the past")
     @Column(name = "dob")
     private LocalDate dob;
     
+    @Size(max = 500, message = "Cloudinary URL must not exceed 500 characters")
     @Column(name = "cloudinary_url", columnDefinition = "TEXT")
     private String cloudinaryUrl;
     

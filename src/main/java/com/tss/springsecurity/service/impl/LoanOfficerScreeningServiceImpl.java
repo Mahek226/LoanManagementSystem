@@ -6,9 +6,11 @@ import com.tss.springsecurity.dto.LoanScreeningDecision;
 import com.tss.springsecurity.dto.ScreeningDashboardResponse;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
+import com.tss.springsecurity.service.EnhancedLoanScreeningService;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,9 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private final LoanOfficerRepository loanOfficerRepository;
     private final ComplianceOfficerRepository complianceOfficerRepository;
     
+    @Autowired
+    private EnhancedLoanScreeningService enhancedScreeningService;
+    
     @Value("${loan.risk-score.threshold:70}")
     private Integer riskScoreThreshold;
     
@@ -40,8 +45,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         List<OfficerApplicationAssignment> assignments = assignmentRepository
                 .findByOfficer_OfficerId(officerId);
         
+        // Return all assignments (including completed ones) for dashboard statistics
         return assignments.stream()
-                .filter(assignment -> "PENDING".equals(assignment.getStatus()) || "IN_PROGRESS".equals(assignment.getStatus()))
                 .map(this::mapToScreeningResponse)
                 .collect(Collectors.toList());
     }
@@ -71,33 +76,61 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         OfficerApplicationAssignment assignment = assignmentRepository.findById(request.getAssignmentId())
                 .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + request.getAssignmentId()));
         
+        // Check if assignment is already processed
+        if ("APPROVED".equals(assignment.getStatus()) || "REJECTED".equals(assignment.getStatus()) || 
+            "ESCALATED_TO_COMPLIANCE".equals(assignment.getStatus())) {
+            throw new RuntimeException("This assignment has already been processed with status: " + assignment.getStatus());
+        }
+        
         // Verify the officer owns this assignment
         if (!assignment.getOfficer().getOfficerId().equals(officerId)) {
             throw new RuntimeException("Officer is not authorized to process this assignment");
         }
         
         ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        log.info("Found loan {} for applicant {}, current risk score: {}", loan.getLoanId(), assignment.getApplicant().getApplicantId(), loan.getRiskScore());
+        
+        // Perform enhanced screening to get normalized score
+        try {
+            EnhancedLoanScreeningService.EnhancedScoringResult enhancedResult = 
+                enhancedScreeningService.performEnhancedScreening(assignment.getApplicant().getApplicantId());
+            
+            // Update loan with normalized score
+            loan.setRiskScore(enhancedResult.getNormalizedScore().intValue());
+            loanRepository.save(loan);
+            
+            log.info("Updated loan {} with enhanced normalized score: {}", loan.getLoanId(), enhancedResult.getNormalizedScore());
+        } catch (Exception e) {
+            log.error("Error performing enhanced screening for applicant {}, using existing score", assignment.getApplicant().getApplicantId(), e);
+        }
         
         // Check if officer can approve/reject based on risk score
         boolean canApproveReject = loan.getRiskScore() < riskScoreThreshold;
+        log.info("Risk score: {}, Threshold: {}, Can approve/reject: {}", loan.getRiskScore(), riskScoreThreshold, canApproveReject);
         
         switch (request.getAction().toUpperCase()) {
             case "APPROVE":
                 if (!canApproveReject) {
-                    throw new RuntimeException("Cannot approve loan with high risk score. Must escalate to compliance.");
+                    log.warn("Cannot approve loan {} - risk score {} exceeds threshold {}", loan.getLoanId(), loan.getRiskScore(), riskScoreThreshold);
+                    throw new RuntimeException("Cannot approve loan with high risk score (" + loan.getRiskScore() + "). Must escalate to compliance.");
                 }
+                log.info("Approving loan {} by officer {}", loan.getLoanId(), officerId);
                 return approveLoan(assignment, loan, request.getRemarks());
                 
             case "REJECT":
                 if (!canApproveReject) {
-                    throw new RuntimeException("Cannot reject loan with high risk score. Must escalate to compliance.");
+                    log.warn("Cannot reject loan {} - risk score {} exceeds threshold {}", loan.getLoanId(), loan.getRiskScore(), riskScoreThreshold);
+                    throw new RuntimeException("Cannot reject loan with high risk score (" + loan.getRiskScore() + "). Must escalate to compliance.");
                 }
+                log.info("Rejecting loan {} by officer {}", loan.getLoanId(), officerId);
                 return rejectLoan(assignment, loan, request.getRejectionReason());
                 
             case "ESCALATE_TO_COMPLIANCE":
+                log.info("Escalating loan {} to compliance", loan.getLoanId());
                 return escalateToCompliance(request.getAssignmentId(), request.getRemarks());
                 
             default:
+                log.error("Invalid action received: {}", request.getAction());
                 throw new RuntimeException("Invalid action: " + request.getAction());
         }
     }
