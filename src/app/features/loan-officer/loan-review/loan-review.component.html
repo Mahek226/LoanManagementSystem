@@ -238,6 +238,79 @@
               {{ loan.canApproveReject ? 'You can approve/reject this loan' : 'Requires escalation to compliance' }}
             </small>
           </div>
+
+          <!-- Score Interpretation -->
+          <div class="mt-3 p-3 rounded bg-info bg-opacity-10" *ngIf="enhancedLoan">
+            <small class="text-muted d-block mb-1"><i class="fas fa-info-circle me-1"></i>Score Interpretation</small>
+            <small class="d-block" style="color: var(--text-primary);">{{ enhancedLoan.normalizedRiskScore.scoreInterpretation }}</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoring Breakdown (Enhanced) -->
+      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.45s; background-color: var(--bg-primary);" *ngIf="enhancedLoan">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-calculator me-2 text-primary"></i>Scoring Breakdown
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Final Score -->
+          <div class="mb-3 p-3 rounded" style="background-color: var(--bg-secondary);">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold" style="color: var(--text-primary);">Final Score</span>
+              <span class="badge bg-{{ getRiskColor(enhancedLoan.normalizedRiskScore.riskLevel) }} fs-6">
+                {{ enhancedLoan.normalizedRiskScore.finalScore.toFixed(1) }}%
+              </span>
+            </div>
+          </div>
+
+          <!-- Internal Scoring -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted"><i class="fas fa-building me-1"></i>Internal Scoring</small>
+              <span class="badge bg-secondary">{{ enhancedLoan.scoringBreakdown.internalScoring.normalizedScore.toFixed(1) }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-info" 
+                   [style.width.%]="enhancedLoan.scoringBreakdown.internalScoring.normalizedScore"
+                   role="progressbar">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">
+              {{ enhancedLoan.scoringBreakdown.internalScoring.rawScore }} / {{ enhancedLoan.scoringBreakdown.internalScoring.maxPossibleScore }} points
+              ({{ enhancedLoan.scoringBreakdown.internalScoring.violatedRulesCount }} violations)
+            </small>
+          </div>
+
+          <!-- External Scoring -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted"><i class="fas fa-globe me-1"></i>External Scoring</small>
+              <span class="badge bg-secondary">{{ enhancedLoan.scoringBreakdown.externalScoring.normalizedScore.toFixed(1) }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-warning" 
+                   [style.width.%]="enhancedLoan.scoringBreakdown.externalScoring.normalizedScore"
+                   role="progressbar">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">
+              {{ enhancedLoan.scoringBreakdown.externalScoring.rawScore }} / {{ enhancedLoan.scoringBreakdown.externalScoring.maxPossibleScore }} points
+              ({{ enhancedLoan.scoringBreakdown.externalScoring.violatedRulesCount }} violations)
+            </small>
+          </div>
+
+          <!-- Recommendation -->
+          <div class="mt-3 p-2 rounded text-center" 
+               [class.bg-success]="enhancedLoan.finalRecommendation === 'APPROVE'"
+               [class.bg-warning]="enhancedLoan.finalRecommendation === 'REVIEW'"
+               [class.bg-danger]="enhancedLoan.finalRecommendation === 'REJECT'"
+               style="opacity: 0.1;">
+            <small class="fw-semibold" style="color: var(--text-primary);">
+              Recommendation: {{ enhancedLoan.finalRecommendation }}
+            </small>
+          </div>
         </div>
       </div>
 
@@ -273,19 +346,19 @@
         <div class="card-body d-grid gap-3">
           <button class="btn btn-success btn-lg" 
                   (click)="openActionModal('APPROVE')"
-                  [disabled]="!loan.canApproveReject || loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+                  [disabled]="!loan.canApproveReject || (loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS')">
             <i class="fas fa-check-circle me-2"></i>Approve Loan
           </button>
           
           <button class="btn btn-danger btn-lg" 
                   (click)="openActionModal('REJECT')"
-                  [disabled]="!loan.canApproveReject || loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+                  [disabled]="!loan.canApproveReject || (loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS')">
             <i class="fas fa-times-circle me-2"></i>Reject Loan
           </button>
           
           <button class="btn btn-warning btn-lg" 
                   (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
-                  [disabled]="loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+                  [disabled]="loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS'">
             <i class="fas fa-arrow-up me-2"></i>Escalate to Compliance
           </button>
 

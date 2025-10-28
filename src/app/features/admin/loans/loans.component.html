@@ -1,8 +1,303 @@
-<div class="loans-management">
-  <div class="text-center py-5">
-    <i class="fas fa-money-check-alt text-muted" style="font-size: 4rem;"></i>
-    <h4 class="mt-3" style="color: var(--text-primary);">Loan Management</h4>
-    <p class="text-muted">Loan application management features will be available here.</p>
-    <p class="text-muted small">This section will include loan approval workflows, document verification, and loan tracking.</p>
+<div class="loans-management" style="background-color: var(--bg-secondary); min-height: 100vh; padding: 2rem;">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+        <i class="fas fa-money-check-alt me-2 text-primary"></i>Loan Applications
+      </h2>
+      <p class="text-muted mb-0">Track and manage all loan applications with detailed progress</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold text-muted">Search</label>
+          <input type="text" 
+                 class="form-control" 
+                 placeholder="Search by applicant name or loan ID..." 
+                 [(ngModel)]="searchQuery"
+                 (ngModelChange)="applyFilters()"
+                 style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold text-muted">Status</label>
+          <select class="form-select" 
+                  [(ngModel)]="statusFilter"
+                  (ngModelChange)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Status</option>
+            <option *ngFor="let status of statusOptions" [value]="status">{{ status | titlecase }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold text-muted">Loan Type</label>
+          <select class="form-select" 
+                  [(ngModel)]="loanTypeFilter"
+                  (ngModelChange)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Types</option>
+            <option *ngFor="let type of loanTypes" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-outline-secondary w-100" (click)="clearFilters()">
+            <i class="fas fa-times me-2"></i>Clear
+          </button>
+        </div>
+      </div>
+      <div class="mt-3 text-muted small">
+        Showing <strong>{{ filteredLoans.length }}</strong> of <strong>{{ loans.length }}</strong> loans
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading loan applications...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="alert alert-danger">
+    <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+  </div>
+
+  <!-- Loans Table -->
+  <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);" *ngIf="!loading && !error">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead style="background-color: var(--bg-secondary); position: sticky; top: 0; z-index: 10;">
+            <tr>
+              <th style="color: var(--text-primary); padding: 1rem;">Loan ID</th>
+              <th style="color: var(--text-primary); padding: 1rem;">Applicant</th>
+              <th style="color: var(--text-primary); padding: 1rem;">Loan Type</th>
+              <th style="color: var(--text-primary); padding: 1rem;">Amount</th>
+              <th style="color: var(--text-primary); padding: 1rem;">Status</th>
+              <th style="color: var(--text-primary); padding: 1rem;">Applied Date</th>
+              <th style="color: var(--text-primary); padding: 1rem; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let loan of filteredLoans" style="cursor: pointer;">
+              <td style="color: var(--text-primary); padding: 1rem;">
+                <strong>#{{ loan.id }}</strong>
+              </td>
+              <td style="color: var(--text-primary); padding: 1rem;">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2">
+                    <i class="fas fa-user text-primary"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold">{{ loan.applicantName }}</div>
+                    <small class="text-muted">ID: {{ loan.applicantId }}</small>
+                  </div>
+                </div>
+              </td>
+              <td style="color: var(--text-primary); padding: 1rem;">
+                <span class="badge bg-info">{{ loan.loanType }}</span>
+              </td>
+              <td style="color: var(--text-primary); padding: 1rem;">
+                <span class="fw-semibold text-success">{{ formatCurrency(loan.requestedAmount) }}</span>
+              </td>
+              <td style="padding: 1rem;">
+                <span class="badge {{ getStatusBadgeClass(loan.status) }}">{{ loan.status | titlecase }}</span>
+              </td>
+              <td style="color: var(--text-secondary); padding: 1rem;">
+                <small>{{ formatDate(loan.appliedDate) }}</small>
+              </td>
+              <td style="padding: 1rem; text-align: center;">
+                <button class="btn btn-sm btn-primary" 
+                        (click)="viewLoanDetails(loan)"
+                        title="View Progress & Details">
+                  <i class="fas fa-eye me-1"></i>View Details
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="text-center py-5" *ngIf="!loading && filteredLoans.length === 0">
+    <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3 text-muted">No Loans Found</h4>
+    <p class="text-muted">Try adjusting your filters to see more results</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="card border-0 shadow-sm mt-3" style="background-color: var(--bg-primary);" *ngIf="!loading && loans.length > 0">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          Showing <strong>{{ currentPage * pageSize + 1 }}</strong> to 
+          <strong>{{ Math.min((currentPage + 1) * pageSize, totalElements) }}</strong> of 
+          <strong>{{ totalElements }}</strong> loans
+        </div>
+        <nav aria-label="Loan pagination">
+          <ul class="pagination mb-0">
+            <li class="page-item" [class.disabled]="currentPage === 0">
+              <button class="page-link" (click)="previousPage()" [disabled]="currentPage === 0">
+                <i class="fas fa-chevron-left"></i> Previous
+              </button>
+            </li>
+            <li class="page-item" *ngFor="let page of getPageNumbers()" [class.active]="page === currentPage">
+              <button class="page-link" (click)="goToPage(page)">{{ page + 1 }}</button>
+            </li>
+            <li class="page-item" [class.disabled]="(currentPage + 1) * pageSize >= totalElements">
+              <button class="page-link" (click)="nextPage()" [disabled]="(currentPage + 1) * pageSize >= totalElements">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
+        <div>
+          <select class="form-select form-select-sm" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" 
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary); width: auto;">
+            <option [value]="10">10 per page</option>
+            <option [value]="25">25 per page</option>
+            <option [value]="50">50 per page</option>
+            <option [value]="100">100 per page</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loan Details Modal -->
+<div class="modal fade show" 
+     [class.d-block]="showDetailModal" 
+     [style.display]="showDetailModal ? 'block' : 'none'"
+     tabindex="-1" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     *ngIf="showDetailModal">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-chart-line me-2"></i>Loan Progress Tracking
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDetailModal()"></button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        
+        <!-- Loan Summary -->
+        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="text-muted mb-3">Loan Information</h6>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Loan ID:</strong>
+                  <span class="ms-2" style="color: var(--text-secondary);">#{{ selectedLoan.id }}</span>
+                </div>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Applicant:</strong>
+                  <span class="ms-2" style="color: var(--text-secondary);">{{ selectedLoan.applicantName }}</span>
+                </div>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Loan Type:</strong>
+                  <span class="badge bg-info ms-2">{{ selectedLoan.loanType }}</span>
+                </div>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Amount:</strong>
+                  <span class="ms-2 text-success fw-bold">{{ formatCurrency(selectedLoan.requestedAmount) }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted mb-3">Status Information</h6>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Current Status:</strong>
+                  <span class="badge {{ getStatusBadgeClass(selectedLoan.status) }} ms-2">{{ selectedLoan.status | titlecase }}</span>
+                </div>
+                <div class="mb-2">
+                  <strong style="color: var(--text-primary);">Applied Date:</strong>
+                  <span class="ms-2" style="color: var(--text-secondary);">{{ formatDate(selectedLoan.appliedDate) }}</span>
+                </div>
+                <div class="mb-2" *ngIf="selectedLoan.reviewedDate">
+                  <strong style="color: var(--text-primary);">Reviewed Date:</strong>
+                  <span class="ms-2" style="color: var(--text-secondary);">{{ formatDate(selectedLoan.reviewedDate) }}</span>
+                </div>
+                <div class="mb-2" *ngIf="selectedLoan.reviewedBy">
+                  <strong style="color: var(--text-primary);">Reviewed By:</strong>
+                  <span class="ms-2" style="color: var(--text-secondary);">{{ selectedLoan.reviewedBy }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+          <div class="card-header" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+            <h6 class="mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-history me-2"></i>Progress Timeline
+            </h6>
+          </div>
+          <div class="card-body">
+            
+            <!-- Loading Progress -->
+            <div *ngIf="loadingProgress" class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-2 text-muted small">Loading progress timeline...</p>
+            </div>
+
+            <!-- Timeline Events -->
+            <div class="timeline" *ngIf="!loadingProgress && loanProgress">
+              <div class="timeline-item" *ngFor="let event of loanProgress.events; let last = last">
+                <div class="timeline-marker bg-{{ getEventColor(event.eventType) }}">
+                  <i class="fas {{ getEventIcon(event.eventType) }} text-white"></i>
+                </div>
+                <div class="timeline-content">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-1" style="color: var(--text-primary);">{{ event.action || event.eventType }}</h6>
+                      <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-{{ getEventColor(event.eventType) }}">{{ event.eventType.replace('_', ' ') }}</span>
+                        <span class="badge bg-secondary">{{ event.performedByRole }}</span>
+                      </div>
+                    </div>
+                    <small class="text-muted">{{ formatDate(event.timestamp) }}</small>
+                  </div>
+                  <p class="mb-2" style="color: var(--text-secondary);">
+                    <strong>Performed by:</strong> {{ event.performedBy }}
+                    <span *ngIf="event.officerName"> ({{ event.officerName }})</span>
+                  </p>
+                  <p class="mb-0 text-muted small" *ngIf="event.remarks">
+                    <i class="fas fa-comment me-1"></i>{{ event.remarks }}
+                  </p>
+                </div>
+                <div class="timeline-line" *ngIf="!last"></div>
+              </div>
+            </div>
+
+            <!-- No Events -->
+            <div *ngIf="!loadingProgress && loanProgress && loanProgress.events.length === 0" class="text-center py-4">
+              <i class="fas fa-info-circle text-muted" style="font-size: 2rem;"></i>
+              <p class="mt-2 text-muted">No progress events recorded yet</p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeDetailModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+      </div>
+    </div>
   </div>
 </div>

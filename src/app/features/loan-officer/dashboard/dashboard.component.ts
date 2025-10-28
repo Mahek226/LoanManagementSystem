@@ -81,7 +81,10 @@ export class LoDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         console.log('Received loan data:', data);
         this.loans = data;
         this.stats = this.loanOfficerService.calculateStats(data);
-        this.recentLoans = data.slice(0, 5); // Show 5 most recent
+        // Show only pending loans in recent assignments (not completed ones)
+        this.recentLoans = data
+          .filter(loan => loan.status === 'PENDING' || loan.status === 'ASSIGNED' || loan.status === 'IN_PROGRESS')
+          .slice(0, 5);
         this.loading = false;
         
         // Initialize charts after data is loaded

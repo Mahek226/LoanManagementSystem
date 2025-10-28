@@ -11,7 +11,8 @@ import {
   FraudCheckResult,
   DocumentVerificationRequest,
   DocumentResubmissionRequest,
-  FraudScreeningTriggerRequest
+  FraudScreeningTriggerRequest,
+  EnhancedLoanScreeningResponse
 } from '@core/services/loan-officer.service';
 
 @Component({
@@ -30,6 +31,7 @@ export class LoanReviewComponent implements OnInit {
   success = '';
 
   loan: LoanScreeningResponse | null = null;
+  enhancedLoan: EnhancedLoanScreeningResponse | null = null;
   documents: LoanDocument[] = [];
   fraudCheckResult: FraudCheckResult | null = null;
 
@@ -109,18 +111,51 @@ export class LoanReviewComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    this.loanOfficerService.getLoanDetailsForScreening(this.assignmentId).subscribe({
-      next: (data) => {
-        this.loan = data;
+    // Load enhanced loan details with scoring breakdown
+    this.loanOfficerService.getEnhancedLoanDetails(this.assignmentId).subscribe({
+      next: (enhancedData) => {
+        this.enhancedLoan = enhancedData;
+        // Map to basic loan for backward compatibility
+        this.loan = {
+          assignmentId: enhancedData.assignmentId,
+          loanId: enhancedData.loanId,
+          applicantId: enhancedData.applicantId,
+          applicantName: enhancedData.applicantName,
+          loanType: enhancedData.loanType,
+          loanAmount: enhancedData.loanAmount,
+          riskScore: Math.round(enhancedData.normalizedRiskScore.finalScore),
+          riskLevel: enhancedData.normalizedRiskScore.riskLevel,
+          canApproveReject: enhancedData.canApproveReject,
+          status: enhancedData.status,
+          remarks: enhancedData.remarks,
+          assignedAt: enhancedData.assignedAt,
+          processedAt: enhancedData.processedAt,
+          officerId: enhancedData.officerId,
+          officerName: enhancedData.officerName,
+          officerType: enhancedData.officerType
+        };
         this.loading = false;
+        console.log('Enhanced loan details loaded:', this.enhancedLoan);
         // Load documents and fraud check results
         this.loadDocuments();
         this.loadFraudCheckResults();
       },
       error: (err) => {
-        console.error('Error loading loan details:', err);
-        this.error = 'Failed to load loan details. Please try again.';
-        this.loading = false;
+        console.error('Error loading enhanced loan details:', err);
+        // Fallback to basic loan details if enhanced fails
+        this.loanOfficerService.getLoanDetailsForScreening(this.assignmentId).subscribe({
+          next: (data) => {
+            this.loan = data;
+            this.loading = false;
+            this.loadDocuments();
+            this.loadFraudCheckResults();
+          },
+          error: (err2) => {
+            console.error('Error loading loan details:', err2);
+            this.error = 'Failed to load loan details. Please try again.';
+            this.loading = false;
+          }
+        });
       }
     });
   }
@@ -171,6 +206,11 @@ export class LoanReviewComponent implements OnInit {
       rejectionReason: this.selectedAction === 'REJECT' ? this.rejectionReason : undefined
     };
 
+    console.log('Processing loan screening:', {
+      officerId: this.officerId,
+      request: request
+    });
+
     this.loanOfficerService.processLoanScreening(this.officerId, request).subscribe({
       next: (response) => {
         this.processing = false;
@@ -189,7 +229,20 @@ export class LoanReviewComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error processing loan:', err);
-        this.error = err.error?.message || 'Failed to process loan. Please try again.';
+        console.error('Error status:', err.status);
+        console.error('Error body:', err.error);
+        
+        // Extract error message from different possible formats
+        let errorMessage = 'Failed to process loan. Please try again.';
+        if (err.error?.message) {
+          errorMessage = err.error.message;
+        } else if (typeof err.error === 'string') {
+          errorMessage = err.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        this.error = errorMessage;
         this.processing = false;
       }
     });

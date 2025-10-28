@@ -51,6 +51,30 @@ export interface LoanApplication {
   comments?: string;
 }
 
+export interface LoanProgressTimeline {
+  loanId: number;
+  applicantId: number;
+  applicantName: string;
+  loanType: string;
+  loanAmount: number;
+  currentStatus: string;
+  appliedAt: string;
+  events: LoanProgressEvent[];
+}
+
+export interface LoanProgressEvent {
+  eventId: number;
+  eventType: string; // APPLICATION_SUBMITTED, ASSIGNED_TO_OFFICER, OFFICER_REVIEW, ESCALATED, COMPLIANCE_REVIEW, APPROVED, REJECTED
+  eventStatus: string;
+  performedBy: string;
+  performedByRole: string; // APPLICANT, LOAN_OFFICER, COMPLIANCE_OFFICER, SYSTEM
+  officerId?: number;
+  officerName?: string;
+  action?: string;
+  remarks?: string;
+  timestamp: string;
+}
+
 export interface OfficerResponse {
   officerId: number;
   username: string;
@@ -64,6 +88,8 @@ export interface LoanOfficerRequest {
   username: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
   loanType?: string;
 }
 
@@ -71,6 +97,8 @@ export interface ComplianceOfficerRequest {
   username: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
   loanType?: string;
 }
 
@@ -180,6 +208,10 @@ export class AdminService {
 
   rejectLoan(id: number, comments: string): Observable<any> {
     return this.http.put(`${this.API_URL}/admin/loans/${id}/reject`, { comments });
+  }
+
+  getLoanProgressTimeline(loanId: number): Observable<LoanProgressTimeline> {
+    return this.http.get<LoanProgressTimeline>(`${this.API_URL}/admin/loans/${loanId}/progress`);
   }
 
   // Search and Filter
