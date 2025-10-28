@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 public class CommonAuthResponse {
     
     private Long userId;
+    private Long applicantId;  // For applicants
+    private Long officerId;    // For loan/compliance officers
     private String username;
     private String firstName;
     private String lastName;
@@ -19,10 +21,11 @@ public class CommonAuthResponse {
     private String tokenType = "Bearer";
     private String message;
     
-    // Constructor for successful login
-    public CommonAuthResponse(Long userId, String username, String firstName, String lastName, 
+    // Constructor for successful login (with applicantId)
+    public CommonAuthResponse(Long userId, Long applicantId, String username, String firstName, String lastName, 
                              String email, String userType, String accessToken) {
         this.userId = userId;
+        this.applicantId = applicantId;
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -33,10 +36,11 @@ public class CommonAuthResponse {
         this.message = "Login successful";
     }
     
-    // Constructor for admin (no firstName/lastName)
-    public CommonAuthResponse(Long userId, String username, String email, 
+    // Constructor for admin/officers (no firstName/lastName)
+    public CommonAuthResponse(Long userId, Long officerId, String username, String email, 
                              String userType, String accessToken) {
         this.userId = userId;
+        this.officerId = officerId;
         this.username = username;
         this.email = email;
         this.userType = userType;

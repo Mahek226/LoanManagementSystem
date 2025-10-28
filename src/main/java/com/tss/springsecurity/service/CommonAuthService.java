@@ -47,6 +47,7 @@ public class CommonAuthService {
             String token = jwtUtil.generateToken(admin.get().getUsername(), "ADMIN");
             return new CommonAuthResponse(
                 admin.get().getAdminId(),
+                null, // Admin has no officerId
                 admin.get().getUsername(),
                 admin.get().getEmail(),
                 "ADMIN",
@@ -69,7 +70,8 @@ public class CommonAuthService {
             
             String token = jwtUtil.generateToken(app.getEmail(), "APPLICANT");
             return new CommonAuthResponse(
-                app.getApplicantId(),
+                app.getApplicantId(), // userId
+                app.getApplicantId(), // applicantId
                 null, // Applicants don't have username
                 app.getFirstName(),
                 app.getLastName(),
@@ -84,7 +86,8 @@ public class CommonAuthService {
         if (loanOfficer.isPresent() && passwordEncoder.matches(password, loanOfficer.get().getPassword())) {
             String token = jwtUtil.generateToken(loanOfficer.get().getUsername(), "LOAN_OFFICER");
             return new CommonAuthResponse(
-                loanOfficer.get().getOfficerId(),
+                loanOfficer.get().getOfficerId(), // userId
+                loanOfficer.get().getOfficerId(), // officerId
                 loanOfficer.get().getUsername(),
                 loanOfficer.get().getEmail(),
                 "LOAN_OFFICER",
@@ -97,7 +100,8 @@ public class CommonAuthService {
         if (complianceOfficer.isPresent() && passwordEncoder.matches(password, complianceOfficer.get().getPassword())) {
             String token = jwtUtil.generateToken(complianceOfficer.get().getUsername(), "COMPLIANCE_OFFICER");
             return new CommonAuthResponse(
-                complianceOfficer.get().getOfficerId(),
+                complianceOfficer.get().getOfficerId(), // userId
+                complianceOfficer.get().getOfficerId(), // officerId
                 complianceOfficer.get().getUsername(),
                 complianceOfficer.get().getEmail(),
                 "COMPLIANCE_OFFICER",

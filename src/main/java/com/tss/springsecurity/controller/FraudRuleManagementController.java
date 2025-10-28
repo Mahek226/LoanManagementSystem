@@ -15,6 +15,7 @@ import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/admin/fraud-rules")
@@ -58,10 +59,12 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/{ruleId}")
     public ResponseEntity<?> getRuleById(@PathVariable Long ruleId) {
-        return ruleRepository.findById(ruleId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Rule not found with id: " + ruleId)));
+        Optional<FraudRuleDefinition> rule = ruleRepository.findById(ruleId);
+        if (rule.isPresent()) {
+            return ResponseEntity.ok(rule.get());
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Rule not found with id: " + ruleId));
     }
     
     /**
@@ -69,10 +72,12 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/code/{ruleCode}")
     public ResponseEntity<?> getRuleByCode(@PathVariable String ruleCode) {
-        return ruleRepository.findByRuleCode(ruleCode)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Rule not found with code: " + ruleCode)));
+        Optional<FraudRuleDefinition> rule = ruleRepository.findByRuleCode(ruleCode);
+        if (rule.isPresent()) {
+            return ResponseEntity.ok(rule.get());
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Rule not found with code: " + ruleCode));
     }
     
     /**

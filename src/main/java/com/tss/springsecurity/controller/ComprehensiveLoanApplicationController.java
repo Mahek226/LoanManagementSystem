@@ -208,14 +208,14 @@ public class ComprehensiveLoanApplicationController {
         }
     }
 
-    @GetMapping("/by-status/{status}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('LOAN_OFFICER')")
-    public ResponseEntity<List<Applicant>> getLoanApplicationsByStatus(@PathVariable String status) {
-        try {
-            List<Applicant> applications = loanApplicationService.getLoanApplicationsByStatus(status);
-            return ResponseEntity.ok(applications);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+//    @GetMapping("/by-status/{status}")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('LOAN_OFFICER')")
+//    public ResponseEntity<List<Applicant>> getLoanApplicationsByStatus(@PathVariable String status) {
+//        try {
+////            List<Applicant> applications = loanApplicationService.getLoanApplicationsByStatus(status);
+//            return ResponseEntity.ok(applications);
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
 }

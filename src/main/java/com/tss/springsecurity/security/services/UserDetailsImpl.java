@@ -1,7 +1,7 @@
 package com.tss.springsecurity.security.services;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.tss.springsecurity.entity.User;
+import com.tss.springsecurity.entity.Applicant;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,15 +33,15 @@ public class UserDetailsImpl implements UserDetails {
         this.authorities = authorities;
     }
 
-    public static UserDetailsImpl build(User user) {
+    public static UserDetailsImpl build(Applicant applicant) {
         return new UserDetailsImpl(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
+                applicant.getApplicantId(),
+                applicant.getUsername(),
+                applicant.getEmail(),
+                applicant.getFirstName(),
+                applicant.getLastName(),
+                applicant.getPasswordHash(),
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_APPLICANT"))
         );
     }
 

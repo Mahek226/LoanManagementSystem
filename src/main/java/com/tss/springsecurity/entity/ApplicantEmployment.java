@@ -25,28 +25,32 @@ public class ApplicantEmployment {
     @JoinColumn(name = "applicant_id", referencedColumnName = "applicant_id")
     private Applicant applicant;
     
-    @NotBlank(message = "Employer name is required")
-    @Size(min = 2, max = 200, message = "Employer name must be between 2 and 200 characters")
-    @Column(name = "employer_name", length = 200)
-    private String employerName;
+    @Column(name = "employment_type", length = 50)
+    private String employmentType;
+    
+    @Size(min = 2, max = 200, message = "Company name must be between 2 and 200 characters")
+    @Column(name = "company_name", length = 200)
+    private String companyName;
     
     @Size(max = 100, message = "Designation must not exceed 100 characters")
     @Column(name = "designation", length = 100)
     private String designation;
     
-    @NotBlank(message = "Employment type is required")
-    @Pattern(regexp = "salaried|self-employed|business|unemployed|retired", message = "Employment type must be salaried, self-employed, business, unemployed, or retired")
-    @Column(name = "employment_type", length = 50)
-    private String employmentType;
+    @Column(name = "work_experience")
+    private Integer workExperience;
     
-    @Past(message = "Employment start date must be in the past")
-    @Column(name = "start_date")
-    private LocalDate startDate;
+    @Column(name = "office_address", columnDefinition = "TEXT")
+    private String officeAddress;
     
-    @NotNull(message = "Monthly income is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Monthly income must be greater than 0")
-    @DecimalMax(value = "10000000.0", message = "Monthly income cannot exceed 1 crore")
-    @Digits(integer = 10, fraction = 2, message = "Monthly income must have at most 10 digits before decimal and 2 after")
+    @Column(name = "office_city", length = 100)
+    private String officeCity;
+    
+    @Column(name = "office_state", length = 100)
+    private String officeState;
+    
+    @Column(name = "office_pincode", length = 10)
+    private String officePincode;
+    
     @Column(name = "monthly_income", precision = 12, scale = 2)
     private BigDecimal monthlyIncome;
     
