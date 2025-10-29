@@ -5,22 +5,33 @@ import { environment } from '@environments/environment';
 
 export interface LoanApplication {
   loanId: number;
-  applicantId: number;
+  applicantId?: number;
   loanType: string;
   loanAmount: number;
-  loanTenure: number;
-  interestRate: number;
-  monthlyIncome: number;
-  employmentType: string;
-  employerName: string;
+  tenureMonths?: number;
+  loanTenure?: number;
+  interestRate?: number;
+  monthlyIncome?: number;
+  employmentType?: string;
+  employerName?: string;
+  status?: string;
   loanStatus: string;
-  applicationDate: string;
-  lastUpdated: string;
-  fraudScore: number;
-  fraudStatus: string;
+  applicationStatus?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  applicationDate?: string;
+  lastUpdated?: string;
+  riskScore?: number;
+  fraudScore?: number;
+  fraudStatus?: string;
   assignedOfficerId?: number;
   assignedOfficerName?: string;
   remarks?: string;
+  // Additional fields from backend
+  applicantFirstName?: string;
+  applicantLastName?: string;
+  applicantEmail?: string;
+  applicantMobile?: string;
 }
 
 export interface ApplicantProfile {
@@ -136,6 +147,13 @@ export class ApplicantService {
     return this.http.get<LoanApplication>(`${this.API_URL}/loan-applications/loan/${loanId}`);
   }
 
+  // Download loan application as PDF
+  downloadLoanApplicationPDF(loanId: number): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/loan-applications/loan/${loanId}/download-pdf`, {
+      responseType: 'blob'
+    });
+  }
+
   // Submit loan application
   submitLoanApplication(applicationData: any): Observable<any> {
     return this.http.post(`${this.API_URL}/loan-applications/submit-complete`, applicationData);
@@ -165,7 +183,11 @@ export class ApplicantService {
       ? applications.reduce((sum, app) => sum + (app.fraudScore || 0), 0) / applications.length
       : 0;
     const recentApplications = applications
-      .sort((a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime())
+      .sort((a, b) => {
+        const dateA = new Date(b.submittedAt || b.applicationDate || 0).getTime();
+        const dateB = new Date(a.submittedAt || a.applicationDate || 0).getTime();
+        return dateA - dateB;
+      })
       .slice(0, 5);
 
     return {
@@ -340,7 +362,7 @@ export class ApplicantService {
       email: profile.isEmailVerified,
       phone: !!profile.phone,
       identity: profile.isApproved,
-      income: applications.some(app => app.monthlyIncome > 0),
+      income: applications.some(app => (app.monthlyIncome || 0) > 0),
       employment: applications.some(app => app.employmentType && app.employerName)
     };
 
