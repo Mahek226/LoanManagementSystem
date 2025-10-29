@@ -41,11 +41,17 @@ public class FraudDetectionController {
             response.put("triggeredRules", result.getTriggeredRules());
             
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+            errorResponse.put("error", e.getClass().getSimpleName());
+            errorResponse.put("details", e.getCause() != null ? e.getCause().getMessage() : "No additional details");
+            
+            // Log the full stack trace
+            e.printStackTrace();
+            
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     

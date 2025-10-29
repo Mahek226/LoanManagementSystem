@@ -1,5 +1,23 @@
 package com.tss.springsecurity.controller;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
@@ -8,17 +26,8 @@ import com.tss.springsecurity.dto.SimpleLoanApplicationDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ApplicantLoanDetails;
 import com.tss.springsecurity.service.LoanApplicationService;
-import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/loan-applications")
@@ -55,6 +64,29 @@ public class LoanApplicationController {
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
+    
+//    @PostMapping("/submit-complete")
+//    public ResponseEntity<Map<String, Object>> submitCompleteLoanApplication(
+//            @Valid @RequestBody CompleteLoanApplicationDTO completeLoanApplicationDTO) {
+//        try {
+//            Applicant applicant = loanApplicationService.submitCompleteLoanApplication(completeLoanApplicationDTO);
+//            
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("success", true);
+//            response.put("message", "Complete loan application submitted successfully with all details");
+//            response.put("applicantId", applicant.getApplicantId());
+//            response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
+//            response.put("email", applicant.getEmail());
+//            response.put("phone", applicant.getPhone());
+//            
+//            return new ResponseEntity<>(response, HttpStatus.CREATED);
+//        } catch (RuntimeException e) {
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("success", false);
+//            errorResponse.put("message", e.getMessage());
+//            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+//        }
+//    }
     
     @GetMapping("/applicant/{applicantId}")
     public ResponseEntity<Applicant> getApplicant(@PathVariable Long applicantId) {

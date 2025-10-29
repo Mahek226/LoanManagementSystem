@@ -42,6 +42,8 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
         officer.setUsername(request.getUsername());
         officer.setEmail(request.getEmail());
         officer.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        officer.setFirstName(request.getFirstName());
+        officer.setLastName(request.getLastName());
         officer.setLoanType(request.getLoanType());
 
         // Save loan officer
@@ -77,6 +79,8 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
         officer.setUsername(request.getUsername());
         officer.setEmail(request.getEmail());
         officer.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        officer.setFirstName(request.getFirstName());
+        officer.setLastName(request.getLastName());
         officer.setLoanType(request.getLoanType());
 
         // Save compliance officer

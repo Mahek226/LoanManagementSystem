@@ -2,6 +2,7 @@ package com.tss.springsecurity.service;
 
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
+import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ApplicantLoanDetails;
 
@@ -22,6 +23,13 @@ public interface LoanApplicationService {
      * @return Created applicant with all details
      */
     Applicant submitCompleteLoanApplication(CompleteLoanApplicationDTO completeLoanApplicationDTO);
+    
+    /**
+     * Submit loan application for existing applicant
+     * @param loanApplicationDTO Loan application data for existing applicant
+     * @return Updated applicant with loan details
+     */
+    ApplicantLoanDetails submitLoanApplicationForExistingApplicant(LoanApplicationForExistingApplicantDTO loanApplicationDTO);
     
     /**
      * Get applicant by ID

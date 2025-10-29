@@ -1,8 +1,8 @@
 package com.tss.springsecurity.controller;
 
-import com.tss.springsecurity.dto.LoanScreeningRequest;
-import com.tss.springsecurity.dto.LoanScreeningResponse;
+import com.tss.springsecurity.dto.*;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
+import com.tss.springsecurity.service.ComplianceOfficerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/compliance-officer")
@@ -17,6 +18,7 @@ import java.util.List;
 public class ComplianceOfficerController {
     
     private final LoanOfficerScreeningService screeningService;
+    private final ComplianceOfficerService complianceOfficerService;
     
     @GetMapping("/escalations")
     public ResponseEntity<List<LoanScreeningResponse>> getComplianceEscalations() {
@@ -40,13 +42,147 @@ public class ComplianceOfficerController {
     @GetMapping("/assignment/{assignmentId}/details")
     public ResponseEntity<?> getComplianceAssignmentDetails(@PathVariable Long assignmentId) {
         try {
-            // This will be handled by the same service method but for compliance assignments
             LoanScreeningResponse response = screeningService.getLoanDetailsForScreening(assignmentId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(e.getMessage()));
         }
+    }
+    
+    // ==================== Enhanced Compliance Officer Endpoints ====================
+    
+    /**
+     * Get detailed loan screening information for compliance review
+     */
+    @GetMapping("/screening/{assignmentId}")
+    public ResponseEntity<?> getLoanScreeningDetails(@PathVariable Long assignmentId) {
+        try {
+            LoanScreeningResponse response = complianceOfficerService.getLoanScreeningDetails(assignmentId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Request document resubmission from applicant
+     */
+    @PostMapping("/request-documents")
+    public ResponseEntity<?> requestDocumentResubmission(
+            @Valid @RequestBody DocumentResubmissionRequest request) {
+        try {
+            DocumentResubmissionResponse response = complianceOfficerService.requestDocumentResubmission(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get all document resubmission requests for an assignment
+     */
+    @GetMapping("/assignment/{assignmentId}/document-requests")
+    public ResponseEntity<List<DocumentResubmissionResponse>> getDocumentResubmissionRequests(
+            @PathVariable Long assignmentId) {
+        List<DocumentResubmissionResponse> requests = complianceOfficerService.getDocumentResubmissionRequests(assignmentId);
+        return ResponseEntity.ok(requests);
+    }
+    
+    /**
+     * Approve loan application
+     */
+    @PostMapping("/approve/{assignmentId}")
+    public ResponseEntity<?> approveLoan(
+            @PathVariable Long assignmentId,
+            @RequestParam Long complianceOfficerId,
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        try {
+            String remarks = requestBody != null ? requestBody.get("remarks") : null;
+            LoanScreeningResponse response = complianceOfficerService.approveLoan(assignmentId, complianceOfficerId, remarks);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Reject loan application
+     */
+    @PostMapping("/reject/{assignmentId}")
+    public ResponseEntity<?> rejectLoan(
+            @PathVariable Long assignmentId,
+            @RequestParam Long complianceOfficerId,
+            @Valid @RequestBody Map<String, String> requestBody) {
+        try {
+            String rejectionReason = requestBody.get("rejectionReason");
+            String remarks = requestBody.get("remarks");
+            
+            if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("Rejection reason is required"));
+            }
+            
+            LoanScreeningResponse response = complianceOfficerService.rejectLoan(assignmentId, complianceOfficerId, rejectionReason, remarks);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Process comprehensive compliance decision (approve/reject/request documents)
+     */
+    @PostMapping("/decision")
+    public ResponseEntity<?> processComplianceDecision(
+            @RequestParam Long complianceOfficerId,
+            @Valid @RequestBody ComplianceDecisionRequest request) {
+        try {
+            LoanScreeningResponse response = complianceOfficerService.processComplianceDecision(complianceOfficerId, request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get compliance officer dashboard with statistics
+     */
+    @GetMapping("/dashboard/{complianceOfficerId}")
+    public ResponseEntity<?> getComplianceDashboard(@PathVariable Long complianceOfficerId) {
+        try {
+            Map<String, Object> dashboard = complianceOfficerService.getComplianceDashboard(complianceOfficerId);
+            return ResponseEntity.ok(dashboard);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get all pending document resubmission requests
+     */
+    @GetMapping("/document-requests/pending")
+    public ResponseEntity<List<DocumentResubmissionResponse>> getPendingDocumentRequests() {
+        List<DocumentResubmissionResponse> requests = complianceOfficerService.getPendingDocumentRequests();
+        return ResponseEntity.ok(requests);
+    }
+    
+    /**
+     * Get compliance officer's processing history
+     */
+    @GetMapping("/history/{complianceOfficerId}")
+    public ResponseEntity<List<LoanScreeningResponse>> getProcessingHistory(
+            @PathVariable Long complianceOfficerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        List<LoanScreeningResponse> history = complianceOfficerService.getProcessingHistory(complianceOfficerId, page, size);
+        return ResponseEntity.ok(history);
     }
     
     // ==================== Response Classes ====================

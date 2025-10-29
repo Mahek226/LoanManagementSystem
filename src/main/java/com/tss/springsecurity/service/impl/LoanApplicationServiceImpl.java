@@ -2,6 +2,7 @@ package com.tss.springsecurity.service.impl;
 
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
+import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
 import com.tss.springsecurity.service.LoanApplicationService;
@@ -146,6 +147,114 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     }
     
     @Override
+    @Transactional
+    public ApplicantLoanDetails submitLoanApplicationForExistingApplicant(LoanApplicationForExistingApplicantDTO dto) {
+        // Get existing applicant
+        Applicant applicant = applicantRepository.findById(dto.getApplicantId())
+                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + dto.getApplicantId()));
+        
+        // Update or create Basic Details
+        ApplicantBasicDetails basicDetails = basicDetailsRepository.findByApplicant_ApplicantId(dto.getApplicantId())
+                .orElse(new ApplicantBasicDetails());
+        basicDetails.setApplicant(applicant);
+        basicDetails.setMaritalStatus(dto.getMaritalStatus());
+        basicDetails.setEducation(dto.getEducation());
+        basicDetails.setNationality(dto.getNationality());
+        basicDetails.setPanNumber(dto.getPanNumber());
+        basicDetails.setAadhaarNumber(dto.getAadhaarNumber());
+        basicDetailsRepository.save(basicDetails);
+        
+        // Update or create Employment Details
+        ApplicantEmployment employment = employmentRepository.findByApplicant_ApplicantId(dto.getApplicantId())
+                .orElse(new ApplicantEmployment());
+        employment.setApplicant(applicant);
+        employment.setEmployerName(dto.getEmployerName());
+        employment.setDesignation(dto.getDesignation());
+        employment.setEmploymentType(dto.getEmploymentType());
+        employment.setStartDate(dto.getEmploymentStartDate());
+        employment.setMonthlyIncome(dto.getMonthlyIncome());
+        employment.setVerifiedStatus("pending");
+        employmentRepository.save(employment);
+        
+        // Update or create Financial Details
+        ApplicantFinancials financials = financialsRepository.findByApplicant_ApplicantId(dto.getApplicantId())
+                .orElse(new ApplicantFinancials());
+        financials.setApplicant(applicant);
+        financials.setBankName(dto.getBankName());
+        financials.setAccountNumber(dto.getAccountNumber());
+        financials.setAccountType(dto.getAccountType());
+        financials.setIfscCode(dto.getIfscCode());
+        financials.setTotalCreditLastMonth(dto.getTotalCreditLastMonth());
+        financials.setTotalDebitLastMonth(dto.getTotalDebitLastMonth());
+        financialsRepository.save(financials);
+        
+        // Update or create Property Details
+        ApplicantPropertyDetails propertyDetails = propertyDetailsRepository.findByApplicant_ApplicantId(dto.getApplicantId())
+                .orElse(new ApplicantPropertyDetails());
+        propertyDetails.setApplicant(applicant);
+        propertyDetails.setResidenceType(dto.getResidenceType());
+        propertyDetails.setPropertyOwnership(dto.getPropertyOwnership());
+        propertyDetails.setYearsAtCurrentAddress(dto.getYearsAtCurrentAddress());
+        propertyDetails.setPropertyValue(dto.getPropertyValue());
+        propertyDetails.setPropertyType(dto.getPropertyType());
+        propertyDetails.setTotalAreaSqft(dto.getTotalAreaSqft());
+        propertyDetails.setHasHomeLoan(dto.getHasHomeLoan());
+        propertyDetailsRepository.save(propertyDetails);
+        
+        // Update or create Credit History
+        ApplicantCreditHistory creditHistory = creditHistoryRepository.findByApplicant_ApplicantId(dto.getApplicantId())
+                .orElse(new ApplicantCreditHistory());
+        creditHistory.setApplicant(applicant);
+        creditHistory.setCreditScore(dto.getCreditScore());
+        creditHistory.setCreditBureau(dto.getCreditBureau());
+        creditHistory.setTotalActiveLoans(dto.getTotalActiveLoans());
+        creditHistory.setTotalOutstandingDebt(dto.getTotalOutstandingDebt());
+        creditHistory.setTotalMonthlyEmi(dto.getTotalMonthlyEmi());
+        creditHistory.setCreditCardCount(dto.getCreditCardCount());
+        creditHistory.setPaymentHistory(dto.getPaymentHistory());
+        creditHistory.setDefaultsCount(dto.getDefaultsCount());
+        creditHistory.setBankruptcyFiled(dto.getBankruptcyFiled());
+        creditHistoryRepository.save(creditHistory);
+        
+        // Create new Loan Details
+        ApplicantLoanDetails loanDetails = new ApplicantLoanDetails();
+        loanDetails.setApplicant(applicant);
+        loanDetails.setLoanType(dto.getLoanType());
+        loanDetails.setLoanAmount(dto.getLoanAmount());
+        loanDetails.setTenureMonths(dto.getTenureMonths());
+        loanDetails.setStatus("pending");
+        loanDetails.setRiskScore(0);
+        
+        // Calculate interest rate
+        BigDecimal interestRate = calculateInterestRate(dto.getLoanType(), dto.getCreditScore());
+        loanDetails.setInterestRate(interestRate);
+        
+        loanDetails = loanDetailsRepository.save(loanDetails);
+        
+        // Save Documents if provided
+        if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
+            saveDocuments(applicant, dto.getDocuments());
+        }
+        
+        // Save References if provided
+        if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
+            saveReferences(applicant, dto.getReferences());
+        }
+        
+        // Save Dependents if provided
+        if (dto.getDependents() != null && !dto.getDependents().isEmpty()) {
+            saveDependents(applicant, dto.getDependents());
+        }
+        
+        // Save Collaterals if provided
+        if (dto.getCollaterals() != null && !dto.getCollaterals().isEmpty()) {
+            saveCollaterals(loanDetails, dto.getCollaterals());
+        }
+        
+        return loanDetails;
+    }
+    
+    @Override
     public Applicant getApplicantById(Long applicantId) {
         return applicantRepository.findById(applicantId)
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
@@ -206,5 +315,55 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         }
         
         return baseRate;
+    }
+    
+    // Helper methods for saving related entities
+    private void saveDocuments(Applicant applicant, List<LoanApplicationForExistingApplicantDTO.DocumentDTO> documents) {
+        // Implementation would depend on your Document entity structure
+        // This is a placeholder - implement based on your document entity
+        for (LoanApplicationForExistingApplicantDTO.DocumentDTO docDto : documents) {
+            // Create and save document entity
+            // Document document = new Document();
+            // document.setApplicant(applicant);
+            // document.setDocType(docDto.getDocType());
+            // ... set other fields
+            // documentRepository.save(document);
+        }
+    }
+    
+    private void saveReferences(Applicant applicant, List<LoanApplicationForExistingApplicantDTO.ReferenceDTO> references) {
+        // Implementation would depend on your Reference entity structure
+        for (LoanApplicationForExistingApplicantDTO.ReferenceDTO refDto : references) {
+            // Create and save reference entity
+            // Reference reference = new Reference();
+            // reference.setApplicant(applicant);
+            // reference.setReferenceName(refDto.getReferenceName());
+            // ... set other fields
+            // referenceRepository.save(reference);
+        }
+    }
+    
+    private void saveDependents(Applicant applicant, List<LoanApplicationForExistingApplicantDTO.DependentDTO> dependents) {
+        // Implementation would depend on your Dependent entity structure
+        for (LoanApplicationForExistingApplicantDTO.DependentDTO depDto : dependents) {
+            // Create and save dependent entity
+            // Dependent dependent = new Dependent();
+            // dependent.setApplicant(applicant);
+            // dependent.setDependentName(depDto.getDependentName());
+            // ... set other fields
+            // dependentRepository.save(dependent);
+        }
+    }
+    
+    private void saveCollaterals(ApplicantLoanDetails loanDetails, List<LoanApplicationForExistingApplicantDTO.CollateralDTO> collaterals) {
+        // Implementation would depend on your Collateral entity structure
+        for (LoanApplicationForExistingApplicantDTO.CollateralDTO colDto : collaterals) {
+            // Create and save collateral entity
+            // LoanCollateral collateral = new LoanCollateral();
+            // collateral.setLoanDetails(loanDetails);
+            // collateral.setCollateralType(colDto.getCollateralType());
+            // ... set other fields
+            // collateralRepository.save(collateral);
+        }
     }
 }

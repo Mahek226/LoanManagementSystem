@@ -38,16 +38,93 @@ public class CommonAuthService {
     private final EmailService emailService;
 
     public CommonAuthResponse login(CommonLoginRequest request) {
-        String usernameOrEmail = request.getUsernameOrEmail();
+        String username = request.getUsername();
         String password = request.getPassword();
+        String userType = request.getUserType();
 
+        // If userType is specified, try specific user type first
+        if (userType != null && !userType.isEmpty()) {
+            switch (userType.toUpperCase()) {
+                case "ADMIN":
+                    Optional<Admin> admin = adminRepository.findByUsernameOrEmail(username, username);
+                    if (admin.isPresent() && passwordEncoder.matches(password, admin.get().getPassword())) {
+                        String token = jwtUtil.generateToken(admin.get().getUsername(), "ADMIN");
+                        return new CommonAuthResponse(
+                            admin.get().getAdminId(),
+                            admin.get().getUsername(),
+                            admin.get().getEmail(),
+                            "ADMIN",
+                            token
+                        );
+                    }
+                    break;
+                    
+                case "LOAN_OFFICER":
+                    Optional<LoanOfficer> loanOfficer = loanOfficerRepository.findByUsernameOrEmail(username, username);
+                    if (loanOfficer.isPresent() && passwordEncoder.matches(password, loanOfficer.get().getPassword())) {
+                        String token = jwtUtil.generateToken(loanOfficer.get().getUsername(), "LOAN_OFFICER");
+                        return new CommonAuthResponse(
+                            loanOfficer.get().getOfficerId(),
+                            loanOfficer.get().getUsername(),
+                            loanOfficer.get().getEmail(),
+                            "LOAN_OFFICER",
+                            token
+                        );
+                    }
+                    break;
+                    
+                case "COMPLIANCE_OFFICER":
+                    Optional<ComplianceOfficer> complianceOfficer = complianceOfficerRepository.findByUsernameOrEmail(username, username);
+                    if (complianceOfficer.isPresent() && passwordEncoder.matches(password, complianceOfficer.get().getPassword())) {
+                        String token = jwtUtil.generateToken(complianceOfficer.get().getUsername(), "COMPLIANCE_OFFICER");
+                        return new CommonAuthResponse(
+                            complianceOfficer.get().getOfficerId(),
+                            complianceOfficer.get().getUsername(),
+                            complianceOfficer.get().getEmail(),
+                            "COMPLIANCE_OFFICER",
+                            token
+                        );
+                    }
+                    break;
+                    
+                case "APPLICANT":
+                    Optional<Applicant> applicant = applicantRepository.findByEmail(username);
+                    if (applicant.isPresent() && passwordEncoder.matches(password, applicant.get().getPassword())) {
+                        Applicant app = applicant.get();
+                        
+                        // Check if applicant is approved and email verified
+                        if (!app.getIsEmailVerified()) {
+                            throw new RuntimeException("Please verify your email before logging in");
+                        }
+                        if (!app.getIsApproved()) {
+                            throw new RuntimeException("Your account is pending admin approval");
+                        }
+                        
+                        String token = jwtUtil.generateToken(app.getEmail(), "APPLICANT");
+                        return new CommonAuthResponse(
+                            app.getApplicantId(),
+                            null, // Applicants don't have username
+                            app.getFirstName(),
+                            app.getLastName(),
+                            app.getEmail(),
+                            "APPLICANT",
+                            token
+                        );
+                    }
+                    break;
+            }
+            
+            // If specific userType was provided but login failed
+            throw new RuntimeException("Invalid credentials for " + userType);
+        }
+
+        // If no userType specified, try all user types (fallback for backward compatibility)
         // Try Admin login first
-        Optional<Admin> admin = adminRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        Optional<Admin> admin = adminRepository.findByUsernameOrEmail(username, username);
         if (admin.isPresent() && passwordEncoder.matches(password, admin.get().getPassword())) {
             String token = jwtUtil.generateToken(admin.get().getUsername(), "ADMIN");
             return new CommonAuthResponse(
                 admin.get().getAdminId(),
-                null, // Admin has no officerId
                 admin.get().getUsername(),
                 admin.get().getEmail(),
                 "ADMIN",
@@ -55,34 +132,8 @@ public class CommonAuthService {
             );
         }
 
-        // Try Applicant login
-        Optional<Applicant> applicant = applicantRepository.findByEmail(usernameOrEmail);
-        if (applicant.isPresent() && passwordEncoder.matches(password, applicant.get().getPassword())) {
-            Applicant app = applicant.get();
-            
-            // Check if applicant is approved and email verified
-            if (!app.getIsEmailVerified()) {
-                throw new RuntimeException("Please verify your email before logging in");
-            }
-            if (!app.getIsApproved()) {
-                throw new RuntimeException("Your account is pending admin approval");
-            }
-            
-            String token = jwtUtil.generateToken(app.getEmail(), "APPLICANT");
-            return new CommonAuthResponse(
-                app.getApplicantId(), // userId
-                app.getApplicantId(), // applicantId
-                null, // Applicants don't have username
-                app.getFirstName(),
-                app.getLastName(),
-                app.getEmail(),
-                "APPLICANT",
-                token
-            );
-        }
-
         // Try Loan Officer login
-        Optional<LoanOfficer> loanOfficer = loanOfficerRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        Optional<LoanOfficer> loanOfficer = loanOfficerRepository.findByUsernameOrEmail(username, username);
         if (loanOfficer.isPresent() && passwordEncoder.matches(password, loanOfficer.get().getPassword())) {
             String token = jwtUtil.generateToken(loanOfficer.get().getUsername(), "LOAN_OFFICER");
             return new CommonAuthResponse(
@@ -96,7 +147,7 @@ public class CommonAuthService {
         }
 
         // Try Compliance Officer login
-        Optional<ComplianceOfficer> complianceOfficer = complianceOfficerRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        Optional<ComplianceOfficer> complianceOfficer = complianceOfficerRepository.findByUsernameOrEmail(username, username);
         if (complianceOfficer.isPresent() && passwordEncoder.matches(password, complianceOfficer.get().getPassword())) {
             String token = jwtUtil.generateToken(complianceOfficer.get().getUsername(), "COMPLIANCE_OFFICER");
             return new CommonAuthResponse(
@@ -109,8 +160,33 @@ public class CommonAuthService {
             );
         }
 
+        // Try Applicant login
+        Optional<Applicant> applicant = applicantRepository.findByEmail(username);
+        if (applicant.isPresent() && passwordEncoder.matches(password, applicant.get().getPassword())) {
+            Applicant app = applicant.get();
+            
+            // Check if applicant is approved and email verified
+            if (!app.getIsEmailVerified()) {
+                throw new RuntimeException("Please verify your email before logging in");
+            }
+            if (!app.getIsApproved()) {
+                throw new RuntimeException("Your account is pending admin approval");
+            }
+            
+            String token = jwtUtil.generateToken(app.getEmail(), "APPLICANT");
+            return new CommonAuthResponse(
+                app.getApplicantId(),
+                null, // Applicants don't have username
+                app.getFirstName(),
+                app.getLastName(),
+                app.getEmail(),
+                "APPLICANT",
+                token
+            );
+        }
+
         // If no user found or password doesn't match
-        throw new RuntimeException("Invalid username/email or password");
+        throw new RuntimeException("Invalid username or password");
     }
     
     public String forgotPassword(ForgotPasswordRequest request) {

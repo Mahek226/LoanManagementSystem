@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -33,6 +34,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "basicDetails", "employment", "financials", 
+    "loanDetails", "aadhaarDetails", "panDetails", "passportDetails", "otherDocuments", 
+    "fraudFlags", "verificationLogs", "auditScores", "propertyDetails", "creditHistory", "dependents"})
 public class Applicant {
     
     @Id
