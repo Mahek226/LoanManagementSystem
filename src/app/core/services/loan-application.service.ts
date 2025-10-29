@@ -18,6 +18,36 @@ export interface BasicDetails {
   collateralValue?: number;
 }
 
+export interface ApplicantDetails {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  maritalStatus: string;
+  emailAddress: string;
+  mobileNumber: string;
+  alternateNumber?: string;
+  currentAddress: string;
+  currentCity: string;
+  currentState: string;
+  currentPincode: string;
+  residenceType: string;
+  yearsAtCurrentAddress: number;
+  permanentAddressSame: boolean;
+  permanentAddress?: string;
+  permanentCity?: string;
+  permanentState?: string;
+  permanentPincode?: string;
+  panNumber: string;
+  aadharNumber: string;
+  hasCoApplicant: boolean;
+  coApplicantName?: string;
+  coApplicantRelation?: string;
+  coApplicantPan?: string;
+  coApplicantAadhar?: string;
+}
+
 export interface FinancialDetails {
   employmentType: 'SALARIED' | 'SELF_EMPLOYED' | 'BUSINESS' | 'PROFESSIONAL' | 'RETIRED';
   employerName?: string;
@@ -72,6 +102,7 @@ export interface LoanApplicationForm {
   applicationId?: string;
   applicantId: number;
   basicDetails: BasicDetails;
+  applicantDetails?: ApplicantDetails;
   financialDetails: FinancialDetails;
   documents: DocumentUpload[];
   declarations: Declaration;
@@ -190,6 +221,16 @@ export class LoanApplicationService {
     const current = this.applicationState.value;
     if (current) {
       current.basicDetails = details;
+      current.lastUpdatedAt = new Date().toISOString();
+      this.applicationState.next(current);
+      this.saveDraft(current);
+    }
+  }
+
+  updateApplicantDetails(details: ApplicantDetails): void {
+    const current = this.applicationState.value;
+    if (current) {
+      current.applicantDetails = details;
       current.lastUpdatedAt = new Date().toISOString();
       this.applicationState.next(current);
       this.saveDraft(current);
