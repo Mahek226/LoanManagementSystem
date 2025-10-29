@@ -9,6 +9,7 @@ import {
   LoanApplicationService, 
   LoanApplicationForm, 
   BasicDetails,
+  ApplicantDetails,
   FinancialDetails,
   DocumentUpload,
   Declaration,
@@ -257,7 +258,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.basicDetailsForm.patchValue(app.basicDetails);
     this.financialDetailsForm.patchValue(app.financialDetails);
     this.declarationsForm.patchValue(app.declarations);
-    this.uploadedDocuments = app.documents;
+    this.uploadedDocuments = [...app.documents];
   }
 
   // ==================== Form Validators ====================
@@ -375,13 +376,21 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   nextStep(): void {
     if (this.currentStep < this.totalSteps) {
+      // Sync uploaded documents before validation
+      if (this.currentStep === 4) {
+        const app = this.loanApplicationService.getCurrentApplication();
+        if (app) {
+          this.uploadedDocuments = [...app.documents];
+        }
+      }
+      
       if (this.validateCurrentStep()) {
         this.saveCurrentStep();
         this.currentStep++;
         this.loanApplicationService.setCurrentStep(this.currentStep);
         
-        // Load required documents when entering step 3
-        if (this.currentStep === 3) {
+        // Load required documents when entering step 4
+        if (this.currentStep === 4) {
           this.loadRequiredDocuments();
         }
         
@@ -395,6 +404,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     if (loanType) {
       this.requiredDocuments = this.loanApplicationService.getRequiredDocuments(loanType);
       console.log('Loaded required documents for loan type:', loanType, this.requiredDocuments);
+      
+      // Sync uploaded documents when entering step 4
+      const app = this.loanApplicationService.getCurrentApplication();
+      if (app) {
+        this.uploadedDocuments = [...app.documents];
+        console.log('Synced uploaded documents on step 4 entry:', this.uploadedDocuments);
+      }
     } else {
       this.error = 'Please select a loan type first';
     }
@@ -429,7 +445,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       case 1:
         // Step 1: Basic Loan Details
         if (!this.basicDetailsForm.valid) {
-          this.error = 'Please fill all required fields in Basic Details';
+          const missingFields = this.getMissingFields(this.basicDetailsForm);
+          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
           return false;
         }
         return true;
@@ -437,7 +454,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       case 2:
         // Step 2: Applicant Information
         if (!this.applicantDetailsForm.valid) {
-          this.error = 'Please fill all required fields in Applicant Information';
+          const missingFields = this.getMissingFields(this.applicantDetailsForm);
+          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
           return false;
         }
         return true;
@@ -445,7 +463,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       case 3:
         // Step 3: Financial Details
         if (!this.financialDetailsForm.valid) {
-          this.error = 'Please fill all required fields in Financial Details';
+          const missingFields = this.getMissingFields(this.financialDetailsForm);
+          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
           return false;
         }
         if (!this.emiCalculation || this.emiCalculation.dti > 60) {
@@ -459,6 +478,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         const requiredTypes = this.requiredDocuments.filter(d => d.required).map(d => d.documentType);
         const uploadedTypes = this.uploadedDocuments.map(d => d.documentType);
         const missingDocs = requiredTypes.filter(type => !uploadedTypes.includes(type));
+        
+        // Debug logging
+        console.log('Required document types:', requiredTypes);
+        console.log('Uploaded document types:', uploadedTypes);
+        console.log('Missing documents:', missingDocs);
+        console.log('Uploaded documents array:', this.uploadedDocuments);
+        
         if (missingDocs.length > 0) {
           this.error = `Please upload all required documents: ${missingDocs.join(', ')}`;
           return false;
@@ -478,6 +504,61 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     }
   }
 
+  getMissingFields(formGroup: any): string[] {
+    const missingFields: string[] = [];
+    const fieldLabels: { [key: string]: string } = {
+      // Basic Details
+      loanType: 'Loan Type',
+      loanAmount: 'Loan Amount',
+      tenure: 'Tenure',
+      purpose: 'Purpose',
+      
+      // Applicant Information
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      dateOfBirth: 'Date of Birth',
+      gender: 'Gender',
+      maritalStatus: 'Marital Status',
+      emailAddress: 'Email Address',
+      mobileNumber: 'Mobile Number',
+      currentAddress: 'Current Address',
+      currentCity: 'Current City',
+      currentState: 'Current State',
+      currentPincode: 'Current Pincode',
+      residenceType: 'Residence Type',
+      yearsAtCurrentAddress: 'Years at Current Address',
+      panNumber: 'PAN Number',
+      aadharNumber: 'Aadhar Number',
+      permanentAddress: 'Permanent Address',
+      permanentCity: 'Permanent City',
+      permanentState: 'Permanent State',
+      permanentPincode: 'Permanent Pincode',
+      
+      // Financial Details
+      employmentType: 'Employment Type',
+      employerName: 'Employer Name',
+      designation: 'Designation',
+      monthlyGrossSalary: 'Monthly Gross Salary',
+      businessName: 'Business Name',
+      annualTurnover: 'Annual Turnover',
+      bankName: 'Bank Name',
+      accountNumber: 'Account Number',
+      ifscCode: 'IFSC Code',
+      accountType: 'Account Type',
+      bankStatementConsent: 'Bank Statement Consent'
+    };
+
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control && control.invalid && control.errors) {
+        const fieldName = fieldLabels[key] || key;
+        missingFields.push(fieldName);
+      }
+    });
+
+    return missingFields;
+  }
+
   saveCurrentStep(): void {
     switch (this.currentStep) {
       case 1:
@@ -488,8 +569,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       
       case 2:
         // Save Applicant Information
-        // You can add a service method to save applicant details if needed
-        // this.loanApplicationService.updateApplicantDetails(this.applicantDetailsForm.value);
+        this.loanApplicationService.updateApplicantDetails(this.applicantDetailsForm.value);
         break;
       
       case 3:
@@ -582,10 +662,10 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
             // Add document via service (which updates both service state and local array)
             this.loanApplicationService.addDocument(document);
             
-            // Sync local array with service state
+            // Sync local array with service state - create new array reference for change detection
             const app = this.loanApplicationService.getCurrentApplication();
             if (app) {
-              this.uploadedDocuments = app.documents;
+              this.uploadedDocuments = [...app.documents];
             }
             
             this.success = `${file.name} uploaded successfully!`;
@@ -618,10 +698,10 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     // Remove via service
     this.loanApplicationService.removeDocument(fileName);
     
-    // Sync local array with service state
+    // Sync local array with service state - create new array reference for change detection
     const app = this.loanApplicationService.getCurrentApplication();
     if (app) {
-      this.uploadedDocuments = app.documents;
+      this.uploadedDocuments = [...app.documents];
     }
   }
 
