@@ -3,8 +3,6 @@ package com.tss.springsecurity.payload.request;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-import java.time.LocalDate;
-
 @Data
 public class SignupRequest {
     @NotBlank(message = "Username is required")
@@ -34,36 +32,4 @@ public class SignupRequest {
     @Size(max = 100, message = "Last name must not exceed 100 characters")
     @Pattern(regexp = "^[a-zA-Z\\s]*$", message = "Last name can only contain letters and spaces")
     private String lastName;
-    
-    // Required fields for Applicant
-    @NotNull(message = "Date of birth is required")
-    @Past(message = "Date of birth must be in the past")
-    private LocalDate dob;
-    
-    @NotBlank(message = "Gender is required")
-    @Pattern(regexp = "Male|Female|Other", message = "Gender must be Male, Female, or Other")
-    private String gender;
-    
-    @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Phone number must be 10-15 digits, optionally starting with +")
-    private String phone;
-    
-    @NotBlank(message = "Address is required")
-    @Size(min = 10, max = 500, message = "Address must be between 10 and 500 characters")
-    private String address;
-    
-    @NotBlank(message = "City is required")
-    @Size(min = 2, max = 100, message = "City must be between 2 and 100 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "City can only contain letters and spaces")
-    private String city;
-    
-    @NotBlank(message = "State is required")
-    @Size(min = 2, max = 100, message = "State must be between 2 and 100 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "State can only contain letters and spaces")
-    private String state;
-    
-    @NotBlank(message = "Country is required")
-    @Size(min = 2, max = 100, message = "Country must be between 2 and 100 characters")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Country can only contain letters and spaces")
-    private String country;
 }
