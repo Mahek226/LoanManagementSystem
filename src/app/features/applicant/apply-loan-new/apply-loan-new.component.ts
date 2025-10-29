@@ -427,12 +427,23 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     
     switch (this.currentStep) {
       case 1:
+        // Step 1: Basic Loan Details
         if (!this.basicDetailsForm.valid) {
           this.error = 'Please fill all required fields in Basic Details';
           return false;
         }
         return true;
+      
       case 2:
+        // Step 2: Applicant Information
+        if (!this.applicantDetailsForm.valid) {
+          this.error = 'Please fill all required fields in Applicant Information';
+          return false;
+        }
+        return true;
+      
+      case 3:
+        // Step 3: Financial Details
         if (!this.financialDetailsForm.valid) {
           this.error = 'Please fill all required fields in Financial Details';
           return false;
@@ -442,7 +453,9 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           return false;
         }
         return true;
-      case 3:
+      
+      case 4:
+        // Step 4: Upload Documents
         const requiredTypes = this.requiredDocuments.filter(d => d.required).map(d => d.documentType);
         const uploadedTypes = this.uploadedDocuments.map(d => d.documentType);
         const missingDocs = requiredTypes.filter(type => !uploadedTypes.includes(type));
@@ -451,12 +464,15 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           return false;
         }
         return true;
-      case 4:
+      
+      case 5:
+        // Step 5: Declarations
         if (!this.declarationsForm.valid) {
           this.error = 'Please accept all required declarations and consents';
           return false;
         }
         return true;
+      
       default:
         return true;
     }
@@ -465,13 +481,24 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   saveCurrentStep(): void {
     switch (this.currentStep) {
       case 1:
+        // Save Basic Loan Details
         this.loanApplicationService.updateBasicDetails(this.basicDetailsForm.value);
         this.calculateEMI();
         break;
+      
       case 2:
+        // Save Applicant Information
+        // You can add a service method to save applicant details if needed
+        // this.loanApplicationService.updateApplicantDetails(this.applicantDetailsForm.value);
+        break;
+      
+      case 3:
+        // Save Financial Details
         this.loanApplicationService.updateFinancialDetails(this.financialDetailsForm.value);
         break;
-      case 4:
+      
+      case 5:
+        // Save Declarations
         const declarations: Declaration = {
           ...this.declarationsForm.value,
           declarationDate: new Date().toISOString()
