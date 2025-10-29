@@ -297,7 +297,7 @@ public class CommonAuthService {
             String token = jwtUtil.generateToken(admin.get().getUsername(), "ADMIN");
             return new CommonAuthResponse(
                 admin.get().getAdminId(),
-                null, // Admin has no officerId
+                null,
                 admin.get().getUsername(),
                 admin.get().getEmail(),
                 "ADMIN",
@@ -320,8 +320,8 @@ public class CommonAuthService {
             
             String token = jwtUtil.generateToken(app.getEmail(), "APPLICANT");
             return new CommonAuthResponse(
-                app.getApplicantId(), // userId
-                app.getApplicantId(), // applicantId
+                app.getApplicantId(),
+                app.getApplicantId(),
                 null, // Applicants don't have username
                 app.getFirstName(),
                 app.getLastName(),
