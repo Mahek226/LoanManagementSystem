@@ -48,6 +48,36 @@
       <div class="row">
         <div class="col-md-6">
           <div class="mb-3">
+            <label class="form-label">First Name <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.firstName"
+              name="firstName"
+              placeholder="Enter first name"
+              required
+              minlength="2">
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+            <input 
+              type="text" 
+              class="form-input-custom" 
+              [(ngModel)]="newOfficer.lastName"
+              name="lastName"
+              placeholder="Enter last name"
+              required
+              minlength="2">
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
             <label class="form-label">Username <span class="text-danger">*</span></label>
             <input 
               type="text" 

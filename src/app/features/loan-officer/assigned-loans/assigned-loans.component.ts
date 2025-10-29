@@ -26,9 +26,12 @@ export class AssignedLoansComponent implements OnInit {
   riskFilter = '';
   loanTypeFilter = '';
 
-  statusOptions = ['PENDING', 'ASSIGNED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'ESCALATED'];
+  statusOptions = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'ESCALATED', 'ESCALATED_TO_COMPLIANCE'];
   riskOptions = ['LOW', 'MEDIUM', 'HIGH'];
   loanTypes = ['Personal Loan', 'Home Loan', 'Car Loan', 'Education Loan', 'Business Loan'];
+  
+  // View mode
+  viewMode: 'table' | 'card' = 'table';
 
   constructor(
     private authService: AuthService,
@@ -125,5 +128,9 @@ export class AssignedLoansComponent implements OnInit {
 
   getStatusColor(status: string): string {
     return this.loanOfficerService.getStatusColor(status);
+  }
+
+  toggleView(mode: 'table' | 'card'): void {
+    this.viewMode = mode;
   }
 }

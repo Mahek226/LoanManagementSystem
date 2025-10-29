@@ -23,6 +23,8 @@ export class LoanOfficersComponent implements OnInit {
     username: '',
     email: '',
     password: '',
+    firstName: '',
+    lastName: '',
     loanType: ''
   };
   
@@ -104,6 +106,8 @@ export class LoanOfficersComponent implements OnInit {
       username: '',
       email: '',
       password: '',
+      firstName: '',
+      lastName: '',
       loanType: ''
     };
   }
@@ -148,6 +152,16 @@ export class LoanOfficersComponent implements OnInit {
     
     if (!this.newOfficer.password || this.newOfficer.password.length < 6) {
       this.error = 'Password must be at least 6 characters';
+      return false;
+    }
+    
+    if (!this.newOfficer.firstName || this.newOfficer.firstName.length < 2) {
+      this.error = 'First name must be at least 2 characters';
+      return false;
+    }
+    
+    if (!this.newOfficer.lastName || this.newOfficer.lastName.length < 2) {
+      this.error = 'Last name must be at least 2 characters';
       return false;
     }
     

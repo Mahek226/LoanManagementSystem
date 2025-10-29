@@ -70,7 +70,7 @@
         
         <!-- Username/Email Field -->
         <div class="form-group">
-          <label for="usernameOrEmail" class="form-label">Email or Username</label>
+          <label for="username" class="form-label">Email or Username</label>
           <div class="input-group">
             <div class="input-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -80,16 +80,16 @@
             </div>
             <input
               type="text"
-              id="usernameOrEmail"
-              formControlName="usernameOrEmail"
+              id="username"
+              formControlName="username"
               class="form-input"
-              [class.error]="submitted && f['usernameOrEmail'].errors"
+              [class.error]="submitted && f['username'].errors"
               placeholder="Enter your email or username"
               autocomplete="username"
             />
           </div>
-          <div *ngIf="submitted && f['usernameOrEmail'].errors" class="error-message">
-            <span *ngIf="f['usernameOrEmail'].errors['required']">Email or username is required</span>
+          <div *ngIf="submitted && f['username'].errors" class="error-message">
+            <span *ngIf="f['username'].errors['required']">Email or username is required</span>
           </div>
         </div>
 

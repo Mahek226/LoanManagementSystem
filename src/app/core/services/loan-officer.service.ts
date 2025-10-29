@@ -87,6 +87,71 @@ export interface FraudScreeningTriggerRequest {
   applicantId: number;
 }
 
+export interface EnhancedLoanScreeningResponse {
+  assignmentId: number;
+  loanId: number;
+  applicantId: number;
+  applicantName: string;
+  loanType: string;
+  loanAmount: number;
+  status: string;
+  remarks?: string;
+  assignedAt: string;
+  processedAt?: string;
+  officerId: number;
+  officerName: string;
+  officerType: string;
+  normalizedRiskScore: NormalizedRiskScore;
+  scoringBreakdown: ScoringBreakdown;
+  ruleViolations: RuleViolation[];
+  finalRecommendation: string;
+  canApproveReject: boolean;
+}
+
+export interface NormalizedRiskScore {
+  finalScore: number;
+  riskLevel: string;
+  scoreInterpretation: string;
+}
+
+export interface ScoringBreakdown {
+  internalScoring: InternalScoring;
+  externalScoring: ExternalScoring;
+  normalizationMethod: string;
+  combinationFormula: string;
+}
+
+export interface InternalScoring {
+  rawScore: number;
+  maxPossibleScore: number;
+  normalizedScore: number;
+  riskLevel: string;
+  violatedRulesCount: number;
+  categories: string[];
+}
+
+export interface ExternalScoring {
+  rawScore: number;
+  maxPossibleScore: number;
+  normalizedScore: number;
+  riskLevel: string;
+  violatedRulesCount: number;
+  personFound: boolean;
+  categories: string[];
+}
+
+export interface RuleViolation {
+  source: string;
+  ruleCode: string;
+  ruleName: string;
+  category: string;
+  severity: string;
+  points: number;
+  description: string;
+  details: string;
+  detectedAt: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -148,14 +213,19 @@ export class LoanOfficerService {
     return this.http.get<FraudCheckResult>(`${this.apiUrl}/loan/${loanId}/fraud-check`);
   }
 
+  // Get enhanced loan details with scoring breakdown
+  getEnhancedLoanDetails(assignmentId: number): Observable<EnhancedLoanScreeningResponse> {
+    return this.http.get<EnhancedLoanScreeningResponse>(`${environment.apiUrl}/enhanced-screening/loan/${assignmentId}`);
+  }
+
   // Calculate dashboard statistics
   calculateStats(loans: LoanScreeningResponse[]): DashboardStats {
     return {
       totalAssigned: loans.length,
-      pendingReview: loans.filter(l => l.status === 'PENDING' || l.status === 'ASSIGNED').length,
+      pendingReview: loans.filter(l => l.status === 'PENDING' || l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS').length,
       approved: loans.filter(l => l.status === 'APPROVED').length,
       rejected: loans.filter(l => l.status === 'REJECTED').length,
-      escalated: loans.filter(l => l.status === 'ESCALATED').length,
+      escalated: loans.filter(l => l.status === 'ESCALATED' || l.status === 'ESCALATED_TO_COMPLIANCE').length,
       highRiskCount: loans.filter(l => l.riskLevel === 'HIGH').length,
       mediumRiskCount: loans.filter(l => l.riskLevel === 'MEDIUM').length,
       lowRiskCount: loans.filter(l => l.riskLevel === 'LOW').length
@@ -191,10 +261,12 @@ export class LoanOfficerService {
   getStatusColor(status: string): string {
     switch (status) {
       case 'PENDING':
-      case 'ASSIGNED': return 'warning';
+      case 'ASSIGNED':
+      case 'IN_PROGRESS': return 'warning';
       case 'APPROVED': return 'success';
       case 'REJECTED': return 'danger';
-      case 'ESCALATED': return 'info';
+      case 'ESCALATED':
+      case 'ESCALATED_TO_COMPLIANCE': return 'info';
       case 'UNDER_REVIEW': return 'primary';
       default: return 'secondary';
     }

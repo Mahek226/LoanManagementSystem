@@ -118,21 +118,33 @@
             Loan Applications
           </button>
         </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'loan-officers'"
-                  (click)="setActiveTab('loan-officers')">
-            <i class="fas fa-user-tie me-2"></i>
-            Loan Officers
+        <li class="nav-item dropdown">
+          <button class="nav-link dropdown-toggle" 
+                  [class.active]="activeTab === 'loan-officers' || activeTab === 'compliance-officers'"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false">
+            <i class="fas fa-users-cog me-2"></i>
+            Officer Management
           </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'compliance-officers'"
-                  (click)="setActiveTab('compliance-officers')">
-            <i class="fas fa-user-shield me-2"></i>
-            Compliance Officers
-          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2" 
+                      (click)="setActiveTab('loan-officers')"
+                      [class.active]="activeTab === 'loan-officers'">
+                <i class="fas fa-user-tie"></i>
+                Loan Officers
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2" 
+                      (click)="setActiveTab('compliance-officers')"
+                      [class.active]="activeTab === 'compliance-officers'">
+                <i class="fas fa-user-shield"></i>
+                Compliance Officers
+              </button>
+            </li>
+          </ul>
         </li>
         <li class="nav-item">
           <button class="nav-link" 
