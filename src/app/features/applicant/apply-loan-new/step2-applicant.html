@@ -1,0 +1,407 @@
+<!-- Step 2: Applicant Information -->
+<div class="step-content" *ngIf="currentStep === 2">
+  <div class="step-header">
+    <h3><i class="fas fa-user me-2"></i>Applicant Information</h3>
+    <p class="text-muted">Please provide your personal and contact details</p>
+  </div>
+
+  <form [formGroup]="applicantDetailsForm" class="loan-form">
+    <!-- Applicant Information Section -->
+    <div class="section-title">
+      <h5><i class="fas fa-id-card me-2"></i>Personal Details</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <label class="form-label required">First Name</label>
+        <input type="text" class="form-control" formControlName="firstName" 
+               placeholder="John"
+               [class.is-invalid]="applicantDetailsForm.get('firstName')?.invalid && applicantDetailsForm.get('firstName')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('firstName')?.invalid && applicantDetailsForm.get('firstName')?.touched">
+          First name is required (minimum 2 characters)
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Middle Name</label>
+        <input type="text" class="form-control" formControlName="middleName" placeholder="Kumar">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Last Name</label>
+        <input type="text" class="form-control" formControlName="lastName" 
+               placeholder="Sharma"
+               [class.is-invalid]="applicantDetailsForm.get('lastName')?.invalid && applicantDetailsForm.get('lastName')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('lastName')?.invalid && applicantDetailsForm.get('lastName')?.touched">
+          Last name is required (minimum 2 characters)
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Date of Birth</label>
+        <input type="date" class="form-control" formControlName="dateOfBirth"
+               [class.is-invalid]="applicantDetailsForm.get('dateOfBirth')?.invalid && applicantDetailsForm.get('dateOfBirth')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('dateOfBirth')?.invalid && applicantDetailsForm.get('dateOfBirth')?.touched">
+          Date of birth is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Gender</label>
+        <select class="form-select" formControlName="gender"
+                [class.is-invalid]="applicantDetailsForm.get('gender')?.invalid && applicantDetailsForm.get('gender')?.touched">
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('gender')?.invalid && applicantDetailsForm.get('gender')?.touched">
+          Gender is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Marital Status</label>
+        <select class="form-select" formControlName="maritalStatus"
+                [class.is-invalid]="applicantDetailsForm.get('maritalStatus')?.invalid && applicantDetailsForm.get('maritalStatus')?.touched">
+          <option value="">Select Status</option>
+          <option value="Single">Single</option>
+          <option value="Married">Married</option>
+          <option value="Divorced">Divorced</option>
+          <option value="Widowed">Widowed</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('maritalStatus')?.invalid && applicantDetailsForm.get('maritalStatus')?.touched">
+          Marital status is required
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Information Section -->
+    <div class="section-title mt-4">
+      <h5><i class="fas fa-phone me-2"></i>Contact Information</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <label class="form-label required">Email Address</label>
+        <input type="email" class="form-control" formControlName="emailAddress" 
+               placeholder="john.sharma@email.com"
+               [class.is-invalid]="applicantDetailsForm.get('emailAddress')?.invalid && applicantDetailsForm.get('emailAddress')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('emailAddress')?.invalid && applicantDetailsForm.get('emailAddress')?.touched">
+          Valid email address is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Mobile Number</label>
+        <input type="tel" class="form-control" formControlName="mobileNumber" 
+               placeholder="9876543210" maxlength="10"
+               [class.is-invalid]="applicantDetailsForm.get('mobileNumber')?.invalid && applicantDetailsForm.get('mobileNumber')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('mobileNumber')?.invalid && applicantDetailsForm.get('mobileNumber')?.touched">
+          Valid 10-digit mobile number is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Alternate Number</label>
+        <input type="tel" class="form-control" formControlName="alternateNumber" 
+               placeholder="9876543211" maxlength="10">
+      </div>
+    </div>
+
+    <!-- Current Address Section -->
+    <div class="section-title mt-4">
+      <h5><i class="fas fa-map-marker-alt me-2"></i>Current Address</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-12">
+        <label class="form-label required">Address</label>
+        <textarea class="form-control" formControlName="currentAddress" rows="3" 
+                  placeholder="House No, Street, Area"
+                  [class.is-invalid]="applicantDetailsForm.get('currentAddress')?.invalid && applicantDetailsForm.get('currentAddress')?.touched"></textarea>
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('currentAddress')?.invalid && applicantDetailsForm.get('currentAddress')?.touched">
+          Current address is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">City</label>
+        <input type="text" class="form-control" formControlName="currentCity" 
+               placeholder="Mumbai"
+               [class.is-invalid]="applicantDetailsForm.get('currentCity')?.invalid && applicantDetailsForm.get('currentCity')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('currentCity')?.invalid && applicantDetailsForm.get('currentCity')?.touched">
+          City is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">State</label>
+        <select class="form-select" formControlName="currentState"
+                [class.is-invalid]="applicantDetailsForm.get('currentState')?.invalid && applicantDetailsForm.get('currentState')?.touched">
+          <option value="">Select State</option>
+          <option value="Andhra Pradesh">Andhra Pradesh</option>
+          <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+          <option value="Assam">Assam</option>
+          <option value="Bihar">Bihar</option>
+          <option value="Chhattisgarh">Chhattisgarh</option>
+          <option value="Goa">Goa</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Haryana">Haryana</option>
+          <option value="Himachal Pradesh">Himachal Pradesh</option>
+          <option value="Jharkhand">Jharkhand</option>
+          <option value="Karnataka">Karnataka</option>
+          <option value="Kerala">Kerala</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Manipur">Manipur</option>
+          <option value="Meghalaya">Meghalaya</option>
+          <option value="Mizoram">Mizoram</option>
+          <option value="Nagaland">Nagaland</option>
+          <option value="Odisha">Odisha</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Rajasthan">Rajasthan</option>
+          <option value="Sikkim">Sikkim</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Telangana">Telangana</option>
+          <option value="Tripura">Tripura</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Uttarakhand">Uttarakhand</option>
+          <option value="West Bengal">West Bengal</option>
+          <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+          <option value="Chandigarh">Chandigarh</option>
+          <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+          <option value="Ladakh">Ladakh</option>
+          <option value="Lakshadweep">Lakshadweep</option>
+          <option value="Puducherry">Puducherry</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('currentState')?.invalid && applicantDetailsForm.get('currentState')?.touched">
+          State is required
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label required">Pincode</label>
+        <input type="text" class="form-control" formControlName="currentPincode" 
+               placeholder="400001" maxlength="6"
+               [class.is-invalid]="applicantDetailsForm.get('currentPincode')?.invalid && applicantDetailsForm.get('currentPincode')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('currentPincode')?.invalid && applicantDetailsForm.get('currentPincode')?.touched">
+          Valid 6-digit pincode is required
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label required">Residence Type</label>
+        <select class="form-select" formControlName="residenceType"
+                [class.is-invalid]="applicantDetailsForm.get('residenceType')?.invalid && applicantDetailsForm.get('residenceType')?.touched">
+          <option value="">Select Type</option>
+          <option value="Owned">Owned</option>
+          <option value="Rented">Rented</option>
+          <option value="Parental">Parental</option>
+          <option value="Company Provided">Company Provided</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('residenceType')?.invalid && applicantDetailsForm.get('residenceType')?.touched">
+          Residence type is required
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label required">Years at Current Address</label>
+        <input type="number" class="form-control" formControlName="yearsAtCurrentAddress" 
+               placeholder="5" min="0"
+               [class.is-invalid]="applicantDetailsForm.get('yearsAtCurrentAddress')?.invalid && applicantDetailsForm.get('yearsAtCurrentAddress')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('yearsAtCurrentAddress')?.invalid && applicantDetailsForm.get('yearsAtCurrentAddress')?.touched">
+          Years at current address is required
+        </div>
+      </div>
+    </div>
+
+    <!-- Permanent Address Section -->
+    <div class="section-title mt-4">
+      <h5><i class="fas fa-home me-2"></i>Permanent Address</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="permanentAddressSame" 
+                 id="permanentAddressSame"
+                 (change)="onPermanentAddressChange(applicantDetailsForm.get('permanentAddressSame')?.value)">
+          <label class="form-check-label" for="permanentAddressSame">
+            Same as current address
+          </label>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!applicantDetailsForm.get('permanentAddressSame')?.value">
+        <div class="col-12">
+          <label class="form-label required">Permanent Address</label>
+          <textarea class="form-control" formControlName="permanentAddress" rows="3" 
+                    placeholder="House No, Street, Area"
+                    [class.is-invalid]="applicantDetailsForm.get('permanentAddress')?.invalid && applicantDetailsForm.get('permanentAddress')?.touched"></textarea>
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('permanentAddress')?.invalid && applicantDetailsForm.get('permanentAddress')?.touched">
+            Permanent address is required
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label required">City</label>
+          <input type="text" class="form-control" formControlName="permanentCity" 
+                 placeholder="Mumbai"
+                 [class.is-invalid]="applicantDetailsForm.get('permanentCity')?.invalid && applicantDetailsForm.get('permanentCity')?.touched">
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('permanentCity')?.invalid && applicantDetailsForm.get('permanentCity')?.touched">
+            City is required
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label required">State</label>
+          <select class="form-select" formControlName="permanentState"
+                  [class.is-invalid]="applicantDetailsForm.get('permanentState')?.invalid && applicantDetailsForm.get('permanentState')?.touched">
+            <option value="">Select State</option>
+            <option value="Andhra Pradesh">Andhra Pradesh</option>
+            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+            <option value="Assam">Assam</option>
+            <option value="Bihar">Bihar</option>
+            <option value="Chhattisgarh">Chhattisgarh</option>
+            <option value="Goa">Goa</option>
+            <option value="Gujarat">Gujarat</option>
+            <option value="Haryana">Haryana</option>
+            <option value="Himachal Pradesh">Himachal Pradesh</option>
+            <option value="Jharkhand">Jharkhand</option>
+            <option value="Karnataka">Karnataka</option>
+            <option value="Kerala">Kerala</option>
+            <option value="Madhya Pradesh">Madhya Pradesh</option>
+            <option value="Maharashtra">Maharashtra</option>
+            <option value="Manipur">Manipur</option>
+            <option value="Meghalaya">Meghalaya</option>
+            <option value="Mizoram">Mizoram</option>
+            <option value="Nagaland">Nagaland</option>
+            <option value="Odisha">Odisha</option>
+            <option value="Punjab">Punjab</option>
+            <option value="Rajasthan">Rajasthan</option>
+            <option value="Sikkim">Sikkim</option>
+            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="Telangana">Telangana</option>
+            <option value="Tripura">Tripura</option>
+            <option value="Uttar Pradesh">Uttar Pradesh</option>
+            <option value="Uttarakhand">Uttarakhand</option>
+            <option value="West Bengal">West Bengal</option>
+            <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+            <option value="Chandigarh">Chandigarh</option>
+            <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+            <option value="Ladakh">Ladakh</option>
+            <option value="Lakshadweep">Lakshadweep</option>
+            <option value="Puducherry">Puducherry</option>
+          </select>
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('permanentState')?.invalid && applicantDetailsForm.get('permanentState')?.touched">
+            State is required
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label required">Pincode</label>
+          <input type="text" class="form-control" formControlName="permanentPincode" 
+                 placeholder="400001" maxlength="6"
+                 [class.is-invalid]="applicantDetailsForm.get('permanentPincode')?.invalid && applicantDetailsForm.get('permanentPincode')?.touched">
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('permanentPincode')?.invalid && applicantDetailsForm.get('permanentPincode')?.touched">
+            Valid 6-digit pincode is required
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Identity Details Section -->
+    <div class="section-title mt-4">
+      <h5><i class="fas fa-id-badge me-2"></i>Identity Details</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <label class="form-label required">PAN Number</label>
+        <input type="text" class="form-control text-uppercase" formControlName="panNumber" 
+               placeholder="ABCDE1234F" maxlength="10"
+               [class.is-invalid]="applicantDetailsForm.get('panNumber')?.invalid && applicantDetailsForm.get('panNumber')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('panNumber')?.invalid && applicantDetailsForm.get('panNumber')?.touched">
+          Valid PAN number is required (Format: ABCDE1234F)
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label required">Aadhar Number</label>
+        <input type="text" class="form-control" formControlName="aadharNumber" 
+               placeholder="123456789012" maxlength="12"
+               [class.is-invalid]="applicantDetailsForm.get('aadharNumber')?.invalid && applicantDetailsForm.get('aadharNumber')?.touched">
+        <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('aadharNumber')?.invalid && applicantDetailsForm.get('aadharNumber')?.touched">
+          Valid 12-digit Aadhar number is required
+        </div>
+      </div>
+    </div>
+
+    <!-- Co-applicant Details Section -->
+    <div class="section-title mt-4">
+      <h5><i class="fas fa-users me-2"></i>Co-applicant Details (Optional)</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="hasCoApplicant" 
+                 id="hasCoApplicant"
+                 (change)="onCoApplicantChange(applicantDetailsForm.get('hasCoApplicant')?.value)">
+          <label class="form-check-label" for="hasCoApplicant">
+            Add Co-applicant
+          </label>
+        </div>
+      </div>
+
+      <ng-container *ngIf="applicantDetailsForm.get('hasCoApplicant')?.value">
+        <div class="col-md-6">
+          <label class="form-label required">Co-applicant Name</label>
+          <input type="text" class="form-control" formControlName="coApplicantName" 
+                 placeholder="Jane Sharma"
+                 [class.is-invalid]="applicantDetailsForm.get('coApplicantName')?.invalid && applicantDetailsForm.get('coApplicantName')?.touched">
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('coApplicantName')?.invalid && applicantDetailsForm.get('coApplicantName')?.touched">
+            Co-applicant name is required
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required">Relationship</label>
+          <select class="form-select" formControlName="coApplicantRelation"
+                  [class.is-invalid]="applicantDetailsForm.get('coApplicantRelation')?.invalid && applicantDetailsForm.get('coApplicantRelation')?.touched">
+            <option value="">Select Relationship</option>
+            <option value="Spouse">Spouse</option>
+            <option value="Father">Father</option>
+            <option value="Mother">Mother</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Son">Son</option>
+            <option value="Daughter">Daughter</option>
+          </select>
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('coApplicantRelation')?.invalid && applicantDetailsForm.get('coApplicantRelation')?.touched">
+            Relationship is required
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required">Co-applicant PAN</label>
+          <input type="text" class="form-control text-uppercase" formControlName="coApplicantPan" 
+                 placeholder="ABCDE1234F" maxlength="10"
+                 [class.is-invalid]="applicantDetailsForm.get('coApplicantPan')?.invalid && applicantDetailsForm.get('coApplicantPan')?.touched">
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('coApplicantPan')?.invalid && applicantDetailsForm.get('coApplicantPan')?.touched">
+            Co-applicant PAN is required
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required">Co-applicant Aadhar</label>
+          <input type="text" class="form-control" formControlName="coApplicantAadhar" 
+                 placeholder="123456789012" maxlength="12"
+                 [class.is-invalid]="applicantDetailsForm.get('coApplicantAadhar')?.invalid && applicantDetailsForm.get('coApplicantAadhar')?.touched">
+          <div class="invalid-feedback" *ngIf="applicantDetailsForm.get('coApplicantAadhar')?.invalid && applicantDetailsForm.get('coApplicantAadhar')?.touched">
+            Co-applicant Aadhar is required
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </form>
+</div>

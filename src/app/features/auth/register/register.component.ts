@@ -84,14 +84,14 @@ export class RegisterComponent implements OnInit {
 
     this.loading = true;
 
-    // Prepare registration data with default role as APPLICANT
+    // Prepare registration data - remove fields not needed by backend
     const registrationData = {
-      ...this.registerForm.value,
-      role: 'ROLE_APPLICANT'
+      ...this.registerForm.value
     };
 
-    // Remove confirmPassword from the data sent to backend
+    // Remove fields not needed by backend
     delete registrationData.confirmPassword;
+    delete registrationData.termsAccepted;
 
     this.authService.register(registrationData).subscribe({
       next: (response) => {

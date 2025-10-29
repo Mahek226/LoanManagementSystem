@@ -27,10 +27,11 @@ import {
 export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // Current step
   currentStep: number = 1;
-  totalSteps: number = 5;
+  totalSteps: number = 6;
   
   // Forms
   basicDetailsForm!: FormGroup;
+  applicantDetailsForm!: FormGroup;
   financialDetailsForm!: FormGroup;
   declarationsForm!: FormGroup;
   
@@ -101,7 +102,49 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       collateralValue: [0]
     });
 
-    // Step 2: Financial Details Form
+    // Step 2: Applicant Details Form
+    this.applicantDetailsForm = this.fb.group({
+      // Applicant Information
+      firstName: ['', [Validators.required, Validators.minLength(2)]],
+      middleName: [''],
+      lastName: ['', [Validators.required, Validators.minLength(2)]],
+      dateOfBirth: ['', Validators.required],
+      gender: ['', Validators.required],
+      maritalStatus: ['', Validators.required],
+      
+      // Contact Information
+      emailAddress: ['', [Validators.required, Validators.email]],
+      mobileNumber: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
+      alternateNumber: ['', [Validators.pattern(/^[6-9]\d{9}$/)]],
+      
+      // Current Address
+      currentAddress: ['', Validators.required],
+      currentCity: ['', Validators.required],
+      currentState: ['', Validators.required],
+      currentPincode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+      residenceType: ['', Validators.required],
+      yearsAtCurrentAddress: ['', [Validators.required, Validators.min(0)]],
+      
+      // Permanent Address
+      permanentAddressSame: [false],
+      permanentAddress: [''],
+      permanentCity: [''],
+      permanentState: [''],
+      permanentPincode: [''],
+      
+      // Identity Details
+      panNumber: ['', [Validators.required, Validators.pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)]],
+      aadharNumber: ['', [Validators.required, Validators.pattern(/^\d{12}$/)]],
+      
+      // Co-applicant Details
+      hasCoApplicant: [false],
+      coApplicantName: [''],
+      coApplicantRelation: [''],
+      coApplicantPan: [''],
+      coApplicantAadhar: ['']
+    });
+
+    // Step 3: Financial Details Form
     this.financialDetailsForm = this.fb.group({
       employmentType: ['SALARIED', Validators.required],
       employerName: [''],
@@ -594,17 +637,59 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   // ==================== Utility Methods ====================
 
+  onPermanentAddressChange(isSame: boolean): void {
+    const permanentFields = ['permanentAddress', 'permanentCity', 'permanentState', 'permanentPincode'];
+    
+    if (isSame) {
+      // Copy current address to permanent address
+      this.applicantDetailsForm.patchValue({
+        permanentAddress: this.applicantDetailsForm.get('currentAddress')?.value,
+        permanentCity: this.applicantDetailsForm.get('currentCity')?.value,
+        permanentState: this.applicantDetailsForm.get('currentState')?.value,
+        permanentPincode: this.applicantDetailsForm.get('currentPincode')?.value
+      });
+      
+      // Remove validators for permanent address fields
+      permanentFields.forEach(field => {
+        this.applicantDetailsForm.get(field)?.clearValidators();
+        this.applicantDetailsForm.get(field)?.updateValueAndValidity();
+      });
+    } else {
+      // Add validators for permanent address fields
+      permanentFields.forEach(field => {
+        this.applicantDetailsForm.get(field)?.setValidators([Validators.required]);
+        this.applicantDetailsForm.get(field)?.updateValueAndValidity();
+      });
+    }
+  }
+
+  onCoApplicantChange(hasCoApplicant: boolean): void {
+    const coApplicantFields = ['coApplicantName', 'coApplicantRelation', 'coApplicantPan', 'coApplicantAadhar'];
+    
+    if (hasCoApplicant) {
+      coApplicantFields.forEach(field => {
+        this.applicantDetailsForm.get(field)?.setValidators([Validators.required]);
+        this.applicantDetailsForm.get(field)?.updateValueAndValidity();
+      });
+    } else {
+      coApplicantFields.forEach(field => {
+        this.applicantDetailsForm.get(field)?.clearValidators();
+        this.applicantDetailsForm.get(field)?.updateValueAndValidity();
+      });
+    }
+  }
+
   formatCurrency(amount: number): string {
     return this.loanApplicationService.formatCurrency(amount);
   }
 
   getStepIcon(step: number): string {
-    const icons = ['', 'fa-info-circle', 'fa-money-bill-wave', 'fa-file-upload', 'fa-check-square', 'fa-eye'];
+    const icons = ['', 'fa-info-circle', 'fa-user', 'fa-money-bill-wave', 'fa-file-upload', 'fa-check-square', 'fa-eye'];
     return icons[step] || 'fa-circle';
   }
 
   getStepTitle(step: number): string {
-    const titles = ['', 'Basic Details', 'Financial Details', 'Upload Documents', 'Declarations', 'Review & Submit'];
+    const titles = ['', 'Basic Details', 'Applicant Information', 'Financial Details', 'Upload Documents', 'Declarations', 'Review & Submit'];
     return titles[step] || '';
   }
 
