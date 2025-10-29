@@ -1,0 +1,85 @@
+<div class="notification-bell position-relative">
+  <!-- Bell Icon -->
+  <button class="btn btn-link position-relative p-2" (click)="toggleDropdown()" type="button">
+    <i class="bi bi-bell fs-5 text-dark"></i>
+    <span *ngIf="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+      {{ unreadCount > 99 ? '99+' : unreadCount }}
+    </span>
+  </button>
+
+  <!-- Dropdown Menu -->
+  <div class="notification-dropdown card shadow-lg" 
+       [class.show]="showDropdown"
+       (clickOutside)="closeDropdown()">
+    
+    <!-- Header -->
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+      <h6 class="mb-0 fw-bold">Notifications</h6>
+      <button *ngIf="unreadCount > 0" 
+              class="btn btn-sm btn-link text-primary p-0" 
+              (click)="markAllAsRead()">
+        Mark all as read
+      </button>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="notification-list">
+      <div *ngIf="loading" class="text-center py-4">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && notifications.length === 0" class="text-center py-5 text-muted">
+        <i class="bi bi-bell-slash fs-1 d-block mb-3"></i>
+        <p class="mb-0">No notifications yet</p>
+      </div>
+
+      <div *ngFor="let notification of notifications" 
+           class="notification-item p-3 border-bottom"
+           [class.unread]="!notification.isRead"
+           (click)="handleNotificationClick(notification)">
+        
+        <div class="d-flex align-items-start">
+          <!-- Icon -->
+          <div class="notification-icon me-3">
+            <div class="icon-circle bg-{{ getNotificationColor(notification.type) }} bg-opacity-10">
+              <i class="{{ getNotificationIcon(notification.type) }} text-{{ getNotificationColor(notification.type) }}"></i>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-grow-1">
+            <h6 class="notification-title mb-1 fw-semibold">{{ notification.title }}</h6>
+            <p class="notification-message mb-1 text-muted small">{{ notification.message }}</p>
+            <span class="notification-time text-muted small">
+              <i class="bi bi-clock me-1"></i>{{ formatTime(notification.createdAt) }}
+            </span>
+          </div>
+
+          <!-- Actions -->
+          <div class="notification-actions ms-2">
+            <button *ngIf="!notification.isRead" 
+                    class="btn btn-sm btn-link p-1 text-primary" 
+                    (click)="markAsRead(notification, $event)"
+                    title="Mark as read">
+              <i class="bi bi-check2"></i>
+            </button>
+            <button class="btn btn-sm btn-link p-1 text-danger" 
+                    (click)="deleteNotification(notification.notificationId, $event)"
+                    title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer bg-white border-top text-center py-2" *ngIf="notifications.length > 0">
+      <a href="javascript:void(0)" class="text-primary text-decoration-none small fw-semibold">
+        View all notifications
+      </a>
+    </div>
+  </div>
+</div>

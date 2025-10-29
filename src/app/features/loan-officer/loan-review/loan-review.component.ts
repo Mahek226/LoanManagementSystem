@@ -14,11 +14,13 @@ import {
   FraudScreeningTriggerRequest,
   EnhancedLoanScreeningResponse
 } from '@core/services/loan-officer.service';
+import { OfficerNotesComponent } from '../../../shared/components/officer-notes/officer-notes.component';
+import { LoanEligibilityReportComponent } from '../../../shared/components/loan-eligibility-report/loan-eligibility-report.component';
 
 @Component({
   selector: 'app-loan-review',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, OfficerNotesComponent, LoanEligibilityReportComponent],
   templateUrl: './loan-review.component.html',
   styleUrl: './loan-review.component.css'
 })

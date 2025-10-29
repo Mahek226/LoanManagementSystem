@@ -371,6 +371,37 @@
     </div>
   </div>
 
+  <!-- Officer Notes Section -->
+  <div class="row g-4 mt-2">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);">
+        <div class="card-body">
+          <app-officer-notes 
+            [loanId]="loan.loanId"
+            [officerId]="officerId"
+            [officerName]="loan.officerName || 'Unknown Officer'"
+            [officerType]="'LOAN_OFFICER'"
+            [canEdit]="true">
+          </app-officer-notes>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan Eligibility Report Section -->
+  <div class="row g-4 mt-2" *ngIf="loan.status === 'APPROVED' || loan.canApproveReject">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.6s; background-color: var(--bg-primary);">
+        <div class="card-body">
+          <app-loan-eligibility-report 
+            [loanId]="loan.loanId"
+            [assignmentId]="assignmentId">
+          </app-loan-eligibility-report>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Action Confirmation Modal -->

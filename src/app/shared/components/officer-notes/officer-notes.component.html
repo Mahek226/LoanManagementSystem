@@ -1,0 +1,140 @@
+<div class="officer-notes-container">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+      <i class="bi bi-journal-text me-2"></i>Officer Notes
+    </h5>
+    <span class="badge bg-primary">{{ notes.length }} Notes</span>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" (click)="error = ''"></button>
+  </div>
+
+  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success }}
+    <button type="button" class="btn-close" (click)="success = ''"></button>
+  </div>
+
+  <!-- Add Note Form -->
+  <div *ngIf="canEdit" class="card mb-3 shadow-sm">
+    <div class="card-body">
+      <h6 class="card-title mb-3">Add New Note</h6>
+      
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Note Type</label>
+          <select class="form-select" [(ngModel)]="newNoteType">
+            <option *ngFor="let type of noteTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Visibility</label>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" 
+                   id="internalSwitch" [(ngModel)]="newNoteIsInternal">
+            <label class="form-check-label" for="internalSwitch">
+              Internal Only (Not visible to applicant)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Note Content</label>
+        <textarea class="form-control" rows="3" 
+                  [(ngModel)]="newNoteContent"
+                  placeholder="Enter your note here..."></textarea>
+      </div>
+
+      <button class="btn btn-primary" (click)="addNote()" [disabled]="loading || !newNoteContent.trim()">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+        <i *ngIf="!loading" class="bi bi-plus-circle me-2"></i>
+        Add Note
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body py-2">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <label class="form-label small mb-1">Filter by Type:</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filterType" (change)="applyFilters()">
+            <option value="ALL">All Types</option>
+            <option *ngFor="let type of noteTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <div class="form-check form-switch mt-3">
+            <input class="form-check-input" type="checkbox" 
+                   id="internalFilter" [(ngModel)]="showInternalOnly" (change)="applyFilters()">
+            <label class="form-check-label small" for="internalFilter">
+              Show Internal Only
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes List -->
+  <div *ngIf="loading && notes.length === 0" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && filteredNotes.length === 0" class="text-center py-5 text-muted">
+    <i class="bi bi-journal-x fs-1 d-block mb-3"></i>
+    <p>No notes found</p>
+  </div>
+
+  <div class="notes-list">
+    <div *ngFor="let note of filteredNotes" class="card mb-3 shadow-sm note-card">
+      <div class="card-body">
+        <!-- Note Header -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="d-flex align-items-center">
+            <span class="badge bg-{{ getNoteTypeColor(note.noteType) }} me-2">
+              <i class="{{ getNoteTypeIcon(note.noteType) }} me-1"></i>
+              {{ note.noteType.replace('_', ' ') }}
+            </span>
+            <span *ngIf="note.isInternal" class="badge bg-secondary">
+              <i class="bi bi-lock-fill me-1"></i>Internal
+            </span>
+          </div>
+          <button *ngIf="canEdit && note.officerId === officerId" 
+                  class="btn btn-sm btn-link text-danger p-0"
+                  (click)="deleteNote(note.noteId)"
+                  title="Delete note">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+
+        <!-- Note Content -->
+        <p class="note-content mb-2">{{ note.content }}</p>
+
+        <!-- Note Footer -->
+        <div class="note-footer d-flex justify-content-between align-items-center">
+          <div class="text-muted small">
+            <i class="bi bi-person-circle me-1"></i>
+            <strong>{{ note.officerName }}</strong>
+            <span class="ms-2">({{ note.officerType.replace('_', ' ') }})</span>
+          </div>
+          <div class="text-muted small">
+            <i class="bi bi-clock me-1"></i>
+            {{ formatDate(note.createdAt) }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
