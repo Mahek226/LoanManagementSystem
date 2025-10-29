@@ -589,7 +589,143 @@ export class LoanApplicationService {
   submitApplication(application: LoanApplicationForm): Observable<any> {
     application.status = 'SUBMITTED';
     application.submittedAt = new Date().toISOString();
-    return this.http.post(`${this.API_URL}/loan-applications/submit-complete`, application);
+    
+    // Map to comprehensive DTO format for existing applicant
+    const comprehensiveDTO = this.mapToComprehensiveDTO(application);
+    
+    console.log('=== SUBMITTING TO COMPREHENSIVE API ===');
+    console.log('Original Application:', application);
+    console.log('Mapped DTO:', comprehensiveDTO);
+    console.log('API Endpoint:', `${this.API_URL}/loan-applications/submit-for-existing-applicant`);
+    
+    return this.http.post(`${this.API_URL}/loan-applications/submit-for-existing-applicant`, comprehensiveDTO);
+  }
+
+  private mapToComprehensiveDTO(application: LoanApplicationForm): any {
+    const applicantDetails = application.applicantDetails;
+    const basicDetails = application.basicDetails;
+    const financialDetails = application.financialDetails;
+    
+    console.log('=== MAPPING DATA ===');
+    console.log('Financial Details:', financialDetails);
+    console.log('Employer Name:', financialDetails?.employerName);
+    console.log('Designation:', financialDetails?.designation);
+    
+    return {
+      // Applicant ID
+      applicantId: application.applicantId,
+      
+      // Basic Details (from applicantDetails)
+      maritalStatus: applicantDetails?.maritalStatus || null,
+      education: null, // Not collected in current form
+      nationality: 'Indian', // Default
+      panNumber: applicantDetails?.panNumber || '',
+      aadhaarNumber: applicantDetails?.aadharNumber || '',
+      
+      // Employment Details (from financialDetails)
+      employerName: financialDetails?.employerName || null,
+      designation: financialDetails?.designation || null,
+      employmentType: financialDetails?.employmentType?.toLowerCase().replace('_', '-') || 'salaried',
+      employmentStartDate: null, // Not collected
+      monthlyIncome: financialDetails?.monthlyGrossSalary || financialDetails?.monthlyNetSalary || 0,
+      
+      // Financial Details
+      bankName: financialDetails.bankName,
+      accountNumber: financialDetails.accountNumber,
+      accountType: financialDetails.accountType?.toLowerCase() || 'savings',
+      ifscCode: financialDetails.ifscCode,
+      totalCreditLastMonth: null, // Not collected
+      totalDebitLastMonth: null, // Not collected
+      
+      // Property Details (from applicantDetails)
+      residenceType: applicantDetails?.residenceType?.toLowerCase().replace(' ', '_') || 'rented',
+      propertyOwnership: null, // Not collected
+      monthlyRent: null, // Not collected
+      yearsAtCurrentAddress: applicantDetails?.yearsAtCurrentAddress || 0,
+      propertyValue: null, // Not collected
+      propertyType: null, // Not collected
+      totalAreaSqft: null, // Not collected
+      hasHomeLoan: false, // Default
+      
+      // Credit History (not collected - using defaults)
+      creditScore: null,
+      creditBureau: null,
+      totalActiveLoans: 0,
+      totalOutstandingDebt: financialDetails.existingLoanEMI || 0,
+      totalMonthlyEmi: financialDetails.existingLoanEMI || 0,
+      creditCardCount: 0,
+      paymentHistory: null,
+      defaultsCount: 0,
+      bankruptcyFiled: false,
+      
+      // Loan Details (from basicDetails)
+      loanType: basicDetails.loanType?.toLowerCase() || 'personal',
+      loanAmount: basicDetails.loanAmount,
+      tenureMonths: basicDetails.tenure,
+      
+      // Documents (map to comprehensive format)
+      documents: application.documents.map(doc => ({
+        docType: this.mapDocumentType(doc.documentType),
+        docNumber: null,
+        cloudinaryUrl: doc.fileUrl,
+        ocrText: null,
+        isTampered: false,
+        name: applicantDetails ? `${applicantDetails.firstName} ${applicantDetails.lastName}` : null,
+        dob: applicantDetails?.dateOfBirth || null,
+        gender: applicantDetails?.gender || null,
+        address: applicantDetails?.currentAddress || null,
+        fatherName: null
+      })),
+      
+      // References (from applicantDetails co-applicant if available)
+      references: applicantDetails?.hasCoApplicant ? [{
+        referenceName: applicantDetails.coApplicantName || '',
+        relationship: applicantDetails.coApplicantRelation?.toLowerCase() || 'family',
+        phone: '0000000000', // Placeholder
+        email: null,
+        address: null,
+        occupation: null,
+        yearsKnown: 0
+      }] : [],
+      
+      // Dependents (not collected)
+      dependents: [],
+      
+      // Collaterals (from basicDetails if has collateral)
+      collaterals: basicDetails.hasCollateral ? [{
+        collateralType: this.mapCollateralType(basicDetails.collateralType),
+        collateralDescription: basicDetails.collateralType || 'Collateral',
+        estimatedValue: basicDetails.collateralValue || 0,
+        valuationBy: null,
+        ownershipProofUrl: null,
+        valuationReportUrl: null
+      }] : []
+    };
+  }
+
+  private mapDocumentType(docType: string): string {
+    const mapping: { [key: string]: string } = {
+      'AADHAAR': 'aadhaar',
+      'PAN': 'pan',
+      'PHOTO': 'other',
+      'BANK_STATEMENT': 'bank_statement',
+      'SALARY_SLIP': 'payslip',
+      'PROPERTY_PAPERS': 'other',
+      'INCOME_PROOF': 'itr',
+      'ADDRESS_PROOF': 'other'
+    };
+    return mapping[docType] || 'other';
+  }
+
+  private mapCollateralType(collateralType?: string): string {
+    if (!collateralType) return 'property';
+    const type = collateralType.toLowerCase();
+    if (type.includes('property') || type.includes('real estate')) return 'property';
+    if (type.includes('gold')) return 'gold';
+    if (type.includes('vehicle') || type.includes('car')) return 'vehicle';
+    if (type.includes('fd') || type.includes('deposit')) return 'fixed_deposit';
+    if (type.includes('securities') || type.includes('shares')) return 'securities';
+    return 'property';
   }
 
   saveDraftToServer(application: LoanApplicationForm): Observable<any> {

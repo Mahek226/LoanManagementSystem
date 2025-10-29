@@ -196,6 +196,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     // Watch for loan amount/tenure changes for EMI calculation
     this.basicDetailsForm.get('loanAmount')?.valueChanges.subscribe(() => this.calculateEMI());
     this.basicDetailsForm.get('tenure')?.valueChanges.subscribe(() => this.calculateEMI());
+    
+    // Watch for financial details changes to recalculate EMI/DTI
+    this.financialDetailsForm.get('monthlyGrossSalary')?.valueChanges.subscribe(() => this.calculateEMI());
+    this.financialDetailsForm.get('monthlyNetSalary')?.valueChanges.subscribe(() => this.calculateEMI());
+    this.financialDetailsForm.get('existingLoanEMI')?.valueChanges.subscribe(() => this.calculateEMI());
+    this.financialDetailsForm.get('creditCardPayment')?.valueChanges.subscribe(() => this.calculateEMI());
+    this.financialDetailsForm.get('otherObligations')?.valueChanges.subscribe(() => this.calculateEMI());
   }
 
   subscribeToApplicationState(): void {
@@ -447,6 +454,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         if (!this.basicDetailsForm.valid) {
           const missingFields = this.getMissingFields(this.basicDetailsForm);
           this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
+          this.markFormGroupTouched(this.basicDetailsForm);
+          this.scrollToFirstError();
           return false;
         }
         return true;
@@ -456,6 +465,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         if (!this.applicantDetailsForm.valid) {
           const missingFields = this.getMissingFields(this.applicantDetailsForm);
           this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
+          this.markFormGroupTouched(this.applicantDetailsForm);
+          this.scrollToFirstError();
           return false;
         }
         return true;
@@ -817,6 +828,26 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   clearSuccess(): void {
     this.success = '';
+  }
+
+  markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+
+  scrollToFirstError(): void {
+    setTimeout(() => {
+      const firstInvalidControl = document.querySelector('.is-invalid, .ng-invalid.ng-touched');
+      if (firstInvalidControl) {
+        firstInvalidControl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (firstInvalidControl as HTMLElement).focus();
+      }
+    }, 100);
   }
 
   // Helper method to check if document is uploaded
