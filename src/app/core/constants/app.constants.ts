@@ -8,7 +8,7 @@ export const APP_CONSTANTS = {
   API_ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',
-      REGISTER: '/applicant/auth/register',
+      REGISTER: '/auth/register',
       LOGOUT: '/auth/logout',
       FORGOT_PASSWORD: '/auth/forgot-password',
       RESET_PASSWORD: '/auth/reset-password',

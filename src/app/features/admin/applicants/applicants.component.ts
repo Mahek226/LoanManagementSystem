@@ -45,8 +45,8 @@ export class ApplicantsComponent implements OnInit {
   }
 
   private loadApplicants(): void {
-    // Load real data from backend
-    this.adminService.getAllApplicants(0, 100).subscribe({
+    // Load all data from backend - using large page size to fetch all records
+    this.adminService.getAllApplicants(0, 10000).subscribe({
       next: (response) => {
         this.applicants = response.content;
         this.updateStatistics();
