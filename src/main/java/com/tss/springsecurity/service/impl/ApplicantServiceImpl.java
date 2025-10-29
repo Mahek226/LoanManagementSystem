@@ -1,15 +1,18 @@
 package com.tss.springsecurity.service.impl;
 
+import com.tss.springsecurity.dto.ApplicantSummaryDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.repository.ApplicantRepository;
 import com.tss.springsecurity.service.ApplicantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,38 @@ public class ApplicantServiceImpl implements ApplicantService {
     @Override
     public Page<Applicant> getAllApplicants(Pageable pageable) {
         return applicantRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<ApplicantSummaryDTO> getAllApplicantsSummary(Pageable pageable) {
+        Page<Applicant> applicants = applicantRepository.findAll(pageable);
+        List<ApplicantSummaryDTO> dtos = applicants.getContent().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, applicants.getTotalElements());
+    }
+
+    private ApplicantSummaryDTO convertToDTO(Applicant applicant) {
+        ApplicantSummaryDTO dto = new ApplicantSummaryDTO();
+        dto.setApplicantId(applicant.getApplicantId());
+        dto.setFirstName(applicant.getFirstName());
+        dto.setLastName(applicant.getLastName());
+        dto.setDob(applicant.getDob());
+        dto.setGender(applicant.getGender());
+        dto.setUsername(applicant.getUsername());
+        dto.setEmail(applicant.getEmail());
+        dto.setPhone(applicant.getPhone());
+        dto.setAddress(applicant.getAddress());
+        dto.setCity(applicant.getCity());
+        dto.setState(applicant.getState());
+        dto.setCountry(applicant.getCountry());
+        dto.setIsApproved(applicant.getIsApproved());
+        dto.setIsEmailVerified(applicant.getIsEmailVerified());
+        dto.setApprovalStatus(applicant.getApprovalStatus());
+        dto.setCreatedAt(applicant.getCreatedAt());
+        dto.setUpdatedAt(applicant.getUpdatedAt());
+        dto.setTotalLoans(applicant.getLoanDetails() != null ? applicant.getLoanDetails().size() : 0);
+        return dto;
     }
 
     @Override

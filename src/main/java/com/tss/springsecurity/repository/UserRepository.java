@@ -1,14 +1,15 @@
 package com.tss.springsecurity.repository;
 
-import com.tss.springsecurity.entity.User;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import com.tss.springsecurity.entity.Applicant;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
+public interface UserRepository extends JpaRepository<Applicant, Long> {
+    Optional<Applicant> findByUsername(String username);
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
 }

@@ -2,6 +2,7 @@ package com.tss.springsecurity.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_activity_entity", columnList = "entity_type,entity_id")
 })
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ActivityLog {
@@ -69,78 +71,5 @@ public class ActivityLog {
         if (status == null) {
             status = "SUCCESS";
         }
-    }
-    
-    // Builder pattern for easy construction
-    public static class Builder {
-        private ActivityLog activityLog = new ActivityLog();
-        
-        public Builder performedBy(String performedBy) {
-            activityLog.performedBy = performedBy;
-            return this;
-        }
-        
-        public Builder userRole(String userRole) {
-            activityLog.userRole = userRole;
-            return this;
-        }
-        
-        public Builder activityType(String activityType) {
-            activityLog.activityType = activityType;
-            return this;
-        }
-        
-        public Builder entityType(String entityType) {
-            activityLog.entityType = entityType;
-            return this;
-        }
-        
-        public Builder entityId(Long entityId) {
-            activityLog.entityId = entityId;
-            return this;
-        }
-        
-        public Builder description(String description) {
-            activityLog.description = description;
-            return this;
-        }
-        
-        public Builder ipAddress(String ipAddress) {
-            activityLog.ipAddress = ipAddress;
-            return this;
-        }
-        
-        public Builder userAgent(String userAgent) {
-            activityLog.userAgent = userAgent;
-            return this;
-        }
-        
-        public Builder oldValue(String oldValue) {
-            activityLog.oldValue = oldValue;
-            return this;
-        }
-        
-        public Builder newValue(String newValue) {
-            activityLog.newValue = newValue;
-            return this;
-        }
-        
-        public Builder status(String status) {
-            activityLog.status = status;
-            return this;
-        }
-        
-        public Builder errorMessage(String errorMessage) {
-            activityLog.errorMessage = errorMessage;
-            return this;
-        }
-        
-        public ActivityLog build() {
-            return activityLog;
-        }
-    }
-    
-    public static Builder builder() {
-        return new Builder();
     }
 }

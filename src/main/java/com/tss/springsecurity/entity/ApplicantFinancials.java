@@ -24,7 +24,21 @@ public class ApplicantFinancials {
     @JoinColumn(name = "applicant_id", referencedColumnName = "applicant_id")
     private Applicant applicant;
     
-    @NotBlank(message = "Bank name is required")
+    @Column(name = "monthly_income", precision = 15, scale = 2)
+    private BigDecimal monthlyIncome;
+    
+    @Column(name = "other_income", precision = 15, scale = 2)
+    private BigDecimal otherIncome;
+    
+    @Column(name = "monthly_expenses", precision = 15, scale = 2)
+    private BigDecimal monthlyExpenses;
+    
+    @Column(name = "existing_loan_emi", precision = 15, scale = 2)
+    private BigDecimal existingLoanEmi;
+    
+    @Column(name = "credit_card_outstanding", precision = 15, scale = 2)
+    private BigDecimal creditCardOutstanding;
+    
     @Size(min = 2, max = 150, message = "Bank name must be between 2 and 150 characters")
     @Column(name = "bank_name", length = 150)
     private String bankName;

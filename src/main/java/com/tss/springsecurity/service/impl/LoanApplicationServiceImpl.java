@@ -168,10 +168,9 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         ApplicantEmployment employment = employmentRepository.findByApplicant_ApplicantId(dto.getApplicantId())
                 .orElse(new ApplicantEmployment());
         employment.setApplicant(applicant);
-        employment.setEmployerName(dto.getEmployerName());
+        employment.setCompanyName(dto.getEmployerName());
         employment.setDesignation(dto.getDesignation());
         employment.setEmploymentType(dto.getEmploymentType());
-        employment.setStartDate(dto.getEmploymentStartDate());
         employment.setMonthlyIncome(dto.getMonthlyIncome());
         employment.setVerifiedStatus("pending");
         employmentRepository.save(employment);

@@ -1,19 +1,38 @@
 package com.tss.springsecurity.service.impl;
 
-import com.tss.springsecurity.dto.CompleteLoanApplicationRequest;
-import com.tss.springsecurity.entity.*;
-import com.tss.springsecurity.repository.*;
-import com.tss.springsecurity.service.CloudinaryService;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.tss.springsecurity.dto.CompleteLoanApplicationRequest;
+import com.tss.springsecurity.entity.AadhaarDetails;
+import com.tss.springsecurity.entity.Applicant;
+import com.tss.springsecurity.entity.ApplicantBasicDetails;
+import com.tss.springsecurity.entity.ApplicantEmployment;
+import com.tss.springsecurity.entity.ApplicantFinancials;
+import com.tss.springsecurity.entity.ApplicantLoanDetails;
+import com.tss.springsecurity.entity.ApplicantPropertyDetails;
+import com.tss.springsecurity.entity.OtherDocument;
+import com.tss.springsecurity.entity.PanDetails;
+import com.tss.springsecurity.entity.PassportDetails;
+import com.tss.springsecurity.repository.AadhaarDetailsRepository;
+import com.tss.springsecurity.repository.ApplicantBasicDetailsRepository;
+import com.tss.springsecurity.repository.ApplicantEmploymentRepository;
+import com.tss.springsecurity.repository.ApplicantFinancialsRepository;
+import com.tss.springsecurity.repository.ApplicantLoanDetailsRepository;
+import com.tss.springsecurity.repository.ApplicantPropertyDetailsRepository;
+import com.tss.springsecurity.repository.ApplicantRepository;
+import com.tss.springsecurity.repository.OtherDocumentRepository;
+import com.tss.springsecurity.repository.PanDetailsRepository;
+import com.tss.springsecurity.repository.PassportDetailsRepository;
+import com.tss.springsecurity.service.CloudinaryService;
+
+import jakarta.transaction.Transactional;
 
 //@Service  // Disabled until Cloudinary dependency is added
 public class ComprehensiveLoanApplicationServiceImpl {
@@ -172,12 +191,12 @@ public class ComprehensiveLoanApplicationServiceImpl {
         ApplicantPropertyDetails propertyDetails = new ApplicantPropertyDetails();
         propertyDetails.setApplicant(applicant);
         propertyDetails.setPropertyType(request.getPropertyType());
-        propertyDetails.setPropertyAddress(request.getPropertyAddress());
-        propertyDetails.setPropertyCity(request.getPropertyCity());
-        propertyDetails.setPropertyState(request.getPropertyState());
-        propertyDetails.setPropertyPincode(request.getPropertyPincode());
-        propertyDetails.setPropertyValue(request.getPropertyValue());
-        propertyDetails.setConstructionStatus(request.getConstructionStatus());
+//        propertyDetails.setPropertyAddress(request.getPropertyAddress());
+//        propertyDetails.setPropertyCity(request.getPropertyCity());
+//        propertyDetails.setPropertyState(request.getPropertyState());
+//        propertyDetails.setPropertyPincode(request.getPropertyPincode());
+//        propertyDetails.setPropertyValue(request.getPropertyValue());
+//        propertyDetails.setConstructionStatus(request.getConstructionStatus());
         
         propertyDetailsRepository.save(propertyDetails);
     }
@@ -187,15 +206,15 @@ public class ComprehensiveLoanApplicationServiceImpl {
         loanDetails.setApplicant(applicant);
         loanDetails.setLoanType(request.getLoanType());
         loanDetails.setLoanAmount(request.getLoanAmount());
-        loanDetails.setLoanTenure(request.getLoanTenure());
-        loanDetails.setLoanPurpose(request.getLoanPurpose());
-        loanDetails.setApplicationStatus("SUBMITTED");
-        loanDetails.setApplicationDate(LocalDateTime.now());
+//        loanDetails.setLoanTenure(request.getLoanTenure());
+//        loanDetails.setLoanPurpose(request.getLoanPurpose());
+//        loanDetails.setApplicationStatus("SUBMITTED");
+//        loanDetails.setApplicationDate(LocalDateTime.now());
         
         // Calculate EMI (simple calculation)
-        BigDecimal monthlyRate = BigDecimal.valueOf(0.085).divide(BigDecimal.valueOf(12), 6, BigDecimal.ROUND_HALF_UP);
+        BigDecimal monthlyRate = BigDecimal.valueOf(0.085).divide(BigDecimal.valueOf(12), 6, RoundingMode.HALF_UP);
         BigDecimal emi = calculateEMI(request.getLoanAmount(), monthlyRate, request.getLoanTenure());
-        loanDetails.setEmiAmount(emi);
+//        loanDetails.setEmiAmount(emi);
         
         loanDetailsRepository.save(loanDetails);
     }
@@ -206,8 +225,8 @@ public class ComprehensiveLoanApplicationServiceImpl {
             AadhaarDetails aadhaar = new AadhaarDetails();
             aadhaar.setApplicant(applicant);
             aadhaar.setAadhaarNumber(request.getAadhaarNumber());
-            aadhaar.setIsVerified(false);
-            aadhaar.setVerificationStatus("PENDING");
+//            aadhaar.setIsVerified(false);
+//            aadhaar.setVerificationStatus("PENDING");
             aadhaarDetailsRepository.save(aadhaar);
         }
 
@@ -216,8 +235,8 @@ public class ComprehensiveLoanApplicationServiceImpl {
             PanDetails pan = new PanDetails();
             pan.setApplicant(applicant);
             pan.setPanNumber(request.getPanNumber());
-            pan.setIsVerified(false);
-            pan.setVerificationStatus("PENDING");
+//            pan.setIsVerified(false);
+//            pan.setVerificationStatus("PENDING");
             panDetailsRepository.save(pan);
         }
 
@@ -226,8 +245,8 @@ public class ComprehensiveLoanApplicationServiceImpl {
             PassportDetails passport = new PassportDetails();
             passport.setApplicant(applicant);
             passport.setPassportNumber(request.getPassportNumber());
-            passport.setIsVerified(false);
-            passport.setVerificationStatus("PENDING");
+//            passport.setIsVerified(false);
+//            passport.setVerificationStatus("PENDING");
             passportDetailsRepository.save(passport);
         }
     }
@@ -247,14 +266,14 @@ public class ComprehensiveLoanApplicationServiceImpl {
                 // Save document info to database
                 OtherDocument document = new OtherDocument();
                 document.setApplicant(applicant);
-                document.setDocumentType(documentType);
-                document.setDocumentName(file.getOriginalFilename());
-                document.setDocumentUrl(cloudinaryUrl);
-                document.setFileSize(file.getSize());
-                document.setMimeType(file.getContentType());
-                document.setUploadedAt(LocalDateTime.now());
-                document.setIsVerified(false);
-                document.setVerificationStatus("PENDING");
+//                document.setDocType(documentType);
+//                document.setDocumentName(file.getOriginalFilename());
+//                document.setDocumentUrl(cloudinaryUrl);
+//                document.setFileSize(file.getSize());
+//                document.setMimeType(file.getContentType());
+//                document.setUploadedAt(LocalDateTime.now());
+//                document.setIsVerified(false);
+//                document.setVerificationStatus("PENDING");
 
                 otherDocumentRepository.save(document);
             }
@@ -275,7 +294,7 @@ public class ComprehensiveLoanApplicationServiceImpl {
         BigDecimal numerator = principal.multiply(monthlyRate).multiply(onePlusRPowerN);
         BigDecimal denominator = onePlusRPowerN.subtract(BigDecimal.ONE);
         
-        return numerator.divide(denominator, 2, BigDecimal.ROUND_HALF_UP);
+        return numerator.divide(denominator, 2, RoundingMode.HALF_UP);
     }
 
     public List<Applicant> getAllLoanApplications() {
@@ -287,7 +306,7 @@ public class ComprehensiveLoanApplicationServiceImpl {
                 .orElseThrow(() -> new RuntimeException("Loan application not found for username: " + username));
     }
 
-    public List<Applicant> getLoanApplicationsByStatus(String status) {
-        return applicantRepository.findByApprovalStatus(status);
-    }
+//    public List<Applicant> getLoanApplicationsByStatus(String status) {
+//        return applicantRepository.findByApprovalStatus(status);
+//    }
 }

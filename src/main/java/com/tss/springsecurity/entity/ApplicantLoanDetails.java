@@ -27,7 +27,7 @@ public class ApplicantLoanDetails {
     private Applicant applicant;
     
     @NotBlank(message = "Loan type is required")
-    @Pattern(regexp = "home|gold|personal|vehicle|education|business|agriculture|medical", message = "Loan type must be home, gold, personal, vehicle, education, business, agriculture, or medical")
+    @Pattern(regexp = "(?i)(home|gold|personal|vehicle|education|business|agriculture|medical|HOME|GOLD|PERSONAL|VEHICLE|EDUCATION|BUSINESS|AGRICULTURE|MEDICAL)", message = "Loan type must be home, gold, personal, vehicle, education, business, agriculture, or medical")
     @Column(name = "loan_type", length = 50)
     private String loanType;
     
@@ -50,9 +50,69 @@ public class ApplicantLoanDetails {
     @Column(name = "tenure_months")
     private Integer tenureMonths;
     
-    @Pattern(regexp = "pending|approved|rejected|under_review|disbursed|closed", message = "Status must be pending, approved, rejected, under_review, disbursed, or closed")
+    @Pattern(regexp = "(?i)(pending|approved|rejected|under_review|disbursed|closed|PENDING|APPROVED|REJECTED|UNDER_REVIEW|DISBURSED|CLOSED)", message = "Status must be pending, approved, rejected, under_review, disbursed, or closed")
     @Column(name = "status", length = 50)
     private String status = "pending";
+    
+    @Column(name = "loan_purpose", length = 500)
+    private String loanPurpose;
+    
+    // Employment Details
+    @Column(name = "employment_type", length = 50)
+    private String employmentType;
+    
+    @Column(name = "employer_name", length = 200)
+    private String employerName;
+    
+    @Column(name = "designation", length = 100)
+    private String designation;
+    
+    @Column(name = "monthly_income", precision = 15, scale = 2)
+    private BigDecimal monthlyIncome;
+    
+    // Bank Details
+    @Column(name = "bank_name", length = 200)
+    private String bankName;
+    
+    @Column(name = "account_number", length = 50)
+    private String accountNumber;
+    
+    @Column(name = "ifsc_code", length = 20)
+    private String ifscCode;
+    
+    @Column(name = "account_type", length = 50)
+    private String accountType;
+    
+    // Financial Obligations
+    @Column(name = "existing_obligations", precision = 15, scale = 2)
+    private BigDecimal existingObligations;
+    
+    // Co-Applicant Details
+    @Column(name = "has_co_applicant")
+    private Boolean hasCoApplicant = false;
+    
+    @Column(name = "co_applicant_name", length = 200)
+    private String coApplicantName;
+    
+    @Column(name = "co_applicant_relation", length = 50)
+    private String coApplicantRelation;
+    
+    // Collateral Details
+    @Column(name = "has_collateral")
+    private Boolean hasCollateral = false;
+    
+    @Column(name = "collateral_type", length = 100)
+    private String collateralType;
+    
+    @Column(name = "collateral_value", precision = 15, scale = 2)
+    private BigDecimal collateralValue;
+    
+    // Application Status
+    @Column(name = "application_status", length = 50)
+    private String applicationStatus = "DRAFT";
+    
+    @Column(name = "loan_status", length = 50)
+    private String loanStatus = "PENDING";
     
     @Min(value = 0, message = "Risk score cannot be negative")
     @Max(value = 1000, message = "Risk score cannot exceed 1000")

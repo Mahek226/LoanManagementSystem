@@ -12,6 +12,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/documents")
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, allowCredentials = "true")
 public class DocumentUploadController {
     
     @Autowired

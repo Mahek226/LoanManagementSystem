@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
+import com.tss.springsecurity.dto.SimpleLoanApplicationDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ApplicantLoanDetails;
 import com.tss.springsecurity.service.LoanApplicationService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,12 +23,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loan-applications")
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, allowCredentials = "true")
 public class LoanApplicationController {
     
     private final LoanApplicationService loanApplicationService;
+    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository;
     
-    public LoanApplicationController(LoanApplicationService loanApplicationService) {
+    public LoanApplicationController(LoanApplicationService loanApplicationService,
+                                    com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository) {
         this.loanApplicationService = loanApplicationService;
+        this.loanDetailsRepository = loanDetailsRepository;
     }
     
     @PostMapping("/submit")
@@ -50,30 +56,30 @@ public class LoanApplicationController {
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
-    
-    @PostMapping("/submit-complete")
-    public ResponseEntity<Map<String, Object>> submitCompleteLoanApplication(
-            @Valid @RequestBody CompleteLoanApplicationDTO completeLoanApplicationDTO) {
-        try {
-            Applicant applicant = loanApplicationService.submitCompleteLoanApplication(completeLoanApplicationDTO);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Complete loan application submitted successfully with all details");
-            response.put("applicantId", applicant.getApplicantId());
-            response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
-            response.put("email", applicant.getEmail());
-            response.put("phone", applicant.getPhone());
-            
-            return new ResponseEntity<>(response, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", e.getMessage());
-            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        }
-    }
-    
+//    
+//    @PostMapping("/submit-complete")
+//    public ResponseEntity<Map<String, Object>> submitCompleteLoanApplication(
+//            @Valid @RequestBody CompleteLoanApplicationDTO completeLoanApplicationDTO) {
+//        try {
+//            Applicant applicant = loanApplicationService.submitCompleteLoanApplication(completeLoanApplicationDTO);
+//            
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("success", true);
+//            response.put("message", "Complete loan application submitted successfully with all details");
+//            response.put("applicantId", applicant.getApplicantId());
+//            response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
+//            response.put("email", applicant.getEmail());
+//            response.put("phone", applicant.getPhone());
+//            
+//            return new ResponseEntity<>(response, HttpStatus.CREATED);
+//        } catch (RuntimeException e) {
+//            Map<String, Object> errorResponse = new HashMap<>();
+//            errorResponse.put("success", false);
+//            errorResponse.put("message", e.getMessage());
+//            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+//        }
+//    }
+//    
     @PostMapping("/submit-for-existing-applicant")
     public ResponseEntity<Map<String, Object>> submitLoanApplicationForExistingApplicant(
             @Valid @RequestBody LoanApplicationForExistingApplicantDTO loanApplicationDTO) {
@@ -247,6 +253,104 @@ public class LoanApplicationController {
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "Error processing bulk upload: " + e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    @PostMapping("/submit-complete")
+    public ResponseEntity<Map<String, Object>> submitSimpleLoanApplication(
+            @Valid @RequestBody SimpleLoanApplicationDTO applicationDTO) {
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Get applicant
+            Applicant applicant = loanApplicationService.getApplicantById(applicationDTO.getApplicantId());
+            
+            if (applicant == null) {
+                response.put("success", false);
+                response.put("message", "Applicant not found");
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            }
+            
+            // Create loan details
+            ApplicantLoanDetails loanDetails = new ApplicantLoanDetails();
+            loanDetails.setApplicant(applicant);
+            
+            // Set basic details
+            SimpleLoanApplicationDTO.BasicDetails basic = applicationDTO.getBasicDetails();
+            loanDetails.setLoanType(basic.getLoanType());
+            loanDetails.setLoanAmount(basic.getLoanAmount());
+            loanDetails.setTenureMonths(basic.getTenure());
+            loanDetails.setLoanPurpose(basic.getPurpose());
+            
+            // Set financial details
+            SimpleLoanApplicationDTO.FinancialDetails financial = applicationDTO.getFinancialDetails();
+            loanDetails.setEmploymentType(financial.getEmploymentType());
+            loanDetails.setEmployerName(financial.getEmployerName());
+            loanDetails.setDesignation(financial.getDesignation());
+            loanDetails.setMonthlyIncome(financial.getMonthlyGrossSalary() != null ? 
+                financial.getMonthlyGrossSalary() : financial.getMonthlyNetSalary());
+            
+            // Set bank details
+            loanDetails.setBankName(financial.getBankName());
+            loanDetails.setAccountNumber(financial.getAccountNumber());
+            loanDetails.setIfscCode(financial.getIfscCode());
+            loanDetails.setAccountType(financial.getAccountType());
+            
+            // Set obligations
+            BigDecimal totalObligations = BigDecimal.ZERO;
+            if (financial.getExistingLoanEMI() != null) {
+                totalObligations = totalObligations.add(financial.getExistingLoanEMI());
+            }
+            if (financial.getCreditCardPayment() != null) {
+                totalObligations = totalObligations.add(financial.getCreditCardPayment());
+            }
+            if (financial.getOtherObligations() != null) {
+                totalObligations = totalObligations.add(financial.getOtherObligations());
+            }
+            loanDetails.setExistingObligations(totalObligations);
+            
+            // Set co-applicant details if present
+            if (basic.getHasCoApplicant() != null && basic.getHasCoApplicant()) {
+                loanDetails.setHasCoApplicant(true);
+                loanDetails.setCoApplicantName(basic.getCoApplicantName());
+                loanDetails.setCoApplicantRelation(basic.getCoApplicantRelation());
+            }
+            
+            // Set collateral details if present
+            if (basic.getHasCollateral() != null && basic.getHasCollateral()) {
+                loanDetails.setHasCollateral(true);
+                loanDetails.setCollateralType(basic.getCollateralType());
+                loanDetails.setCollateralValue(basic.getCollateralValue());
+            }
+            
+            // Set status
+            loanDetails.setApplicationStatus("SUBMITTED");
+            loanDetails.setLoanStatus("PENDING");
+            
+            // Save loan application
+            ApplicantLoanDetails savedLoan = loanDetailsRepository.save(loanDetails);
+            
+            // Prepare response
+            response.put("success", true);
+            response.put("message", "Loan application submitted successfully!");
+            response.put("loanId", savedLoan.getLoanId());
+            response.put("applicantId", applicant.getApplicantId());
+            response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
+            response.put("loanType", savedLoan.getLoanType());
+            response.put("loanAmount", savedLoan.getLoanAmount());
+            response.put("status", savedLoan.getApplicationStatus());
+            
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+            
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to submit application: " + e.getMessage());
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

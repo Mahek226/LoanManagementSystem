@@ -3,6 +3,7 @@ package com.tss.springsecurity.controller;
 import com.tss.springsecurity.dto.AdminAuthResponse;
 import com.tss.springsecurity.dto.AdminLoginRequest;
 import com.tss.springsecurity.dto.AdminRegisterRequest;
+import com.tss.springsecurity.dto.ApplicantSummaryDTO;
 import com.tss.springsecurity.dto.DashboardStatsResponse;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.service.AdminService;
@@ -69,12 +70,12 @@ public class AdminController {
     // Applicant management endpoints
     @GetMapping("/api/admin/applicants")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<Applicant>> getAllApplicants(
+    public ResponseEntity<Page<ApplicantSummaryDTO>> getAllApplicants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
             Pageable pageable = PageRequest.of(page, size);
-            Page<Applicant> applicants = applicantService.getAllApplicants(pageable);
+            Page<ApplicantSummaryDTO> applicants = applicantService.getAllApplicantsSummary(pageable);
             return ResponseEntity.ok(applicants);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

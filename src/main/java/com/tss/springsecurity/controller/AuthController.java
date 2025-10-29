@@ -5,6 +5,7 @@ import com.tss.springsecurity.entity.Admin;
 import com.tss.springsecurity.entity.LoanOfficer;
 import com.tss.springsecurity.entity.ComplianceOfficer;
 import com.tss.springsecurity.payload.request.SignupRequest;
+import com.tss.springsecurity.payload.request.ApplicantRegisterRequest;
 import com.tss.springsecurity.payload.response.MessageResponse;
 import com.tss.springsecurity.payload.response.UserInfoResponse;
 import com.tss.springsecurity.repository.ApplicantRepository;
@@ -26,7 +27,6 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, maxAge = 3600, allowCredentials = "true")
 @RestController
-@RequestMapping("/api/auth")
 public class AuthController {
     @Autowired
     private ApplicantRepository applicantRepository;
@@ -45,8 +45,57 @@ public class AuthController {
 
     // Removed getCurrentUser() - will be implemented with JWT-based authentication
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
+    @PostMapping("/api/auth/register")
+    public ResponseEntity<?> registerApplicant(@Valid @RequestBody ApplicantRegisterRequest request) {
+        // Check if username already exists in applicant table
+        if (applicantRepository.existsByUsername(request.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
+        }
+
+        // Check if email already exists in applicant table
+        if (applicantRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Email is already in use!"));
+        }
+
+        // Check if phone already exists
+        if (applicantRepository.existsByPhone(request.getPhone())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Phone number is already in use!"));
+        }
+
+        // Create new applicant with all details
+        Applicant applicant = new Applicant();
+        applicant.setUsername(request.getUsername());
+        applicant.setEmail(request.getEmail());
+        applicant.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        applicant.setFirstName(request.getFirstName());
+        applicant.setLastName(request.getLastName());
+        applicant.setDob(request.getDob());
+        applicant.setGender(request.getGender());
+        applicant.setPhone(request.getPhone());
+        applicant.setAddress(request.getAddress());
+        applicant.setCity(request.getCity());
+        applicant.setState(request.getState());
+        applicant.setCountry(request.getCountry());
+        
+        // Set default values
+        applicant.setIsApproved(false);
+        applicant.setIsEmailVerified(false);
+        applicant.setApprovalStatus("PENDING");
+        
+        // Save the applicant
+        applicantRepository.save(applicant);
+
+        return ResponseEntity.ok(new MessageResponse("Applicant registered successfully!"));
+    }
+
+    @PostMapping("/api/auth/signup")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         // Get the role as string
         String role = signUpRequest.getRole();
         
@@ -57,54 +106,11 @@ public class AuthController {
                     .body(new MessageResponse("Error: Role is required!"));
         }
 
-        // If role is APPLICANT, save to applicant table
+        // If role is APPLICANT, redirect to specific endpoint
         if ("ROLE_APPLICANT".equals(role)) {
-            // Check if username already exists in applicant table
-            if (applicantRepository.existsByUsername(signUpRequest.getUsername())) {
-                return ResponseEntity
-                        .badRequest()
-                        .body(new MessageResponse("Error: Username is already taken!"));
-            }
-
-            // Check if email already exists in applicant table
-            if (applicantRepository.existsByEmail(signUpRequest.getEmail())) {
-                return ResponseEntity
-                        .badRequest()
-                        .body(new MessageResponse("Error: Email is already in use!"));
-            }
-
-            // Check if phone already exists (if provided)
-            if (signUpRequest.getPhone() != null && !signUpRequest.getPhone().isEmpty() 
-                && applicantRepository.existsByPhone(signUpRequest.getPhone())) {
-                return ResponseEntity
-                        .badRequest()
-                        .body(new MessageResponse("Error: Phone number is already in use!"));
-            }
-
-            // Create new applicant with all details
-            Applicant applicant = new Applicant();
-            applicant.setUsername(signUpRequest.getUsername());
-            applicant.setEmail(signUpRequest.getEmail());
-            applicant.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
-            applicant.setFirstName(signUpRequest.getFirstName());
-            applicant.setLastName(signUpRequest.getLastName());
-            applicant.setDob(signUpRequest.getDob());
-            applicant.setGender(signUpRequest.getGender());
-            applicant.setPhone(signUpRequest.getPhone());
-            applicant.setAddress(signUpRequest.getAddress());
-            applicant.setCity(signUpRequest.getCity());
-            applicant.setState(signUpRequest.getState());
-            applicant.setCountry(signUpRequest.getCountry());
-            
-            // Set default values
-            applicant.setIsApproved(false);
-            applicant.setIsEmailVerified(false);
-            applicant.setApprovalStatus("PENDING");
-            
-            // Save the applicant
-            applicantRepository.save(applicant);
-
-            return ResponseEntity.ok(new MessageResponse("Applicant registered successfully!"));
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Please use /api/auth/signup/applicant endpoint for applicant registration!"));
         } else if ("ROLE_ADMIN".equals(role)) {
             // Handle Admin registration
             if (adminRepository.existsByUsername(signUpRequest.getUsername())) {

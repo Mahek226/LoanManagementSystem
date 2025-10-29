@@ -29,4 +29,5 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
            "GROUP BY MONTH(a.createdAt) " +
            "ORDER BY MONTH(a.createdAt)")
     List<Object[]> countApplicantsByMonth();
+	List<Applicant> findByApprovalStatus(String status);
 }

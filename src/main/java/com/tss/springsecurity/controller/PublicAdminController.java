@@ -1,5 +1,6 @@
 package com.tss.springsecurity.controller;
 
+import com.tss.springsecurity.dto.ApplicantSummaryDTO;
 import com.tss.springsecurity.dto.DashboardStatsResponse;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.service.AdminService;
@@ -35,13 +36,13 @@ public class PublicAdminController {
     }
 
     @GetMapping("/applicants")
-    public ResponseEntity<Page<Applicant>> getAllApplicants(
+    public ResponseEntity<Page<ApplicantSummaryDTO>> getAllApplicants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
             System.out.println("Getting all applicants (public endpoint)...");
             Pageable pageable = PageRequest.of(page, size);
-            Page<Applicant> applicants = applicantService.getAllApplicants(pageable);
+            Page<ApplicantSummaryDTO> applicants = applicantService.getAllApplicantsSummary(pageable);
             System.out.println("Found " + applicants.getTotalElements() + " applicants");
             return ResponseEntity.ok(applicants);
         } catch (Exception e) {
