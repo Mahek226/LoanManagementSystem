@@ -42,7 +42,7 @@ public class LoanApplicationForExistingApplicantDTO {
     private String designation;
     
     @NotBlank
-    @Pattern(regexp = "salaried|self-employed")
+    @Pattern(regexp = "salaried|self-employed|business|professional|retired")
     private String employmentType;
     
     @Past
