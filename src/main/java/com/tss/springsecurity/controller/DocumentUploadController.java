@@ -141,6 +141,9 @@ public class DocumentUploadController {
             
             log.info("Document upload completed successfully for: {}", file.getOriginalFilename());
             
+            // Note: Document extraction will be triggered by Loan Officer during review
+            // This keeps upload fast and extraction happens only when needed
+            
             // Prepare response data
             Map<String, Object> docInfo = new HashMap<>();
             docInfo.put("documentId", uploadedDocument.getDocumentId());

@@ -46,28 +46,14 @@ public class LoanAssignmentServiceImpl implements LoanAssignmentService {
             throw new RuntimeException("Loan is already assigned to an officer");
         }
         
-        LoanOfficer assignedOfficer;
+        // Get the officer to assign to
+        LoanOfficer assignedOfficer = loanOfficerRepository.findById(request.getOfficerId())
+                .orElseThrow(() -> new RuntimeException("Officer not found with ID: " + request.getOfficerId()));
         
-        if (request.getSpecificOfficerId() != null) {
-            // Assign to specific officer if provided
-            assignedOfficer = loanOfficerRepository.findById(request.getSpecificOfficerId())
-                    .orElseThrow(() -> new RuntimeException("Officer not found with ID: " + request.getSpecificOfficerId()));
-            
-            // Validate that officer handles this loan type
-            if (!assignedOfficer.getLoanType().equalsIgnoreCase(loan.getLoanType())) {
-                throw new RuntimeException("Officer category (" + assignedOfficer.getLoanType() + 
-                        ") does not match loan type (" + loan.getLoanType() + ")");
-            }
-        } else {
-            // Auto-assign to officer with least workload in the same category
-            List<LoanOfficer> availableOfficers = loanOfficerRepository
-                    .findByLoanTypeOrderByWorkload(loan.getLoanType());
-            
-            if (availableOfficers.isEmpty()) {
-                throw new RuntimeException("No officers available for loan type: " + loan.getLoanType());
-            }
-            
-            assignedOfficer = availableOfficers.get(0); // Officer with least workload
+        // Validate that officer handles this loan type
+        if (!assignedOfficer.getLoanType().equalsIgnoreCase(loan.getLoanType())) {
+            throw new RuntimeException("Officer category (" + assignedOfficer.getLoanType() + 
+                    ") does not match loan type (" + loan.getLoanType() + ")");
         }
         
         // Create assignment
