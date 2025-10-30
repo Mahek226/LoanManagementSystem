@@ -23,10 +23,14 @@ export interface LoanScreeningResponse {
 }
 
 export interface LoanScreeningRequest {
-  assignmentId: number;
-  action: string; // APPROVE, REJECT, ESCALATE_TO_COMPLIANCE
-  remarks?: string;
-  rejectionReason?: string;
+  decision: string; // APPROVE, REJECT
+  remarks: string;
+  riskAssessment: number;
+  incomeVerified: boolean;
+  creditCheckPassed: boolean;
+  collateralVerified: boolean;
+  employmentVerified: boolean;
+  identityVerified: boolean;
 }
 
 export interface DashboardStats {
@@ -171,8 +175,8 @@ export class LoanOfficerService {
   }
 
   // Process loan screening (approve/reject)
-  processLoanScreening(officerId: number, request: LoanScreeningRequest): Observable<LoanScreeningResponse> {
-    return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/process-screening`, request);
+  processLoanScreening(officerId: number, assignmentId: number, request: LoanScreeningRequest): Observable<LoanScreeningResponse> {
+    return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/screen-loan/${assignmentId}`, request);
   }
 
   // Escalate to compliance

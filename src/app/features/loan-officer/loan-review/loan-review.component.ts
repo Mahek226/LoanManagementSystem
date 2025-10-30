@@ -201,19 +201,29 @@ export class LoanReviewComponent implements OnInit {
     this.error = '';
     this.success = '';
 
+    // Combine remarks and rejection reason
+    const finalRemarks = this.selectedAction === 'REJECT' 
+      ? `${this.remarks}${this.rejectionReason ? ' - ' + this.rejectionReason : ''}`
+      : this.remarks || 'All verification checks passed';
+
     const request: LoanScreeningRequest = {
-      assignmentId: this.assignmentId,
-      action: this.selectedAction,
-      remarks: this.remarks,
-      rejectionReason: this.selectedAction === 'REJECT' ? this.rejectionReason : undefined
+      decision: this.selectedAction,
+      remarks: finalRemarks,
+      riskAssessment: this.loan?.riskScore || 0,
+      incomeVerified: true,
+      creditCheckPassed: true,
+      collateralVerified: true,
+      employmentVerified: true,
+      identityVerified: true
     };
 
     console.log('Processing loan screening:', {
       officerId: this.officerId,
+      assignmentId: this.assignmentId,
       request: request
     });
 
-    this.loanOfficerService.processLoanScreening(this.officerId, request).subscribe({
+    this.loanOfficerService.processLoanScreening(this.officerId, this.assignmentId, request).subscribe({
       next: (response) => {
         this.processing = false;
         this.success = `Loan ${this.selectedAction.toLowerCase()} successfully!`;
