@@ -424,11 +424,14 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
         
         // Process the decision
+        log.info("Processing decision: {} for loan {}", decision.getDecision(), loan.getLoanId());
         switch (decision.getDecision().toUpperCase()) {
             case "APPROVE":
+                log.info("Calling processApprovalDecision for loan {}", loan.getLoanId());
                 return processApprovalDecision(assignment, loan, decision);
                 
             case "REJECT":
+                log.info("Calling processRejectionDecision for loan {}", loan.getLoanId());
                 return processRejectionDecision(assignment, loan, decision);
                 
             case "ESCALATE":
@@ -465,12 +468,14 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private LoanScreeningResponse processApprovalDecision(OfficerApplicationAssignment assignment, 
                                                          ApplicantLoanDetails loan, 
                                                          LoanScreeningDecision decision) {
+        log.info("[processApprovalDecision] Starting approval process for loan {}", loan.getLoanId());
         // Check if officer can approve based on risk score
         if (loan.getRiskScore() >= riskScoreThreshold && 
             (decision.getRequiresManagerApproval() == null || !decision.getRequiresManagerApproval())) {
             throw new RuntimeException("Cannot approve high-risk loan without manager approval. Please escalate to compliance.");
         }
         
+        log.info("[processApprovalDecision] Setting assignment status to APPROVED and loan status to approved");
         assignment.setStatus("APPROVED");
         assignment.setRemarks(decision.getRemarks());
         assignment.setCompletedAt(LocalDateTime.now());
@@ -489,6 +494,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private LoanScreeningResponse processRejectionDecision(OfficerApplicationAssignment assignment, 
                                                           ApplicantLoanDetails loan, 
                                                           LoanScreeningDecision decision) {
+        log.info("[processRejectionDecision] Starting rejection process for loan {}", loan.getLoanId());
+        log.info("[processRejectionDecision] Setting assignment status to REJECTED and loan status to rejected");
         assignment.setStatus("REJECTED");
         assignment.setRemarks(decision.getRejectionReason() != null ? 
                              decision.getRejectionReason() : decision.getRemarks());

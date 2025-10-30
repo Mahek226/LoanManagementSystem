@@ -38,11 +38,14 @@ public class LoanApplicationController {
     
     private final LoanApplicationService loanApplicationService;
     private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository;
+    private final com.tss.springsecurity.service.LoanAssignmentService loanAssignmentService;
     
     public LoanApplicationController(LoanApplicationService loanApplicationService,
-                                    com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository) {
+                                    com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository,
+                                    com.tss.springsecurity.service.LoanAssignmentService loanAssignmentService) {
         this.loanApplicationService = loanApplicationService;
         this.loanDetailsRepository = loanDetailsRepository;
+        this.loanAssignmentService = loanAssignmentService;
     }
     
     @PostMapping("/submit")
@@ -98,7 +101,6 @@ public class LoanApplicationController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Loan application submitted successfully for existing applicant");
             response.put("loanId", loanDetails.getLoanId());
             response.put("applicantId", loanDetails.getApplicant().getApplicantId());
             response.put("applicantName", loanDetails.getApplicant().getFirstName() + " " + loanDetails.getApplicant().getLastName());
@@ -106,6 +108,28 @@ public class LoanApplicationController {
             response.put("loanAmount", loanDetails.getLoanAmount());
             response.put("status", loanDetails.getStatus());
             response.put("interestRate", loanDetails.getInterestRate());
+            
+            // Automatically assign loan to an officer based on loan type
+            try {
+                com.tss.springsecurity.dto.LoanAssignmentRequest assignmentRequest = 
+                    new com.tss.springsecurity.dto.LoanAssignmentRequest();
+                assignmentRequest.setLoanId(loanDetails.getLoanId());
+                assignmentRequest.setPriority("NORMAL");
+                assignmentRequest.setRemarks("Auto-assigned after loan submission");
+                
+                com.tss.springsecurity.dto.LoanAssignmentResponse assignmentResponse = 
+                    loanAssignmentService.assignLoanToOfficer(assignmentRequest);
+                
+                response.put("message", "Loan application submitted and assigned successfully!");
+                response.put("assignmentId", assignmentResponse.getAssignmentId());
+                response.put("assignedOfficerId", assignmentResponse.getOfficerId());
+                response.put("assignedOfficerName", assignmentResponse.getOfficerName());
+                
+            } catch (Exception assignmentError) {
+                // If assignment fails, still return success for loan submission
+                response.put("message", "Loan application submitted successfully! Assignment pending.");
+                response.put("assignmentError", assignmentError.getMessage());
+            }
             
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (RuntimeException e) {
@@ -380,15 +404,42 @@ public class LoanApplicationController {
             // Save loan application
             ApplicantLoanDetails savedLoan = loanDetailsRepository.save(loanDetails);
             
-            // Prepare response
-            response.put("success", true);
-            response.put("message", "Loan application submitted successfully!");
-            response.put("loanId", savedLoan.getLoanId());
-            response.put("applicantId", applicant.getApplicantId());
-            response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
-            response.put("loanType", savedLoan.getLoanType());
-            response.put("loanAmount", savedLoan.getLoanAmount());
-            response.put("status", savedLoan.getApplicationStatus());
+            // Automatically assign loan to an officer based on loan type
+            try {
+                com.tss.springsecurity.dto.LoanAssignmentRequest assignmentRequest = 
+                    new com.tss.springsecurity.dto.LoanAssignmentRequest();
+                assignmentRequest.setLoanId(savedLoan.getLoanId());
+                assignmentRequest.setPriority("NORMAL");
+                assignmentRequest.setRemarks("Auto-assigned after loan submission");
+                
+                com.tss.springsecurity.dto.LoanAssignmentResponse assignmentResponse = 
+                    loanAssignmentService.assignLoanToOfficer(assignmentRequest);
+                
+                // Prepare response with assignment details
+                response.put("success", true);
+                response.put("message", "Loan application submitted and assigned successfully!");
+                response.put("loanId", savedLoan.getLoanId());
+                response.put("applicantId", applicant.getApplicantId());
+                response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
+                response.put("loanType", savedLoan.getLoanType());
+                response.put("loanAmount", savedLoan.getLoanAmount());
+                response.put("status", savedLoan.getApplicationStatus());
+                response.put("assignmentId", assignmentResponse.getAssignmentId());
+                response.put("assignedOfficerId", assignmentResponse.getOfficerId());
+                response.put("assignedOfficerName", assignmentResponse.getOfficerName());
+                
+            } catch (Exception assignmentError) {
+                // If assignment fails, still return success for loan submission
+                response.put("success", true);
+                response.put("message", "Loan application submitted successfully! Assignment pending.");
+                response.put("loanId", savedLoan.getLoanId());
+                response.put("applicantId", applicant.getApplicantId());
+                response.put("applicantName", applicant.getFirstName() + " " + applicant.getLastName());
+                response.put("loanType", savedLoan.getLoanType());
+                response.put("loanAmount", savedLoan.getLoanAmount());
+                response.put("status", savedLoan.getApplicationStatus());
+                response.put("assignmentError", assignmentError.getMessage());
+            }
             
             return new ResponseEntity<>(response, HttpStatus.CREATED);
             
