@@ -62,6 +62,14 @@ export class LoanReviewComponent implements OnInit {
   fraudCheckTriggered = false;
   fraudCheckLoading = false;
 
+  // Document extraction
+  extractingDocuments = false;
+  documentsExtracted = false;
+  extractionResults: any = null;
+
+  // Tab management
+  activeTab: string = 'overview';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -302,6 +310,51 @@ export class LoanReviewComponent implements OnInit {
     this.router.navigate(['/loan-officer/assigned-loans']);
   }
 
+  // Document Extraction
+  extractDocuments(): void {
+    if (!this.assignmentId || this.extractingDocuments || this.documentsExtracted) {
+      return;
+    }
+
+    this.extractingDocuments = true;
+    this.error = '';
+    this.success = '';
+
+    this.loanOfficerService.extractDocuments(this.assignmentId).subscribe({
+      next: (response) => {
+        this.extractingDocuments = false;
+        this.documentsExtracted = true;
+        this.extractionResults = response;
+        
+        const successCount = response.successCount || 0;
+        const totalCount = response.totalDocuments || 0;
+        
+        if (successCount === totalCount) {
+          this.success = `Successfully extracted data from all ${totalCount} document(s)!`;
+        } else {
+          this.success = `Extracted ${successCount} out of ${totalCount} document(s). Check extraction results for details.`;
+        }
+        
+        console.log('Document extraction results:', response);
+        
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => {
+          this.success = '';
+        }, 5000);
+      },
+      error: (error) => {
+        this.extractingDocuments = false;
+        console.error('Document extraction error:', error);
+        this.error = error.error?.message || 'Failed to extract documents. Please try again.';
+        
+        // Auto-clear error message after 5 seconds
+        setTimeout(() => {
+          this.error = '';
+        }, 5000);
+      }
+    });
+  }
+
   formatCurrency(amount: number): string {
     return this.loanOfficerService.formatCurrency(amount);
   }
@@ -463,5 +516,138 @@ export class LoanReviewComponent implements OnInit {
 
   formatDocumentType(type: string): string {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  // Helper method to check if resubmission button should be disabled
+  isResubmissionDisabled(): boolean {
+    return this.processing || this.selectedDocumentTypes.length === 0 || !this.resubmissionReason;
+  }
+
+  // Getter for resubmission button text
+  getResubmissionButtonText(): string {
+    return this.processing ? 'Sending...' : 'Send Request';
+  }
+
+  // Helper methods for template text to avoid ternary operators
+  getApprovalIndicatorText(): string {
+    return this.loan?.canApproveReject ? 'You can approve/reject this loan' : 'Requires escalation to compliance';
+  }
+
+  getApprovalIndicatorClass(): string {
+    return this.loan?.canApproveReject ? 'bg-success bg-opacity-10' : 'bg-warning bg-opacity-10';
+  }
+
+  getExtractButtonText(): string {
+    if (this.extractingDocuments) return 'Extracting Documents...';
+    if (this.documentsExtracted) return 'Documents Extracted ✓';
+    return 'Extract Document Data';
+  }
+
+  getFraudCheckButtonText(): string {
+    return this.fraudCheckTriggered ? 'Fraud Check Completed' : 'Trigger Fraud Screening';
+  }
+
+  getActionModalTitle(): string {
+    if (this.actionType === 'APPROVE') return 'Approve Loan';
+    if (this.actionType === 'REJECT') return 'Reject Loan';
+    return 'Escalate to Compliance';
+  }
+
+  getActionModalMessage(): string {
+    if (this.actionType === 'APPROVE') return 'Are you sure you want to approve this loan application?';
+    if (this.actionType === 'REJECT') return 'Please provide a reason for rejecting this loan application:';
+    return 'Escalate this loan to a compliance officer for further review.';
+  }
+
+  getConfirmButtonText(): string {
+    return this.processing ? 'Processing...' : 'Confirm';
+  }
+
+  getFraudCheckModalButtonText(): string {
+    return this.fraudCheckLoading ? 'Processing...' : 'Trigger Fraud Check';
+  }
+
+  getModalDisplayStyle(show: boolean): string {
+    return show ? 'block' : 'none';
+  }
+
+  isActionRejectWithNoReason(): boolean {
+    return this.actionType === 'REJECT' && !this.rejectionReason;
+  }
+
+  // Helper methods for button disabled states
+  isFraudCheckDisabled(): boolean {
+    if (this.fraudCheckTriggered) return true;
+    if (!this.loan) return true;
+    return this.loan.status !== 'ASSIGNED' && this.loan.status !== 'PENDING';
+  }
+
+  isResubmissionButtonDisabled(): boolean {
+    if (!this.loan) return true;
+    return this.loan.status !== 'ASSIGNED' && this.loan.status !== 'PENDING';
+  }
+
+  isApproveDisabled(): boolean {
+    if (!this.loan) return true;
+    if (!this.loan.canApproveReject) return true;
+    const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
+    return !validStatuses.includes(this.loan.status);
+  }
+
+  isRejectDisabled(): boolean {
+    if (!this.loan) return true;
+    if (!this.loan.canApproveReject) return true;
+    const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
+    return !validStatuses.includes(this.loan.status);
+  }
+
+  isEscalateDisabled(): boolean {
+    if (!this.loan) return true;
+    const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
+    return !validStatuses.includes(this.loan.status);
+  }
+
+  // Document count helpers
+  getVerifiedDocumentsCount(): number {
+    return this.documents.filter(d => d.verificationStatus === 'VERIFIED').length;
+  }
+
+  getPendingDocumentsCount(): number {
+    return this.documents.filter(d => d.verificationStatus === 'PENDING').length;
+  }
+
+  getRejectedDocumentsCount(): number {
+    return this.documents.filter(d => d.verificationStatus === 'REJECTED').length;
+  }
+
+  // Document verification button states
+  isVerifyButtonDisabled(doc: any): boolean {
+    return doc.verificationStatus === 'VERIFIED' || this.processing;
+  }
+
+  isRejectDocButtonDisabled(doc: any): boolean {
+    return doc.verificationStatus === 'REJECTED' || this.processing;
+  }
+
+  // Tab switching
+  switchTab(tab: string): void {
+    this.activeTab = tab;
+  }
+
+  // Fraud check calculation helpers
+  getTotalPointsDeducted(): number {
+    if (!this.fraudCheckResult?.flaggedRules || this.fraudCheckResult.flaggedRules.length === 0) {
+      return 0;
+    }
+    return this.fraudCheckResult.flaggedRules.reduce((sum, rule) => sum + (rule.points || 0), 0);
+  }
+
+  getMaxPossiblePoints(): number {
+    if (!this.fraudCheckResult?.flaggedRules || this.fraudCheckResult.flaggedRules.length === 0) {
+      return 100;
+    }
+    const totalPoints = this.getTotalPointsDeducted();
+    const riskScore = this.fraudCheckResult.riskScore || 1;
+    return Math.round((totalPoints * 100) / riskScore);
   }
 }

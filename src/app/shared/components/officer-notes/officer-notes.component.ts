@@ -78,8 +78,14 @@ export class OfficerNotesComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error loading notes:', err);
-          this.error = 'Failed to load notes';
+          // Endpoint not implemented yet - use empty array
+          this.notes = [];
+          this.applyFilters();
           this.loading = false;
+          // Don't show error for 404 (endpoint not found)
+          if (err.status !== 404) {
+            this.error = 'Notes feature is not yet available';
+          }
         }
       });
   }
@@ -116,8 +122,12 @@ export class OfficerNotesComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error adding note:', err);
-          this.error = err.error?.message || 'Failed to add note';
           this.loading = false;
+          if (err.status === 404) {
+            this.error = 'Notes feature is not yet available. Backend endpoint not implemented.';
+          } else {
+            this.error = err.error?.message || 'Failed to add note';
+          }
         }
       });
   }

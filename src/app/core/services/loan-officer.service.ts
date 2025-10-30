@@ -70,6 +70,17 @@ export interface FraudCheckResult {
   apiRemarks?: string;
   checkedAt: string;
   externalApiResponse?: any;
+  flaggedRules?: FlaggedRule[];
+}
+
+export interface FlaggedRule {
+  ruleId?: number;
+  ruleCode?: string;
+  ruleName: string;
+  description: string;
+  category: string;
+  severity: string;
+  points?: number;
 }
 
 export interface DocumentVerificationRequest {
@@ -178,6 +189,11 @@ export class LoanOfficerService {
   // Process loan screening (approve/reject)
   processLoanScreening(officerId: number, assignmentId: number, request: LoanScreeningRequest): Observable<LoanScreeningResponse> {
     return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/screen-loan/${assignmentId}`, request);
+  }
+
+  // Extract documents for a loan
+  extractDocuments(assignmentId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/assignment/${assignmentId}/extract-documents`, {});
   }
 
   // Escalate to compliance

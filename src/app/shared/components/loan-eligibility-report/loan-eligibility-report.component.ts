@@ -83,8 +83,12 @@ export class LoanEligibilityReportComponent {
       },
       error: (err) => {
         console.error('Error generating report:', err);
-        this.error = err.error?.message || 'Failed to generate eligibility report';
         this.loading = false;
+        if (err.status === 404) {
+          this.error = 'Eligibility report feature is not yet available. Backend endpoint not implemented.';
+        } else {
+          this.error = err.error?.message || 'Failed to generate eligibility report';
+        }
       }
     });
   }
