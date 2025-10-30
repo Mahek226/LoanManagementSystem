@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { LoanOfficerService } from '@core/services/loan-officer.service';
 
 interface OfficerProfile {
   officerId: number;
@@ -39,6 +40,7 @@ export class LoProfileComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private loanOfficerService: LoanOfficerService,
     private router: Router
   ) {
     const user = this.authService.currentUserValue;
@@ -53,28 +55,30 @@ export class LoProfileComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    // Get profile from current user for now
     const user = this.authService.currentUserValue;
     
-    if (user) {
-      this.profile = {
-        officerId: user.officerId || user.userId || 0,
-        username: user.username || '',
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        loanType: 'All Types', // Default
-        createdAt: new Date().toISOString()
-      };
-      
-      // Populate edit form
-      this.editForm = {
-        firstName: this.profile.firstName || '',
-        lastName: this.profile.lastName || '',
-        email: this.profile.email
-      };
-      
-      this.loading = false;
+    if (user && user.officerId) {
+      // Fetch profile from API
+      this.loanOfficerService.getOfficerProfile(user.officerId)
+        .subscribe({
+          next: (profile: OfficerProfile) => {
+            this.profile = profile;
+            
+            // Populate edit form
+            this.editForm = {
+              firstName: this.profile.firstName || '',
+              lastName: this.profile.lastName || '',
+              email: this.profile.email
+            };
+            
+            this.loading = false;
+          },
+          error: (err: any) => {
+            console.error('Error loading profile:', err);
+            this.error = 'Failed to load profile';
+            this.loading = false;
+          }
+        });
     } else {
       this.error = 'Unable to load profile. Please login again.';
       this.loading = false;
@@ -94,12 +98,38 @@ export class LoProfileComponent implements OnInit {
   }
 
   saveProfile(): void {
-    this.success = 'Profile update feature will be available soon!';
-    this.editMode = false;
+    this.loading = true;
+    this.error = '';
+    this.success = '';
+
+    const user = this.authService.currentUserValue;
     
-    setTimeout(() => {
-      this.success = '';
-    }, 3000);
+    if (user && user.officerId) {
+      // Call API to update profile
+      this.loanOfficerService.updateOfficerProfile(user.officerId, this.editForm)
+        .subscribe({
+          next: (response: any) => {
+            this.success = 'Profile updated successfully!';
+            this.editMode = false;
+            this.loading = false;
+            
+            // Reload profile to get updated data
+            this.loadProfile();
+            
+            setTimeout(() => {
+              this.success = '';
+            }, 3000);
+          },
+          error: (err: any) => {
+            this.error = 'Failed to update profile: ' + (err.error?.message || 'Unknown error');
+            console.error('Error updating profile:', err);
+            this.loading = false;
+          }
+        });
+    } else {
+      this.error = 'Unable to update profile. Please login again.';
+      this.loading = false;
+    }
   }
 
   goBack(): void {

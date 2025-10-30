@@ -81,6 +81,7 @@ export interface DashboardStats {
 })
 export class ComplianceOfficerService {
   private apiUrl = `${environment.apiUrl}/compliance-officer`;
+  private profileUrl = `${environment.apiUrl}/profile`;
 
   constructor(private http: HttpClient) {}
 
@@ -132,6 +133,20 @@ export class ComplianceOfficerService {
    */
   getLoanDocuments(loanId: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/loan/${loanId}/documents`);
+  }
+
+  /**
+   * Get compliance officer profile
+   */
+  getOfficerProfile(officerId: number): Observable<any> {
+    return this.http.get(`${this.profileUrl}/compliance-officer/${officerId}`);
+  }
+
+  /**
+   * Update compliance officer profile
+   */
+  updateOfficerProfile(officerId: number, profileData: any): Observable<any> {
+    return this.http.put(`${this.profileUrl}/compliance-officer/${officerId}`, profileData);
   }
 
   // ==================== Utility Methods ====================

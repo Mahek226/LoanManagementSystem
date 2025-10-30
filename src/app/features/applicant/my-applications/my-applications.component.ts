@@ -82,7 +82,139 @@ export class MyApplicationsComponent implements OnInit {
   }
 
   viewDetails(loanId: number): void {
-    this.router.navigate(['/applicant/applications', loanId]);
+    // For now, show details in a modal or navigate to a details page
+    // TODO: Create application details component
+    this.applicantService.getLoanDetails(loanId).subscribe({
+      next: (details) => {
+        console.log('Loan Details:', details);
+        alert(`Loan Details:\nLoan ID: ${details.loanId}\nType: ${details.loanType}\nAmount: ₹${details.loanAmount}\nStatus: ${details.loanStatus}`);
+      },
+      error: (err) => {
+        console.error('Error loading details:', err);
+        alert('Failed to load loan details');
+      }
+    });
+  }
+
+  downloadPDF(app: LoanApplication): void {
+    this.loading = true;
+    this.applicantService.downloadLoanApplicationPDF(app.loanId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Loan_Application_${app.loanId}_${app.loanType.replace(/\s+/g, '_')}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error downloading PDF:', err);
+        this.error = 'Failed to download PDF. Please try again.';
+        this.loading = false;
+        // Fallback: Generate PDF on frontend
+        this.generatePDFOnFrontend(app);
+      }
+    });
+  }
+
+  generatePDFOnFrontend(app: LoanApplication): void {
+    // Import jsPDF dynamically or use a service
+    // For now, create a simple HTML print version
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Loan Application #${app.loanId}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+            .section { margin-bottom: 20px; }
+            .label { font-weight: bold; display: inline-block; width: 200px; }
+            .value { display: inline-block; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Loan Application</h1>
+            <p>Application ID: #${app.loanId}</p>
+            <p>Date: ${this.formatDate(app.submittedAt || app.applicationDate)}</p>
+          </div>
+          
+          <div class="section">
+            <h2>Loan Information</h2>
+            <p><span class="label">Loan Type:</span> <span class="value">${app.loanType}</span></p>
+            <p><span class="label">Loan Amount:</span> <span class="value">₹${app.loanAmount.toLocaleString('en-IN')}</span></p>
+            <p><span class="label">Tenure:</span> <span class="value">${app.tenureMonths || app.loanTenure || 'N/A'} months</span></p>
+            <p><span class="label">Interest Rate:</span> <span class="value">${app.interestRate || 'N/A'}% p.a.</span></p>
+            <p><span class="label">Status:</span> <span class="value">${app.loanStatus}</span></p>
+          </div>
+
+          ${app.applicantFirstName ? `
+          <div class="section">
+            <h2>Applicant Information</h2>
+            <p><span class="label">Name:</span> <span class="value">${app.applicantFirstName} ${app.applicantLastName || ''}</span></p>
+            <p><span class="label">Email:</span> <span class="value">${app.applicantEmail || 'N/A'}</span></p>
+            <p><span class="label">Mobile:</span> <span class="value">${app.applicantMobile || 'N/A'}</span></p>
+          </div>
+          ` : ''}
+
+          ${app.employmentType ? `
+          <div class="section">
+            <h2>Employment Details</h2>
+            <p><span class="label">Employment Type:</span> <span class="value">${app.employmentType}</span></p>
+            <p><span class="label">Employer:</span> <span class="value">${app.employerName || 'N/A'}</span></p>
+            <p><span class="label">Monthly Income:</span> <span class="value">₹${(app.monthlyIncome || 0).toLocaleString('en-IN')}</span></p>
+          </div>
+          ` : ''}
+
+          <div class="section">
+            <h2>Application Status</h2>
+            <table>
+              <tr>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+              <tr>
+                <td>Submitted</td>
+                <td>${this.formatDate(app.submittedAt || app.applicationDate)}</td>
+              </tr>
+              ${app.reviewedAt ? `
+              <tr>
+                <td>Reviewed</td>
+                <td>${this.formatDate(app.reviewedAt)}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+
+          ${app.remarks ? `
+          <div class="section">
+            <h2>Remarks</h2>
+            <p>${app.remarks}</p>
+          </div>
+          ` : ''}
+
+          <div class="section" style="margin-top: 50px; text-align: center; color: #666; font-size: 12px;">
+            <p>This is a computer-generated document. No signature is required.</p>
+            <p>Generated on: ${new Date().toLocaleString('en-IN')}</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   }
 
   applyForNew(): void {
@@ -93,7 +225,8 @@ export class MyApplicationsComponent implements OnInit {
     return this.applicantService.formatCurrency(amount);
   }
 
-  formatDate(dateString: string): string {
+  formatDate(dateString: string | undefined): string {
+    if (!dateString) return 'N/A';
     return this.applicantService.formatDate(dateString);
   }
 
@@ -101,7 +234,8 @@ export class MyApplicationsComponent implements OnInit {
     return this.applicantService.getStatusColor(status);
   }
 
-  getFraudStatusColor(status: string): string {
+  getFraudStatusColor(status: string | undefined): string {
+    if (!status) return 'secondary';
     return this.applicantService.getFraudStatusColor(status);
   }
 
@@ -123,10 +257,10 @@ export class MyApplicationsComponent implements OnInit {
       app.loanId,
       app.loanType,
       app.loanAmount,
-      app.loanTenure + ' months',
+      (app.tenureMonths || app.loanTenure || 0) + ' months',
       app.loanStatus,
-      app.fraudScore,
-      this.formatDate(app.applicationDate)
+      app.fraudScore || app.riskScore || 0,
+      this.formatDate(app.submittedAt || app.applicationDate)
     ]);
 
     let csvContent = headers.join(',') + '\n';

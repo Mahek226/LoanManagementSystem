@@ -659,7 +659,7 @@ export class LoanApplicationService {
       bankruptcyFiled: false,
       
       // Loan Details (from basicDetails)
-      loanType: basicDetails.loanType?.toLowerCase() || 'personal',
+      loanType: basicDetails.loanType?.toUpperCase() || 'PERSONAL',
       loanAmount: basicDetails.loanAmount,
       tenureMonths: basicDetails.tenure,
       

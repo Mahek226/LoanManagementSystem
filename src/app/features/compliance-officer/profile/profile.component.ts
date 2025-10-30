@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { ComplianceOfficerService } from '../../../core/services/compliance-officer.service';
 
 @Component({
   selector: 'app-compliance-profile',
@@ -25,7 +26,10 @@ export class ComplianceProfileComponent implements OnInit {
     username: ''
   };
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private complianceOfficerService: ComplianceOfficerService
+  ) {}
 
   ngOnInit(): void {
     this.loadProfile();
@@ -33,7 +37,28 @@ export class ComplianceProfileComponent implements OnInit {
 
   loadProfile(): void {
     const user = this.authService.currentUserValue;
-    if (user) {
+    if (user && user.officerId) {
+      this.loading = true;
+      this.complianceOfficerService.getOfficerProfile(user.officerId)
+        .subscribe({
+          next: (profile: any) => {
+            this.officer = profile;
+            this.profileData = {
+              firstName: profile.firstName || '',
+              lastName: profile.lastName || '',
+              email: profile.email || '',
+              username: profile.username || ''
+            };
+            this.loading = false;
+          },
+          error: (err: any) => {
+            console.error('Error loading profile:', err);
+            this.errorMessage = 'Failed to load profile';
+            this.loading = false;
+          }
+        });
+    } else if (user) {
+      // Fallback to cached user data
       this.officer = user;
       this.profileData = {
         firstName: user.firstName || '',
@@ -59,23 +84,41 @@ export class ComplianceProfileComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    // Simulate API call - replace with actual service call
-    setTimeout(() => {
+    const user = this.authService.currentUserValue;
+    
+    if (user && user.officerId) {
+      // Call API to update profile
+      this.complianceOfficerService.updateOfficerProfile(user.officerId, this.profileData)
+        .subscribe({
+          next: (response: any) => {
+            this.loading = false;
+            this.successMessage = 'Profile updated successfully!';
+            this.editMode = false;
+
+            // Update local user data
+            if (this.officer) {
+              this.officer.firstName = this.profileData.firstName;
+              this.officer.lastName = this.profileData.lastName;
+            }
+
+            // Reload profile to get updated data
+            this.loadProfile();
+
+            // Auto-dismiss success message
+            setTimeout(() => {
+              this.successMessage = '';
+            }, 3000);
+          },
+          error: (err: any) => {
+            this.loading = false;
+            this.errorMessage = 'Failed to update profile: ' + (err.error?.message || 'Unknown error');
+            console.error('Error updating profile:', err);
+          }
+        });
+    } else {
       this.loading = false;
-      this.successMessage = 'Profile updated successfully!';
-      this.editMode = false;
-
-      // Update local user data
-      if (this.officer) {
-        this.officer.firstName = this.profileData.firstName;
-        this.officer.lastName = this.profileData.lastName;
-      }
-
-      // Auto-dismiss success message
-      setTimeout(() => {
-        this.successMessage = '';
-      }, 3000);
-    }, 1000);
+      this.errorMessage = 'Unable to update profile. Please login again.';
+    }
   }
 
   getMemberSince(): string {

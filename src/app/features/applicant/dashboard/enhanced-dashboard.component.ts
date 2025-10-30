@@ -172,7 +172,8 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     return this.applicantService.formatCurrency(amount);
   }
 
-  formatDate(dateString: string): string {
+  formatDate(dateString: string | undefined): string {
+    if (!dateString) return 'N/A';
     return this.applicantService.formatDate(dateString);
   }
 

@@ -150,12 +150,12 @@
             <div class="row g-2 mt-3">
               <div class="col-6">
                 <small class="text-muted">
-                  <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}
+                  <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.submittedAt || app.applicationDate) }}
                 </small>
               </div>
               <div class="col-6 text-end">
                 <small class="text-muted">
-                  <i class="fas fa-clock me-1"></i>Updated: {{ formatDate(app.lastUpdated) }}
+                  <i class="fas fa-clock me-1"></i>Updated: {{ formatDate(app.reviewedAt || app.lastUpdated) }}
                 </small>
               </div>
             </div>
@@ -173,8 +173,12 @@
             <button class="btn btn-primary flex-fill" (click)="viewDetails(app.loanId)">
               <i class="fas fa-eye me-1"></i>View Details
             </button>
-            <button class="btn btn-outline-secondary flex-fill">
-              <i class="fas fa-file-pdf me-1"></i>Download
+            <button class="btn btn-outline-secondary flex-fill" (click)="downloadPDF(app)" [disabled]="loading">
+              <i class="fas fa-file-pdf me-1"></i>
+              <span *ngIf="!loading">Download PDF</span>
+              <span *ngIf="loading">
+                <span class="spinner-border spinner-border-sm me-1"></span>Downloading...
+              </span>
             </button>
           </div>
         </div>
