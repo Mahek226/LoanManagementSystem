@@ -8,6 +8,7 @@ import com.tss.springsecurity.repository.ApplicantLoanDetailsRepository;
 import com.tss.springsecurity.repository.UploadedDocumentRepository;
 import com.tss.springsecurity.service.CloudinaryService;
 import com.tss.springsecurity.service.DocumentUploadService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.*;
 
 @Service
 @Transactional
+@Slf4j
 public class DocumentUploadServiceImpl implements DocumentUploadService {
     
     @Autowired
@@ -85,26 +87,47 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
     private UploadedDocument uploadSingleDocument(Applicant applicant, ApplicantLoanDetails loan, 
                                                 MultipartFile file, String documentType) throws IOException {
         
+        log.info("Starting document upload - File: {}, Type: {}, Size: {}, ContentType: {}", 
+                file.getOriginalFilename(), documentType, file.getSize(), file.getContentType());
+        
         // Validate file
         if (file.isEmpty()) {
+            log.error("File is empty: {}", file.getOriginalFilename());
             throw new RuntimeException("File is empty");
         }
         
         // Validate file size (max 10MB)
         if (file.getSize() > 10 * 1024 * 1024) {
+            log.error("File size exceeds limit: {} bytes", file.getSize());
             throw new RuntimeException("File size exceeds maximum limit of 10MB");
         }
         
         // Validate file type
         String contentType = file.getContentType();
-        if (contentType == null || !isValidFileType(contentType)) {
-            throw new RuntimeException("Invalid file type. Only PDF, JPG, JPEG, PNG files are allowed");
+        boolean isValidByContentType = contentType != null && isValidFileType(contentType);
+        boolean isValidByExtension = isValidFileExtension(file.getOriginalFilename());
+        
+        // Accept file if either content type OR file extension is valid
+        if (!isValidByContentType && !isValidByExtension) {
+            log.error("Invalid file type - ContentType: {}, File: {}, Extension check: {}", 
+                    contentType, file.getOriginalFilename(), isValidByExtension);
+            throw new RuntimeException("Invalid file type: " + contentType + 
+                    ". Only PDF, JPG, JPEG, PNG files are allowed. File: " + file.getOriginalFilename());
         }
+        
+        if (!isValidByContentType) {
+            log.warn("File accepted by extension only - ContentType: {}, File: {}", 
+                    contentType, file.getOriginalFilename());
+        }
+        
+        log.info("File validation passed for: {}", file.getOriginalFilename());
         
         try {
             // Upload to Cloudinary
+            log.info("Uploading to Cloudinary: {}", file.getOriginalFilename());
             Map<String, Object> uploadResult = cloudinaryService.uploadDocumentWithDetails(
                     file, documentType, applicant.getApplicantId().toString());
+            log.info("Cloudinary upload successful. URL: {}", uploadResult.get("secure_url"));
             
             // Create document record
             UploadedDocument document = new UploadedDocument();
@@ -120,9 +143,16 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
             document.setUploadStatus(UploadedDocument.UploadStatus.UPLOADED);
             document.setVerificationStatus(UploadedDocument.VerificationStatus.PENDING);
             
-            return uploadedDocumentRepository.save(document);
+            UploadedDocument savedDocument = uploadedDocumentRepository.save(document);
+            log.info("Document saved to database with ID: {}", savedDocument.getDocumentId());
+            
+            return savedDocument;
             
         } catch (IOException e) {
+            log.error("IOException during document upload: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload document: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error during document upload: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to upload document: " + e.getMessage(), e);
         }
     }
@@ -192,10 +222,44 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
     }
     
     private boolean isValidFileType(String contentType) {
-        return contentType.equals("application/pdf") ||
-               contentType.equals("image/jpeg") ||
-               contentType.equals("image/jpg") ||
-               contentType.equals("image/png");
+        if (contentType == null) {
+            return false;
+        }
+        
+        // Normalize content type by converting to lowercase and removing any parameters
+        String normalizedType = contentType.toLowerCase().split(";")[0].trim();
+        
+        log.info("Validating file type - Original: {}, Normalized: {}", contentType, normalizedType);
+        
+        // Make validation more flexible by checking if content type starts with allowed types
+        return normalizedType.equals("application/pdf") ||
+               normalizedType.startsWith("image/jpeg") ||
+               normalizedType.startsWith("image/jpg") ||
+               normalizedType.startsWith("image/png") ||
+               normalizedType.equals("image/pjpeg") || // Progressive JPEG
+               normalizedType.equals("image/x-png") ||  // Alternative PNG MIME type
+               normalizedType.equals("image/jpe") ||    // Another JPEG variant
+               // Also check by file extension pattern in content type
+               normalizedType.contains("jpeg") ||
+               normalizedType.contains("jpg") ||
+               normalizedType.contains("png") ||
+               normalizedType.contains("pdf");
+    }
+    
+    private boolean isValidFileExtension(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return false;
+        }
+        
+        String lowerFilename = filename.toLowerCase();
+        boolean isValid = lowerFilename.endsWith(".pdf") ||
+                         lowerFilename.endsWith(".jpg") ||
+                         lowerFilename.endsWith(".jpeg") ||
+                         lowerFilename.endsWith(".png") ||
+                         lowerFilename.endsWith(".jpe");
+        
+        log.info("File extension validation for '{}': {}", filename, isValid);
+        return isValid;
     }
     
     private String generateDocumentName(String documentType, Long applicantId) {

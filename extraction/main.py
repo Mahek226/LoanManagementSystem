@@ -112,3 +112,18 @@ def get_docs(id: int, db: Session = Depends(get_db)):
             "fields": fields
         })
     return {"applicant_id": id, "documents": out}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    return {"status": "ok", "service": "Document Extraction API"}
+
+# Run the server
+if __name__ == "__main__":
+    import uvicorn
+    print("=" * 60)
+    print("Starting Document Extraction Service...")
+    print("API will be available at: http://127.0.0.1:8000")
+    print("API Documentation at: http://127.0.0.1:8000/docs")
+    print("=" * 60)
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
