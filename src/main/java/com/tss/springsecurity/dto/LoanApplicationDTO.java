@@ -97,7 +97,8 @@ public class LoanApplicationDTO {
     
     // Loan Details
     @NotBlank(message = "Loan type is required")
-    @Pattern(regexp = "home|gold|personal|vehicle|education|business", message = "Invalid loan type")
+    @Pattern(regexp = "(?i)(home|gold|personal|vehicle|education|business|HOME|GOLD|PERSONAL|VEHICLE|EDUCATION|BUSINESS)", 
+             message = "Invalid loan type. Must be one of: HOME, GOLD, PERSONAL, VEHICLE, EDUCATION, BUSINESS")
     private String loanType;
     
     @NotNull(message = "Loan amount is required")
