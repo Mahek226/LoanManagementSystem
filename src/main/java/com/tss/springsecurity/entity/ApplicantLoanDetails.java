@@ -1,5 +1,6 @@
 package com.tss.springsecurity.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class ApplicantLoanDetails {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_id", referencedColumnName = "applicant_id")
+    @JsonIgnoreProperties({"loanDetails", "employment", "financials", "aadhaarDetails", "panDetails", "passportDetails", "otherDocuments", "basicDetails", "propertyDetails", "references", "bankStatements", "payslips", "loanCollaterals", "loanGuarantors", "loanRepayments", "loanDisbursements"})
     private Applicant applicant;
     
     @NotBlank(message = "Loan type is required")
@@ -56,6 +58,75 @@ public class ApplicantLoanDetails {
     
     @Column(name = "loan_purpose", length = 500)
     private String loanPurpose;
+    
+    // Applicant Personal Details
+    @Column(name = "applicant_first_name", length = 100)
+    private String applicantFirstName;
+    
+    @Column(name = "applicant_middle_name", length = 100)
+    private String applicantMiddleName;
+    
+    @Column(name = "applicant_last_name", length = 100)
+    private String applicantLastName;
+    
+    @Column(name = "applicant_dob", length = 20)
+    private String applicantDateOfBirth;
+    
+    @Column(name = "applicant_gender", length = 20)
+    private String applicantGender;
+    
+    @Column(name = "applicant_marital_status", length = 50)
+    private String applicantMaritalStatus;
+    
+    @Column(name = "applicant_email", length = 200)
+    private String applicantEmail;
+    
+    @Column(name = "applicant_mobile", length = 20)
+    private String applicantMobile;
+    
+    @Column(name = "applicant_alternate_mobile", length = 20)
+    private String applicantAlternateMobile;
+    
+    // Address Details
+    @Column(name = "current_address", length = 500)
+    private String currentAddress;
+    
+    @Column(name = "current_city", length = 100)
+    private String currentCity;
+    
+    @Column(name = "current_state", length = 100)
+    private String currentState;
+    
+    @Column(name = "current_pincode", length = 10)
+    private String currentPincode;
+    
+    @Column(name = "residence_type", length = 50)
+    private String residenceType;
+    
+    @Column(name = "years_at_current_address")
+    private Integer yearsAtCurrentAddress;
+    
+    @Column(name = "permanent_address_same")
+    private Boolean permanentAddressSame = false;
+    
+    @Column(name = "permanent_address", length = 500)
+    private String permanentAddress;
+    
+    @Column(name = "permanent_city", length = 100)
+    private String permanentCity;
+    
+    @Column(name = "permanent_state", length = 100)
+    private String permanentState;
+    
+    @Column(name = "permanent_pincode", length = 10)
+    private String permanentPincode;
+    
+    // Identity Details
+    @Column(name = "applicant_pan", length = 20)
+    private String applicantPan;
+    
+    @Column(name = "applicant_aadhar", length = 20)
+    private String applicantAadhar;
     
     // Employment Details
     @Column(name = "employment_type", length = 50)
@@ -97,6 +168,12 @@ public class ApplicantLoanDetails {
     @Column(name = "co_applicant_relation", length = 50)
     private String coApplicantRelation;
     
+    @Column(name = "co_applicant_pan", length = 20)
+    private String coApplicantPan;
+    
+    @Column(name = "co_applicant_aadhar", length = 20)
+    private String coApplicantAadhar;
+    
     // Collateral Details
     @Column(name = "has_collateral")
     private Boolean hasCollateral = false;
@@ -126,15 +203,19 @@ public class ApplicantLoanDetails {
     private LocalDateTime reviewedAt;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"loan", "applicant"})
     private List<FraudFlag> fraudFlags;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"loan", "applicant"})
     private List<VerificationLog> verificationLogs;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"loan", "applicant"})
     private List<AuditScore> auditScores;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"loan", "applicant"})
     private List<LoanCollateral> collaterals;
     
     @PrePersist

@@ -20,8 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tss.springsecurity.dto.ApplicantLoanDetailsDTO;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
+import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
 import com.tss.springsecurity.dto.SimpleLoanApplicationDTO;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ApplicantLoanDetails;
@@ -64,7 +66,7 @@ public class LoanApplicationController {
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
-    
+//    
 //    @PostMapping("/submit-complete")
 //    public ResponseEntity<Map<String, Object>> submitCompleteLoanApplication(
 //            @Valid @RequestBody CompleteLoanApplicationDTO completeLoanApplicationDTO) {
@@ -87,6 +89,32 @@ public class LoanApplicationController {
 //            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
 //        }
 //    }
+//    
+    @PostMapping("/submit-for-existing-applicant")
+    public ResponseEntity<Map<String, Object>> submitLoanApplicationForExistingApplicant(
+            @Valid @RequestBody LoanApplicationForExistingApplicantDTO loanApplicationDTO) {
+        try {
+            ApplicantLoanDetails loanDetails = loanApplicationService.submitLoanApplicationForExistingApplicant(loanApplicationDTO);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Loan application submitted successfully for existing applicant");
+            response.put("loanId", loanDetails.getLoanId());
+            response.put("applicantId", loanDetails.getApplicant().getApplicantId());
+            response.put("applicantName", loanDetails.getApplicant().getFirstName() + " " + loanDetails.getApplicant().getLastName());
+            response.put("loanType", loanDetails.getLoanType());
+            response.put("loanAmount", loanDetails.getLoanAmount());
+            response.put("status", loanDetails.getStatus());
+            response.put("interestRate", loanDetails.getInterestRate());
+            
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
     
     @GetMapping("/applicant/{applicantId}")
     public ResponseEntity<Applicant> getApplicant(@PathVariable Long applicantId) {
@@ -99,8 +127,8 @@ public class LoanApplicationController {
     }
     
     @GetMapping("/applicant/{applicantId}/loans")
-    public ResponseEntity<List<ApplicantLoanDetails>> getApplicantLoans(@PathVariable Long applicantId) {
-        List<ApplicantLoanDetails> loans = loanApplicationService.getApplicantLoans(applicantId);
+    public ResponseEntity<List<ApplicantLoanDetailsDTO>> getApplicantLoans(@PathVariable Long applicantId) {
+        List<ApplicantLoanDetailsDTO> loans = loanApplicationService.getApplicantLoans(applicantId);
         return new ResponseEntity<>(loans, HttpStatus.OK);
     }
     
@@ -266,6 +294,42 @@ public class LoanApplicationController {
             loanDetails.setTenureMonths(basic.getTenure());
             loanDetails.setLoanPurpose(basic.getPurpose());
             
+            // Set applicant details if present
+            SimpleLoanApplicationDTO.ApplicantDetails applicantInfo = applicationDTO.getApplicantDetails();
+            if (applicantInfo != null) {
+                loanDetails.setApplicantFirstName(applicantInfo.getFirstName());
+                loanDetails.setApplicantMiddleName(applicantInfo.getMiddleName());
+                loanDetails.setApplicantLastName(applicantInfo.getLastName());
+                loanDetails.setApplicantDateOfBirth(applicantInfo.getDateOfBirth());
+                loanDetails.setApplicantGender(applicantInfo.getGender());
+                loanDetails.setApplicantMaritalStatus(applicantInfo.getMaritalStatus());
+                loanDetails.setApplicantEmail(applicantInfo.getEmailAddress());
+                loanDetails.setApplicantMobile(applicantInfo.getMobileNumber());
+                loanDetails.setApplicantAlternateMobile(applicantInfo.getAlternateNumber());
+                loanDetails.setCurrentAddress(applicantInfo.getCurrentAddress());
+                loanDetails.setCurrentCity(applicantInfo.getCurrentCity());
+                loanDetails.setCurrentState(applicantInfo.getCurrentState());
+                loanDetails.setCurrentPincode(applicantInfo.getCurrentPincode());
+                loanDetails.setResidenceType(applicantInfo.getResidenceType());
+                loanDetails.setYearsAtCurrentAddress(applicantInfo.getYearsAtCurrentAddress());
+                loanDetails.setPermanentAddressSame(applicantInfo.getPermanentAddressSame());
+                loanDetails.setPermanentAddress(applicantInfo.getPermanentAddress());
+                loanDetails.setPermanentCity(applicantInfo.getPermanentCity());
+                loanDetails.setPermanentState(applicantInfo.getPermanentState());
+                loanDetails.setPermanentPincode(applicantInfo.getPermanentPincode());
+                loanDetails.setApplicantPan(applicantInfo.getPanNumber());
+                loanDetails.setApplicantAadhar(applicantInfo.getAadharNumber());
+                
+                // Set co-applicant details from applicant info if present
+                if (applicantInfo.getHasCoApplicant() != null && applicantInfo.getHasCoApplicant()) {
+                    loanDetails.setHasCoApplicant(true);
+                    loanDetails.setCoApplicantName(applicantInfo.getCoApplicantName());
+                    loanDetails.setCoApplicantRelation(applicantInfo.getCoApplicantRelation());
+                    loanDetails.setCoApplicantPan(applicantInfo.getCoApplicantPan());
+                    loanDetails.setCoApplicantAadhar(applicantInfo.getCoApplicantAadhar());
+                }
+            }
+            
             // Set financial details
             SimpleLoanApplicationDTO.FinancialDetails financial = applicationDTO.getFinancialDetails();
             loanDetails.setEmploymentType(financial.getEmploymentType());
@@ -293,11 +357,13 @@ public class LoanApplicationController {
             }
             loanDetails.setExistingObligations(totalObligations);
             
-            // Set co-applicant details if present
-            if (basic.getHasCoApplicant() != null && basic.getHasCoApplicant()) {
-                loanDetails.setHasCoApplicant(true);
-                loanDetails.setCoApplicantName(basic.getCoApplicantName());
-                loanDetails.setCoApplicantRelation(basic.getCoApplicantRelation());
+            // Set co-applicant details from basic details if not already set from applicant details
+            if (applicantInfo == null || (applicantInfo.getHasCoApplicant() == null || !applicantInfo.getHasCoApplicant())) {
+                if (basic.getHasCoApplicant() != null && basic.getHasCoApplicant()) {
+                    loanDetails.setHasCoApplicant(true);
+                    loanDetails.setCoApplicantName(basic.getCoApplicantName());
+                    loanDetails.setCoApplicantRelation(basic.getCoApplicantRelation());
+                }
             }
             
             // Set collateral details if present

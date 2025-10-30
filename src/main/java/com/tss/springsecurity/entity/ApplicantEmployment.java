@@ -32,9 +32,16 @@ public class ApplicantEmployment {
     @Column(name = "company_name", length = 200)
     private String companyName;
     
+    @Size(min = 2, max = 200, message = "Employer name must be between 2 and 200 characters")
+    @Column(name = "employer_name", length = 200)
+    private String employerName;
+    
     @Size(max = 100, message = "Designation must not exceed 100 characters")
     @Column(name = "designation", length = 100)
     private String designation;
+    
+    @Column(name = "start_date")
+    private LocalDate startDate;
     
     @Column(name = "work_experience")
     private Integer workExperience;

@@ -1,5 +1,6 @@
 package com.tss.springsecurity.service;
 
+import com.tss.springsecurity.dto.ApplicantLoanDetailsDTO;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
@@ -43,7 +44,7 @@ public interface LoanApplicationService {
      * @param applicantId Applicant ID
      * @return List of loan applications
      */
-    List<ApplicantLoanDetails> getApplicantLoans(Long applicantId);
+    List<ApplicantLoanDetailsDTO> getApplicantLoans(Long applicantId);
     
     /**
      * Get all applicants

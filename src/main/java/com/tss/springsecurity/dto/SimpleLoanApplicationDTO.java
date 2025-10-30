@@ -20,6 +20,9 @@ public class SimpleLoanApplicationDTO {
     @NotNull
     private BasicDetails basicDetails;
     
+    // Applicant Details
+    private ApplicantDetails applicantDetails;
+    
     // Financial Details
     @NotNull
     private FinancialDetails financialDetails;
@@ -63,6 +66,39 @@ public class SimpleLoanApplicationDTO {
         private Boolean hasCollateral;
         private String collateralType;
         private BigDecimal collateralValue;
+    }
+    
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ApplicantDetails {
+        private String firstName;
+        private String middleName;
+        private String lastName;
+        private String dateOfBirth;
+        private String gender;
+        private String maritalStatus;
+        private String emailAddress;
+        private String mobileNumber;
+        private String alternateNumber;
+        private String currentAddress;
+        private String currentCity;
+        private String currentState;
+        private String currentPincode;
+        private String residenceType;
+        private Integer yearsAtCurrentAddress;
+        private Boolean permanentAddressSame;
+        private String permanentAddress;
+        private String permanentCity;
+        private String permanentState;
+        private String permanentPincode;
+        private String panNumber;
+        private String aadharNumber;
+        private Boolean hasCoApplicant;
+        private String coApplicantName;
+        private String coApplicantRelation;
+        private String coApplicantPan;
+        private String coApplicantAadhar;
     }
     
     @Data

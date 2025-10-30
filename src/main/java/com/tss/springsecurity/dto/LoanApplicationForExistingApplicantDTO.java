@@ -37,13 +37,12 @@ public class LoanApplicationForExistingApplicantDTO {
     private String aadhaarNumber;
     
     // ========== EMPLOYMENT DETAILS ==========
-    @NotBlank(message = "Employer name is required")
-    private String employerName;
+    private String employerName;  // Required only for salaried employees
     
     private String designation;
     
     @NotBlank
-    @Pattern(regexp = "salaried|self-employed")
+    @Pattern(regexp = "salaried|self-employed|business|professional|retired")
     private String employmentType;
     
     @Past

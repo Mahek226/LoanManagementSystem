@@ -1,5 +1,6 @@
 package com.tss.springsecurity.service.impl;
 
+import com.tss.springsecurity.dto.ApplicantLoanDetailsDTO;
 import com.tss.springsecurity.dto.CompleteLoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationDTO;
 import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class LoanApplicationServiceImpl implements LoanApplicationService {
@@ -260,8 +262,38 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     }
     
     @Override
-    public List<ApplicantLoanDetails> getApplicantLoans(Long applicantId) {
-        return loanDetailsRepository.findByApplicant_ApplicantId(applicantId);
+    public List<ApplicantLoanDetailsDTO> getApplicantLoans(Long applicantId) {
+        List<ApplicantLoanDetails> loans = loanDetailsRepository.findByApplicant_ApplicantId(applicantId);
+        return loans.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    private ApplicantLoanDetailsDTO convertToDTO(ApplicantLoanDetails loan) {
+        ApplicantLoanDetailsDTO dto = new ApplicantLoanDetailsDTO();
+        dto.setLoanId(loan.getLoanId());
+        dto.setLoanType(loan.getLoanType());
+        dto.setLoanAmount(loan.getLoanAmount());
+        dto.setInterestRate(loan.getInterestRate());
+        dto.setTenureMonths(loan.getTenureMonths());
+        dto.setStatus(loan.getStatus());
+        dto.setLoanPurpose(loan.getLoanPurpose());
+        dto.setApplicationStatus(loan.getApplicationStatus());
+        dto.setLoanStatus(loan.getLoanStatus());
+        dto.setRiskScore(loan.getRiskScore());
+        dto.setSubmittedAt(loan.getSubmittedAt());
+        dto.setReviewedAt(loan.getReviewedAt());
+        
+        // Set applicant basic info without circular reference
+        if (loan.getApplicant() != null) {
+            dto.setApplicantId(loan.getApplicant().getApplicantId());
+            dto.setApplicantFirstName(loan.getApplicant().getFirstName());
+            dto.setApplicantLastName(loan.getApplicant().getLastName());
+            dto.setApplicantEmail(loan.getApplicant().getEmail());
+            dto.setApplicantPhone(loan.getApplicant().getPhone());
+        }
+        
+        return dto;
     }
     
     @Override
