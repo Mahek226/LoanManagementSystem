@@ -734,16 +734,26 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
     this.loanApplicationService.submitApplication(this.application).subscribe({
       next: (response) => {
-        this.success = 'Application submitted successfully!';
+        console.log('Loan submission response:', response);
+        
+        // Check if loan was assigned to an officer
+        if (response.assignmentId && response.assignedOfficerName) {
+          this.success = `Application submitted and assigned to ${response.assignedOfficerName} successfully!`;
+        } else if (response.assignmentError) {
+          this.success = `Application submitted successfully! ${response.assignmentError}`;
+        } else {
+          this.success = 'Application submitted successfully!';
+        }
+        
         this.submitting = false;
         
         // Clear draft
         this.loanApplicationService.clearDraft();
         
-        // Redirect to dashboard after 2 seconds
+        // Redirect to dashboard after 3 seconds to show assignment message
         setTimeout(() => {
           this.router.navigate(['/applicant/dashboard']);
-        }, 2000);
+        }, 3000);
       },
       error: (error) => {
         console.error('Submission error:', error);

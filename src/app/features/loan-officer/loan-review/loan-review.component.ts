@@ -168,6 +168,7 @@ export class LoanReviewComponent implements OnInit {
     this.showActionModal = true;
     this.remarks = '';
     this.rejectionReason = '';
+    console.log('Action modal opened with action:', action);
   }
 
   closeActionModal(): void {
@@ -206,10 +207,20 @@ export class LoanReviewComponent implements OnInit {
       ? `${this.remarks}${this.rejectionReason ? ' - ' + this.rejectionReason : ''}`
       : this.remarks || 'All verification checks passed';
 
+    // Compute a robust risk score: prefer enhanced normalized score, then basic loan riskScore, default to 65.
+    const computedRisk = Math.round(
+      (this.enhancedLoan?.normalizedRiskScore?.finalScore as number | undefined) ??
+      (this.loan?.riskScore as number | undefined) ??
+      65
+    );
+
+    // Clamp between 0 and 100
+    const riskAssessment = Math.max(0, Math.min(100, computedRisk));
+
     const request: LoanScreeningRequest = {
       decision: this.selectedAction,
       remarks: finalRemarks,
-      riskAssessment: this.loan?.riskScore || 0,
+      riskAssessment: riskAssessment,
       incomeVerified: true,
       creditCheckPassed: true,
       collateralVerified: true,
@@ -225,8 +236,11 @@ export class LoanReviewComponent implements OnInit {
 
     this.loanOfficerService.processLoanScreening(this.officerId, this.assignmentId, request).subscribe({
       next: (response) => {
+        console.log('Loan screening response:', response);
+        console.log('Response status:', response.status);
         this.processing = false;
-        this.success = `Loan ${this.selectedAction.toLowerCase()} successfully!`;
+        const actionText = this.selectedAction === 'APPROVE' ? 'approved' : 'rejected';
+        this.success = `Loan ${actionText} successfully!`;
         this.closeActionModal();
         
         // Reload loan details
