@@ -1,0 +1,87 @@
+.eligibility-report-container {
+  padding: 1rem;
+}
+
+.report-header {
+  border: 2px solid #0d6efd;
+}
+
+.report-content {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-header {
+  border: none;
+  padding: 1rem 1.25rem;
+}
+
+.card-header h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+}
+
+.badge {
+  font-size: 0.9rem;
+  padding: 0.5em 0.8em;
+  font-weight: 500;
+}
+
+.progress {
+  border-radius: 8px;
+}
+
+.progress-bar {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+@media print {
+  .btn, .report-header .mt-3 {
+    display: none !important;
+  }
+  
+  .card {
+    page-break-inside: avoid;
+  }
+  
+  .report-header {
+    border: 2px solid #000;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .eligibility-report-container {
+    padding: 0.5rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}

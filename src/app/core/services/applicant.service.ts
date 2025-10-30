@@ -137,6 +137,11 @@ export class ApplicantService {
     return this.http.get<ApplicantProfile>(`${this.API_URL}/loan-applications/applicant/${applicantId}`);
   }
 
+  // Update applicant profile
+  updateApplicantProfile(applicantId: number, profileData: any): Observable<any> {
+    return this.http.put(`${this.API_URL}/profile/applicant/${applicantId}`, profileData);
+  }
+
   // Get applicant's loan applications
   getMyApplications(applicantId: number): Observable<LoanApplication[]> {
     return this.http.get<LoanApplication[]>(`${this.API_URL}/loan-applications/applicant/${applicantId}/loans`);

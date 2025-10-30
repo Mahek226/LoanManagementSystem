@@ -23,10 +23,14 @@ export interface LoanScreeningResponse {
 }
 
 export interface LoanScreeningRequest {
-  assignmentId: number;
-  action: string; // APPROVE, REJECT, ESCALATE_TO_COMPLIANCE
-  remarks?: string;
-  rejectionReason?: string;
+  decision: string; // APPROVE, REJECT
+  remarks: string;
+  riskAssessment: number;
+  incomeVerified: boolean;
+  creditCheckPassed: boolean;
+  collateralVerified: boolean;
+  employmentVerified: boolean;
+  identityVerified: boolean;
 }
 
 export interface DashboardStats {
@@ -157,6 +161,7 @@ export interface RuleViolation {
 })
 export class LoanOfficerService {
   private apiUrl = `${environment.apiUrl}/loan-officer`;
+  private profileUrl = `${environment.apiUrl}/profile`;
 
   constructor(private http: HttpClient) {}
 
@@ -171,8 +176,8 @@ export class LoanOfficerService {
   }
 
   // Process loan screening (approve/reject)
-  processLoanScreening(officerId: number, request: LoanScreeningRequest): Observable<LoanScreeningResponse> {
-    return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/process-screening`, request);
+  processLoanScreening(officerId: number, assignmentId: number, request: LoanScreeningRequest): Observable<LoanScreeningResponse> {
+    return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/screen-loan/${assignmentId}`, request);
   }
 
   // Escalate to compliance
@@ -201,6 +206,15 @@ export class LoanOfficerService {
   // Request document resubmission
   requestDocumentResubmission(officerId: number, request: DocumentResubmissionRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}/${officerId}/request-resubmission`, request);
+  }
+
+  // Profile Management
+  getOfficerProfile(officerId: number): Observable<any> {
+    return this.http.get(`${this.profileUrl}/loan-officer/${officerId}`);
+  }
+
+  updateOfficerProfile(officerId: number, profileData: any): Observable<any> {
+    return this.http.put(`${this.profileUrl}/loan-officer/${officerId}`, profileData);
   }
 
   // Trigger fraud screening

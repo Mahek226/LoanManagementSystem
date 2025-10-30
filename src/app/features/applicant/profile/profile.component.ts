@@ -87,13 +87,30 @@ export class ProfileComponent implements OnInit {
   }
 
   saveProfile(): void {
-    // In a real application, you would call an API to update the profile
-    this.success = 'Profile updated successfully (This is a demo - API integration pending)';
-    this.editMode = false;
-    
-    setTimeout(() => {
-      this.success = '';
-    }, 3000);
+    this.loading = true;
+    this.error = '';
+    this.success = '';
+
+    // Call API to update profile
+    this.applicantService.updateApplicantProfile(this.applicantId, this.editForm).subscribe({
+      next: (response) => {
+        this.success = 'Profile updated successfully!';
+        this.editMode = false;
+        this.loading = false;
+        
+        // Reload profile to get updated data
+        this.loadProfile();
+        
+        setTimeout(() => {
+          this.success = '';
+        }, 3000);
+      },
+      error: (err) => {
+        this.error = 'Failed to update profile: ' + (err.error?.message || 'Unknown error');
+        console.error('Error updating profile:', err);
+        this.loading = false;
+      }
+    });
   }
 
   formatDate(dateString: string): string {

@@ -1,0 +1,133 @@
+.notification-bell {
+  position: relative;
+}
+
+.notification-bell .btn-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.notification-bell .btn-link:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 380px;
+  max-height: 600px;
+  display: none;
+  z-index: 1050;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.notification-dropdown.show {
+  display: block;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notification-list {
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.notification-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.notification-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.notification-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.notification-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.notification-item.unread {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+.notification-item.unread .notification-title {
+  color: #0d6efd;
+}
+
+.notification-icon .icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-icon i {
+  font-size: 1.2rem;
+}
+
+.notification-title {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notification-time {
+  font-size: 0.75rem;
+}
+
+.notification-actions button {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.notification-item:hover .notification-actions button {
+  opacity: 1;
+}
+
+.card-header h6 {
+  font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .notification-dropdown {
+    width: 320px;
+    right: -50px;
+  }
+}

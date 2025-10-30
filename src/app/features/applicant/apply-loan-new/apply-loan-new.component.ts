@@ -178,6 +178,23 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       eSignConsent: [false]
     });
 
+    // Watch for loan type changes - reinitialize application if needed
+    this.basicDetailsForm.get('loanType')?.valueChanges.subscribe(loanType => {
+      if (loanType) {
+        console.log('Loan type changed to:', loanType);
+        const currentApp = this.loanApplicationService.getCurrentApplication();
+        if (!currentApp) {
+          console.log('No application exists, initializing with loan type:', loanType);
+          this.loanApplicationService.initializeApplication(this.applicantId, loanType);
+        } else if (currentApp.basicDetails.loanType !== loanType) {
+          console.log('Loan type changed, updating application');
+          currentApp.basicDetails.loanType = loanType;
+          this.loanApplicationService.updateBasicDetails(currentApp.basicDetails);
+        }
+        this.requiredDocuments = this.loanApplicationService.getRequiredDocuments(loanType);
+      }
+    });
+
     // Watch for employment type changes
     this.financialDetailsForm.get('employmentType')?.valueChanges.subscribe(type => {
       this.updateFinancialValidators(type);
@@ -242,6 +259,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         this.basicDetailsForm.patchValue({ loanType: loanType.id });
         
         // Initialize application
+        console.log('Initializing application with loan type:', loanType.id);
         this.loanApplicationService.initializeApplication(this.applicantId, loanType.id);
         
         // Load required documents
@@ -250,6 +268,20 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         localStorage.removeItem('selectedLoanType');
       } catch (error) {
         console.error('Error parsing loan type:', error);
+      }
+    } else {
+      // If no saved loan type, check if there's an existing application or initialize with default
+      const existingApp = this.loanApplicationService.getCurrentApplication();
+      if (!existingApp) {
+        console.log('No saved loan type and no existing application. Initializing with PERSONAL loan type.');
+        // Initialize with a default loan type (PERSONAL) so the form can work
+        this.loanApplicationService.initializeApplication(this.applicantId, 'PERSONAL');
+        this.basicDetailsForm.patchValue({ loanType: 'PERSONAL' });
+        this.requiredDocuments = this.loanApplicationService.getRequiredDocuments('PERSONAL');
+      } else {
+        console.log('Found existing application:', existingApp);
+        this.selectedLoanType = existingApp.basicDetails.loanType;
+        this.requiredDocuments = this.loanApplicationService.getRequiredDocuments(existingApp.basicDetails.loanType);
       }
     }
   }
@@ -399,6 +431,30 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         // Load required documents when entering step 4
         if (this.currentStep === 4) {
           this.loadRequiredDocuments();
+        }
+        
+        // Load application data when entering step 6 (Review & Submit)
+        if (this.currentStep === 6) {
+          // Force save current step before loading
+          this.saveCurrentStep();
+          
+          // Get application from service
+          this.application = this.loanApplicationService.getCurrentApplication();
+          console.log('=== Review Step Debug ===');
+          console.log('Application loaded:', this.application);
+          console.log('Basic Details:', this.application?.basicDetails);
+          console.log('Applicant Details:', this.application?.applicantDetails);
+          console.log('Financial Details:', this.application?.financialDetails);
+          console.log('Documents:', this.application?.documents);
+          console.log('Declarations:', this.application?.declarations);
+          console.log('========================');
+          
+          if (!this.application) {
+            this.error = 'Failed to load application data. Please go back and check all steps.';
+          } else if (!this.application.basicDetails || !this.application.financialDetails) {
+            this.error = 'Some required data is missing. Please review all previous steps.';
+            console.error('Missing required data in application');
+          }
         }
         
         window.scrollTo(0, 0);
@@ -637,8 +693,17 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       const docReq = this.requiredDocuments.find(d => d.documentType === documentType);
       if (!docReq) return;
 
-      if (!docReq.acceptedFormats.includes(file.type)) {
-        this.error = `Invalid file format for ${docReq.displayName}. Accepted formats: ${docReq.acceptedFormats.join(', ')}`;
+      // Enhanced file type validation - check both MIME type and file extension
+      const isValidMimeType = this.isValidFileType(file.type, docReq.acceptedFormats);
+      const isValidExtension = this.isValidFileExtension(file.name);
+      
+      if (!isValidMimeType && !isValidExtension) {
+        this.error = `Invalid file format for ${docReq.displayName}. Please upload PDF, JPG, JPEG, or PNG files only. File: ${file.name}`;
+        console.error('File validation failed:', {
+          fileName: file.name,
+          mimeType: file.type,
+          acceptedFormats: docReq.acceptedFormats
+        });
         return;
       }
 
@@ -650,6 +715,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       // Upload file to Cloudinary via backend
       this.loanApplicationService.uploadDocument(file, documentType, this.applicantId).subscribe({
         next: (response) => {
+          console.log('Upload response received:', response);
+          
           // Update progress
           this.uploadProgress[file.name] = {
             fileName: file.name,
@@ -657,18 +724,24 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
             status: response.status || 'uploading'
           };
           
-          if (response.status === 'success' && response.data) {
+          // Check if upload is complete (status === 'success' from HTTP event)
+          if (response.status === 'success') {
+            console.log('Upload complete! Response data:', response.data);
+            
             const uploadData = response.data;
             
-            // Add to uploaded documents with Cloudinary URL
+            // Create document object - handle both possible response structures
             const document: DocumentUpload = {
               documentType,
-              fileName: uploadData.document?.originalFilename || file.name,
-              fileUrl: uploadData.document?.cloudinaryUrl || '',
+              fileName: uploadData?.document?.originalFilename || uploadData?.originalFilename || file.name,
+              fileUrl: uploadData?.document?.cloudinaryUrl || uploadData?.cloudinaryUrl || '',
               fileSize: file.size,
-              uploadedAt: uploadData.document?.uploadedAt || new Date().toISOString(),
+              uploadedAt: uploadData?.document?.uploadedAt || uploadData?.uploadedAt || new Date().toISOString(),
               status: 'PENDING'
             };
+            
+            console.log('Adding document to service:', document);
+            console.log('Current uploadedDocuments before add:', this.uploadedDocuments);
             
             // Add document via service (which updates both service state and local array)
             this.loanApplicationService.addDocument(document);
@@ -677,6 +750,15 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
             const app = this.loanApplicationService.getCurrentApplication();
             if (app) {
               this.uploadedDocuments = [...app.documents];
+              console.log('Updated uploadedDocuments array after sync:', this.uploadedDocuments);
+            } else {
+              console.error('No current application found!');
+            }
+            
+            // Also add directly to local array as backup
+            if (!this.uploadedDocuments.some(d => d.documentType === documentType)) {
+              this.uploadedDocuments.push(document);
+              console.log('Added directly to local array:', this.uploadedDocuments);
             }
             
             this.success = `${file.name} uploaded successfully!`;
@@ -853,5 +935,40 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // Helper method to check if document is uploaded
   isDocumentUploaded(documentType: string): boolean {
     return this.uploadedDocuments.some(d => d.documentType === documentType);
+  }
+
+  // Enhanced file type validation - checks MIME type flexibly
+  private isValidFileType(mimeType: string, acceptedFormats: string[]): boolean {
+    if (!mimeType) return false;
+    
+    // Normalize MIME type (lowercase, remove parameters)
+    const normalizedType = mimeType.toLowerCase().split(';')[0].trim();
+    
+    // Check if it matches accepted formats
+    const isAccepted = acceptedFormats.some(format => {
+      const normalizedFormat = format.toLowerCase().trim();
+      return normalizedType === normalizedFormat || 
+             normalizedType.startsWith(normalizedFormat) ||
+             normalizedType.includes(normalizedFormat.split('/')[1]);
+    });
+    
+    // Additional checks for common image variations
+    const isImageVariant = normalizedType.includes('jpeg') || 
+                          normalizedType.includes('jpg') || 
+                          normalizedType.includes('png') ||
+                          normalizedType === 'image/pjpeg' ||
+                          normalizedType === 'image/x-png';
+    
+    return isAccepted || isImageVariant;
+  }
+
+  // File extension validation as fallback
+  private isValidFileExtension(filename: string): boolean {
+    if (!filename) return false;
+    
+    const lowerFilename = filename.toLowerCase();
+    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.jpe'];
+    
+    return validExtensions.some(ext => lowerFilename.endsWith(ext));
   }
 }

@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { NotificationBellComponent } from '../../../shared/components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-loan-officer-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, NotificationBellComponent],
   templateUrl: './loan-officer-layout.component.html',
   styleUrl: './loan-officer-layout.component.css'
 })
