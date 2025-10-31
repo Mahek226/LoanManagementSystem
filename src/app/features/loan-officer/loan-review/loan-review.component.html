@@ -1,204 +1,209 @@
-<!-- Loan Review Content -->
+<!-- Professional Loan Review Interface -->
 
 <!-- Loading State -->
 <div *ngIf="loading" class="text-center py-5">
-  <div class="spinner-border text-primary" role="status">
+  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
     <span class="visually-hidden">Loading...</span>
   </div>
-  <p class="mt-3 text-muted">Loading loan details...</p>
+  <p class="mt-3 text-muted fw-semibold">Loading loan application details...</p>
 </div>
 
-<!-- Error State -->
-<div *ngIf="error && !loading && !success" class="container-fluid py-4">
-  <div class="alert alert-danger">
+<!-- Alert Messages -->
+<div class="container-fluid px-4 pt-3" *ngIf="!loading">
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
     <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = ''"></button>
   </div>
-</div>
-
-<!-- Success State -->
-<div *ngIf="success" class="container-fluid py-4">
-  <div class="alert alert-success">
+  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="fas fa-check-circle me-2"></i>{{ success }}
+    <button type="button" class="btn-close" (click)="success = ''"></button>
   </div>
 </div>
 
 <!-- Main Content -->
-<div class="container-fluid px-4 py-4" *ngIf="!loading && loan">
+<div class="container-fluid px-4 py-3" *ngIf="!loading && loan">
   
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4 animate-fade-in">
-    <div>
-      <button class="btn btn-outline-secondary btn-sm mb-2" (click)="goBack()">
-        <i class="fas fa-arrow-left me-2"></i>Back to Assigned Loans
+  <!-- Header with Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="javascript:void(0)" (click)="goBack()" class="text-decoration-none">Assigned Loans</a></li>
+        <li class="breadcrumb-item active">Review Application #{{ assignmentId }}</li>
+      </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h2 class="h3 fw-bold mb-2" style="color: var(--text-primary);">
+          <i class="fas fa-clipboard-check me-2 text-primary"></i>Loan Application Review
+        </h2>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge bg-{{ getStatusColor(loan.status) }} fs-6 px-3 py-2">{{ loan.status }}</span>
+          <span class="text-muted">|</span>
+          <span class="text-muted"><i class="fas fa-hashtag me-1"></i>Assignment: {{ assignmentId }}</span>
+          <span class="text-muted">|</span>
+          <span class="text-muted"><i class="fas fa-calendar me-1"></i>{{ formatDate(loan.assignedAt) }}</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
       </button>
-      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
-        <i class="fas fa-search me-2 text-primary"></i>Loan Review & Screening
-      </h2>
-      <p class="text-muted mb-0">Assignment ID: #{{ assignmentId }}</p>
     </div>
-    <span class="badge bg-{{ getStatusColor(loan.status) }} fs-6">{{ loan.status }}</span>
   </div>
 
-  <div class="row g-4">
-    <!-- Left Column - Applicant & Loan Details -->
-    <div class="col-lg-8">
+  <!-- Workflow Tabs -->
+  <ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'overview'" (click)="switchTab('overview')" type="button" role="tab">
+        <i class="fas fa-info-circle me-2"></i>Overview
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'documents'" (click)="switchTab('documents')" type="button" role="tab">
+        <i class="fas fa-folder-open me-2"></i>Documents <span class="badge bg-primary ms-1">{{ documents.length }}</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'verification'" (click)="switchTab('verification')" type="button" role="tab">
+        <i class="fas fa-shield-alt me-2"></i>Verification & Fraud Check
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'decision'" (click)="switchTab('decision')" type="button" role="tab">
+        <i class="fas fa-gavel me-2"></i>Final Decision
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    
+    <!-- Overview Tab -->
+    <div *ngIf="activeTab === 'overview'" class="tab-pane fade show active" id="overview-tab" role="tabpanel">
+      <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
       
-      <!-- Applicant Information -->
-      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.1s; background-color: var(--bg-primary);">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-user-circle me-2 text-primary"></i>Applicant Information
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-4">
-            <div class="col-md-6">
-              <div class="info-item">
-                <label class="text-muted small mb-1">Applicant Name</label>
-                <div class="d-flex align-items-center">
-                  <div class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
-                    <i class="fas fa-user text-primary fs-4"></i>
+          <!-- Applicant Information Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Applicant Information</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+                      <i class="fas fa-user text-primary fs-3"></i>
+                    </div>
+                    <div>
+                      <label class="text-muted small d-block mb-1">Full Name</label>
+                      <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ loan.applicantName }}</h5>
+                      <small class="text-muted">Applicant ID: #{{ loan.applicantId }}</small>
+                    </div>
                   </div>
-                  <div>
-                    <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ loan.applicantName }}</h5>
-                    <small class="text-muted">ID: {{ loan.applicantId }}</small>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small d-block mb-1">Loan Application ID</label>
+                  <h5 class="fw-bold" style="color: var(--text-primary);">#{{ loan.loanId }}</h5>
+                  <small class="text-muted">Assigned to you on {{ formatDate(loan.assignedAt) }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loan Details Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="fas fa-money-check-alt me-2"></i>Loan Request Details</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-tag me-1"></i>Loan Type</label>
+                    <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ loan.loanType }}</h5>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-rupee-sign me-1"></i>Requested Amount</label>
+                    <h5 class="fw-bold mb-0 text-success">{{ formatCurrency(loan.loanAmount) }}</h5>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-calendar me-1"></i>Application Date</label>
+                    <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ formatDate(loan.assignedAt) }}</h5>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="info-item">
-                <label class="text-muted small mb-1">Loan ID</label>
-                <h5 class="fw-bold" style="color: var(--text-primary);">#{{ loan.loanId }}</h5>
+          </div>
+
+          <!-- Previous Remarks Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="loan.remarks">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Previous Officer Remarks</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> {{ loan.remarks }}
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Loan Details -->
-      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.2s; background-color: var(--bg-primary);">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-file-alt me-2 text-primary"></i>Loan Details
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-4">
-            <div class="col-md-4">
-              <div class="info-item">
-                <label class="text-muted small mb-1">
-                  <i class="fas fa-tag me-1"></i>Loan Type
-                </label>
-                <h6 class="fw-semibold" style="color: var(--text-primary);">{{ loan.loanType }}</h6>
+          <!-- Quick Document Summary -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-warning text-dark">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Documents Summary</h5>
+                <span class="badge bg-dark">{{ documents.length }} Total</span>
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="info-item">
-                <label class="text-muted small mb-1">
-                  <i class="fas fa-rupee-sign me-1"></i>Loan Amount
-                </label>
-                <h6 class="fw-semibold text-success">{{ formatCurrency(loan.loanAmount) }}</h6>
+            <div class="card-body">
+              <div *ngIf="documents.length === 0" class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">No documents uploaded yet</p>
+                <small class="text-muted">Applicant needs to upload required documents</small>
               </div>
-            </div>
-            <div class="col-md-4">
-              <div class="info-item">
-                <label class="text-muted small mb-1">
-                  <i class="fas fa-calendar me-1"></i>Assigned Date
-                </label>
-                <h6 class="fw-semibold" style="color: var(--text-primary);">{{ formatDate(loan.assignedAt) }}</h6>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Officer Remarks -->
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.3s; background-color: var(--bg-primary);" *ngIf="loan.remarks">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-comment-alt me-2 text-primary"></i>Previous Remarks
-          </h5>
-        </div>
-        <div class="card-body">
-          <p class="mb-0" style="color: var(--text-primary);">{{ loan.remarks }}</p>
-        </div>
-      </div>
-
-      <!-- Documents Section -->
-      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.4s; background-color: var(--bg-primary);">
-        <div class="card-header border-0 d-flex justify-content-between align-items-center" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-file-alt me-2 text-primary"></i>Documents ({{ documents.length }})
-          </h5>
-          <button class="btn btn-sm btn-outline-primary" (click)="openDocumentsModal()">
-            <i class="fas fa-eye me-1"></i>View All
-          </button>
-        </div>
-        <div class="card-body">
-          <div *ngIf="documents.length === 0" class="text-center text-muted py-3">
-            <i class="fas fa-folder-open fa-2x mb-2"></i>
-            <p>No documents uploaded yet</p>
-          </div>
-          <div *ngIf="documents.length > 0" class="row g-3">
-            <div *ngFor="let doc of documents.slice(0, 3)" class="col-md-4">
-              <div class="document-item p-3 border rounded">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <i class="fas fa-file-pdf text-danger me-2"></i>
-                    <small class="fw-semibold" style="color: var(--text-primary);">{{ formatDocumentType(doc.documentType) }}</small>
+              <div *ngIf="documents.length > 0">
+                <div class="row g-2 mb-3">
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-success">{{ getVerifiedDocumentsCount() }}</h4>
+                      <small class="text-muted">Verified</small>
+                    </div>
                   </div>
-                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-warning">{{ getPendingDocumentsCount() }}</h4>
+                      <small class="text-muted">Pending</small>
+                    </div>
+                  </div>
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-danger">{{ getRejectedDocumentsCount() }}</h4>
+                      <small class="text-muted">Rejected</small>
+                    </div>
+                  </div>
                 </div>
-                <small class="text-muted d-block">{{ doc.documentName }}</small>
+                <div class="d-grid">
+                  <button class="btn btn-outline-primary" (click)="openDocumentsModal()">
+                    <i class="fas fa-eye me-2"></i>View & Verify All Documents
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Fraud Check Results -->
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);" *ngIf="fraudCheckResult">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-shield-alt me-2 text-danger"></i>Fraud Screening Results
-          </h5>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="text-muted small mb-1">Risk Level</label>
-              <h6 class="fw-semibold">
-                <span class="badge bg-{{ getRiskColor(fraudCheckResult.riskLevel) }}">{{ fraudCheckResult.riskLevel }}</span>
-              </h6>
-            </div>
-            <div class="col-md-6">
-              <label class="text-muted small mb-1">Risk Score</label>
-              <h6 class="fw-semibold" style="color: var(--text-primary);">{{ fraudCheckResult.riskScore }}/100</h6>
-            </div>
-            <div class="col-12" *ngIf="fraudCheckResult.fraudTags && fraudCheckResult.fraudTags.length > 0">
-              <label class="text-muted small mb-2">Fraud Tags</label>
-              <div class="d-flex flex-wrap gap-2">
-                <span *ngFor="let tag of fraudCheckResult.fraudTags" class="badge bg-danger">{{ tag }}</span>
-              </div>
-            </div>
-            <div class="col-12" *ngIf="fraudCheckResult.apiRemarks">
-              <label class="text-muted small mb-1">API Remarks</label>
-              <p class="mb-0" style="color: var(--text-primary);">{{ fraudCheckResult.apiRemarks }}</p>
-            </div>
-            <div class="col-12">
-              <small class="text-muted">Checked at: {{ formatDate(fraudCheckResult.checkedAt) }}</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Right Column - Risk Assessment & Actions -->
-    <div class="col-lg-4">
+        
+        <!-- Right Column - Risk Assessment & Actions -->
+        <div class="col-lg-4">
       
-      <!-- Risk Assessment -->
+          <!-- Risk Assessment -->
       <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.4s; background-color: var(--bg-primary);">
         <div class="card-header border-0" style="background-color: var(--bg-primary);">
           <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
@@ -231,11 +236,11 @@
           <small class="text-muted d-block mt-2">Risk Score: {{ loan.riskScore }}%</small>
 
           <!-- Can Approve/Reject Indicator -->
-          <div class="mt-3 p-3 rounded" [class]="loan.canApproveReject ? 'bg-success bg-opacity-10' : 'bg-warning bg-opacity-10'">
+          <div class="mt-3 p-3 rounded" [class]="getApprovalIndicatorClass()">
             <i class="fas" [class.fa-check-circle]="loan.canApproveReject" [class.fa-exclamation-triangle]="!loan.canApproveReject"
                [class.text-success]="loan.canApproveReject" [class.text-warning]="!loan.canApproveReject"></i>
             <small class="d-block mt-2 fw-semibold" [class.text-success]="loan.canApproveReject" [class.text-warning]="!loan.canApproveReject">
-              {{ loan.canApproveReject ? 'You can approve/reject this loan' : 'Requires escalation to compliance' }}
+              {{ getApprovalIndicatorText() }}
             </small>
           </div>
 
@@ -322,15 +327,23 @@
           </h5>
         </div>
         <div class="card-body d-grid gap-2">
+          <button class="btn btn-primary btn-sm" 
+                  (click)="extractDocuments()"
+                  [disabled]="extractingDocuments || documentsExtracted">
+            <span *ngIf="extractingDocuments" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!extractingDocuments" class="fas fa-file-invoice me-2"></i>
+            {{ getExtractButtonText() }}
+          </button>
+          
           <button class="btn btn-info btn-sm" 
                   (click)="openFraudCheckModal()"
-                  [disabled]="fraudCheckTriggered || loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
-            <i class="fas fa-shield-alt me-2"></i>{{ fraudCheckTriggered ? 'Fraud Check Completed' : 'Trigger Fraud Screening' }}
+                  [disabled]="isFraudCheckDisabled()">
+            <i class="fas fa-shield-alt me-2"></i>{{ getFraudCheckButtonText() }}
           </button>
           
           <button class="btn btn-outline-warning btn-sm" 
                   (click)="openResubmissionModal()"
-                  [disabled]="loan.status !== 'ASSIGNED' && loan.status !== 'PENDING'">
+                  [disabled]="isResubmissionButtonDisabled()">
             <i class="fas fa-redo me-2"></i>Request Document Resubmission
           </button>
         </div>
@@ -346,19 +359,19 @@
         <div class="card-body d-grid gap-3">
           <button class="btn btn-success btn-lg" 
                   (click)="openActionModal('APPROVE')"
-                  [disabled]="!loan.canApproveReject || (loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS')">
+                  [disabled]="isApproveDisabled()">
             <i class="fas fa-check-circle me-2"></i>Approve Loan
           </button>
           
           <button class="btn btn-danger btn-lg" 
                   (click)="openActionModal('REJECT')"
-                  [disabled]="!loan.canApproveReject || (loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS')">
+                  [disabled]="isRejectDisabled()">
             <i class="fas fa-times-circle me-2"></i>Reject Loan
           </button>
           
           <button class="btn btn-warning btn-lg" 
                   (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
-                  [disabled]="loan.status !== 'ASSIGNED' && loan.status !== 'PENDING' && loan.status !== 'IN_PROGRESS'">
+                  [disabled]="isEscalateDisabled()">
             <i class="fas fa-arrow-up me-2"></i>Escalate to Compliance
           </button>
 
@@ -368,44 +381,873 @@
         </div>
       </div>
 
-    </div>
-  </div>
+        </div>
+      </div>
 
-  <!-- Officer Notes Section -->
-  <div class="row g-4 mt-2">
-    <div class="col-12">
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);">
-        <div class="card-body">
-          <app-officer-notes 
-            [loanId]="loan.loanId"
-            [officerId]="officerId"
-            [officerName]="loan.officerName || 'Unknown Officer'"
-            [officerType]="'LOAN_OFFICER'"
-            [canEdit]="true">
-          </app-officer-notes>
+      <!-- Officer Notes Section - COMMENTED OUT UNTIL BACKEND IMPLEMENTED -->
+      <!-- 
+      <div class="row g-4 mt-3">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <app-officer-notes 
+                [loanId]="loan.loanId"
+                [officerId]="officerId"
+                [officerName]="loan.officerName || 'Unknown Officer'"
+                [officerType]="'LOAN_OFFICER'"
+                [canEdit]="true">
+              </app-officer-notes>
+            </div>
+          </div>
+        </div>
+      </div>
+      -->
+
+      <!-- Loan Eligibility Report Section - COMMENTED OUT UNTIL BACKEND IMPLEMENTED -->
+      <!--
+      <div class="row g-4 mt-3" *ngIf="loan.status === 'APPROVED' || loan.canApproveReject">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <app-loan-eligibility-report 
+                [loanId]="loan.loanId"
+                [assignmentId]="assignmentId">
+              </app-loan-eligibility-report>
+            </div>
+          </div>
+        </div>
+      </div>
+      -->
+    </div>
+    <!-- End Overview Tab -->
+
+    <!-- Documents Tab -->
+    <div *ngIf="activeTab === 'documents'">
+      <div class="row g-4">
+        <div class="col-12">
+          <!-- Document Extraction Section -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Document Extraction</h5>
+            </div>
+            <div class="card-body">
+              <button class="btn btn-primary" 
+                      (click)="extractDocuments()"
+                      [disabled]="extractingDocuments || documentsExtracted">
+                <span *ngIf="extractingDocuments" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!extractingDocuments" class="fas fa-file-invoice me-2"></i>
+                {{ getExtractButtonText() }}
+              </button>
+              <div *ngIf="extractionResults" class="mt-3">
+                <div class="alert alert-info">
+                  <strong>Extraction Results:</strong>
+                  <div>Total: {{ extractionResults.totalDocuments }}</div>
+                  <div>Success: {{ extractionResults.successCount }}</div>
+                  <div>Failed: {{ extractionResults.failureCount }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documents List -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-info text-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Uploaded Documents</h5>
+                <span class="badge bg-light text-dark">{{ documents.length }} Total</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div *ngIf="documents.length === 0" class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No documents found</h5>
+                <p class="text-muted">Documents will appear here once uploaded by the applicant</p>
+              </div>
+
+              <div *ngIf="documents.length > 0" class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Document Type</th>
+                      <th>Document Name</th>
+                      <th>Uploaded At</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let doc of documents">
+                      <td><strong>{{ doc.documentType }}</strong></td>
+                      <td>{{ doc.documentName }}</td>
+                      <td>{{ formatDate(doc.uploadedAt) }}</td>
+                      <td>
+                        <span class="badge" 
+                              [class.bg-success]="doc.verificationStatus === 'VERIFIED'"
+                              [class.bg-warning]="doc.verificationStatus === 'PENDING'"
+                              [class.bg-danger]="doc.verificationStatus === 'REJECTED'">
+                          {{ doc.verificationStatus }}
+                        </span>
+                      </td>
+                      <td>
+                        <button class="btn btn-sm btn-success me-2" 
+                                (click)="verifyDocument(doc, 'VERIFIED')"
+                                [disabled]="isVerifyButtonDisabled(doc)">
+                          <i class="fas fa-check me-1"></i>Verify
+                        </button>
+                        <button class="btn btn-sm btn-danger" 
+                                (click)="verifyDocument(doc, 'REJECTED')"
+                                [disabled]="isRejectDocButtonDisabled(doc)">
+                          <i class="fas fa-times me-1"></i>Reject
+                        </button>
+                        <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                          <i class="fas fa-eye"></i> View
+                        </a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+    <!-- End Documents Tab -->
 
-  <!-- Loan Eligibility Report Section -->
-  <div class="row g-4 mt-2" *ngIf="loan.status === 'APPROVED' || loan.canApproveReject">
-    <div class="col-12">
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.6s; background-color: var(--bg-primary);">
-        <div class="card-body">
-          <app-loan-eligibility-report 
-            [loanId]="loan.loanId"
-            [assignmentId]="assignmentId">
-          </app-loan-eligibility-report>
+    <!-- Verification & Fraud Check Tab -->
+    <div *ngIf="activeTab === 'verification'">
+      <div class="row g-4">
+        
+        <!-- Left Column - Fraud Detection -->
+        <div class="col-lg-6">
+          <!-- Fraud Check Trigger -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-warning text-dark">
+              <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Fraud Detection System</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Comprehensive Fraud Screening</strong>
+                <p class="mb-0 mt-2 small">Our system performs multi-layer fraud detection including:</p>
+                <ul class="small mb-0 mt-2">
+                  <li>Identity verification (PAN, Aadhaar)</li>
+                  <li>Document authenticity checks</li>
+                  <li>Cross-reference validation</li>
+                  <li>Behavioral pattern analysis</li>
+                  <li>Financial anomaly detection</li>
+                </ul>
+              </div>
+              
+              <button class="btn btn-info btn-lg w-100" 
+                      (click)="openFraudCheckModal()"
+                      [disabled]="isFraudCheckDisabled()">
+                <i class="fas fa-shield-alt me-2"></i>{{ getFraudCheckButtonText() }}
+              </button>
+              
+              <div *ngIf="fraudCheckTriggered" class="mt-3">
+                <div class="d-flex align-items-center text-success">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <span>Fraud check completed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screening Process Details -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Screening Process</h5>
+            </div>
+            <div class="card-body">
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">1. Document Verification</h6>
+                    <p class="text-muted small mb-1">All uploaded documents verified for authenticity</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">2. Identity Validation</h6>
+                    <p class="text-muted small mb-1">PAN and Aadhaar cross-verification completed</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">3. Financial Analysis</h6>
+                    <p class="text-muted small mb-1">Income verification and debt analysis</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon bg-info text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-sync fa-spin" *ngIf="!fraudCheckTriggered"></i>
+                    <i class="fas fa-check" *ngIf="fraudCheckTriggered"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">4. Fraud Rule Engine</h6>
+                    <p class="text-muted small mb-1">{{ fraudCheckTriggered ? 'Fraud rules evaluated successfully' : 'Pending fraud check execution' }}</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" [class.bg-success]="fraudCheckTriggered" [class.bg-info]="!fraudCheckTriggered" [style.width.%]="fraudCheckTriggered ? 100 : 60"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon bg-secondary text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-file-alt"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">5. Final Risk Assessment</h6>
+                    <p class="text-muted small mb-1">Comprehensive risk score calculation</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar bg-primary" [style.width.%]="loan.riskScore"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Fraud Check Results -->
+        <div class="col-lg-6">
+          <!-- Overall Risk Assessment -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header" [class.bg-success]="loan.riskLevel === 'LOW'" 
+                                     [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
+                                     [class.bg-danger]="loan.riskLevel === 'HIGH'" 
+                                     class="text-white">
+              <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Overall Risk Assessment</h5>
+            </div>
+            <div class="card-body">
+              <div class="text-center mb-4">
+                <div class="risk-circle mx-auto mb-3" style="width: 150px; height: 150px; border-radius: 50%; border: 10px solid; display: flex; align-items: center; justify-content: center;"
+                     [style.border-color]="getRiskColor(loan.riskLevel)">
+                  <div>
+                    <h2 class="mb-0" [style.color]="getRiskColor(loan.riskLevel)">{{ loan.riskScore }}%</h2>
+                    <small class="text-muted">Risk Score</small>
+                  </div>
+                </div>
+                <h4 [class.text-success]="loan.riskLevel === 'LOW'"
+                    [class.text-warning]="loan.riskLevel === 'MEDIUM'"
+                    [class.text-danger]="loan.riskLevel === 'HIGH'">
+                  {{ loan.riskLevel }} RISK
+                </h4>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-user-check fa-2x text-primary mb-2"></i>
+                    <h6 class="mb-1">Identity</h6>
+                    <span class="badge bg-success">Verified</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-file-alt fa-2x text-info mb-2"></i>
+                    <h6 class="mb-1">Documents</h6>
+                    <span class="badge bg-success">{{ getVerifiedDocumentsCount() }}/{{ documents.length }}</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h6 class="mb-1">Financial</h6>
+                    <span class="badge bg-success">Stable</span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
+                    <h6 class="mb-1">Fraud Check</h6>
+                    <span class="badge" [class.bg-success]="fraudCheckTriggered" [class.bg-secondary]="!fraudCheckTriggered">
+                      {{ fraudCheckTriggered ? 'Complete' : 'Pending' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Fraud Check Results -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-danger text-white">
+              <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Results</h5>
+            </div>
+            <div class="card-body">
+              <div *ngIf="!fraudCheckResult" class="text-center py-4">
+                <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No fraud check performed yet</h6>
+                <p class="text-muted small">Click "Run Fraud Check" to perform comprehensive fraud detection</p>
+              </div>
+
+              <div *ngIf="fraudCheckResult">
+                <!-- Risk Level Alert -->
+                <div class="alert mb-4" 
+                     [class.alert-success]="fraudCheckResult.riskLevel === 'LOW'"
+                     [class.alert-warning]="fraudCheckResult.riskLevel === 'MEDIUM'"
+                     [class.alert-danger]="fraudCheckResult.riskLevel === 'HIGH'">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h5 class="mb-1">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Risk Level: {{ fraudCheckResult.riskLevel }}
+                      </h5>
+                      <p class="mb-0">Risk Score: {{ fraudCheckResult.riskScore }}%</p>
+                    </div>
+                    <div class="text-end">
+                      <small class="d-block">Checked At:</small>
+                      <small>{{ formatDate(fraudCheckResult.checkedAt) }}</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fraud Tags -->
+                <div *ngIf="fraudCheckResult.fraudTags && fraudCheckResult.fraudTags.length > 0" class="mb-4">
+                  <h6 class="mb-3"><i class="fas fa-tags me-2"></i>Fraud Indicators</h6>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let tag of fraudCheckResult.fraudTags" class="badge bg-warning text-dark">
+                      {{ tag }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Risk Score Calculation Breakdown -->
+                <div class="mb-4">
+                  <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Risk Score Calculation</h6>
+                  <div class="card border-0" style="background-color: var(--bg-secondary);">
+                    <div class="card-body">
+                      <div class="row g-3 mb-3">
+                        <div class="col-6">
+                          <div class="text-center">
+                            <small class="text-muted d-block">Total Points Deducted</small>
+                            <h4 class="mb-0 text-danger">{{ getTotalPointsDeducted() }}</h4>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center">
+                            <small class="text-muted d-block">Rules Violated</small>
+                            <h4 class="mb-0 text-warning">
+                              {{ fraudCheckResult.flaggedRules ? fraudCheckResult.flaggedRules.length : 0 }}
+                            </h4>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="alert alert-light mb-0">
+                        <small>
+                          <strong>Formula:</strong> Risk Score = (Total Points Deducted / Maximum Possible Points) × 100
+                          <br>
+                          <strong>Result:</strong> {{ fraudCheckResult.riskScore }}% = 
+                          ({{ getTotalPointsDeducted() }} points / {{ getMaxPossiblePoints() }} max points) × 100
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Flagged Rules with Detailed Breakdown -->
+                <div *ngIf="fraudCheckResult.flaggedRules && fraudCheckResult.flaggedRules.length > 0">
+                  <h6 class="mb-3">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Violated Rules - Detailed Breakdown ({{ fraudCheckResult.flaggedRules.length }})
+                  </h6>
+                  
+                  <div class="accordion" id="fraudRulesAccordion">
+                    <div *ngFor="let rule of fraudCheckResult.flaggedRules; let i = index" 
+                         class="accordion-item mb-2 border rounded">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                [attr.data-bs-toggle]="'collapse'" 
+                                [attr.data-bs-target]="'#rule' + i">
+                          <div class="d-flex align-items-center w-100">
+                            <span class="badge me-2" 
+                                  [class.bg-info]="rule.severity === 'LOW'"
+                                  [class.bg-warning]="rule.severity === 'MEDIUM'"
+                                  [class.bg-danger]="rule.severity === 'HIGH'"
+                                  style="min-width: 70px;">
+                              {{ rule.severity }}
+                            </span>
+                            <span class="badge bg-secondary me-2" style="min-width: 120px;">{{ rule.category }}</span>
+                            <span class="flex-grow-1 text-start">{{ rule.ruleName }}</span>
+                            <span class="badge bg-danger ms-2" *ngIf="rule.points">
+                              <i class="fas fa-minus-circle me-1"></i>{{ rule.points }} pts
+                            </span>
+                          </div>
+                        </button>
+                      </h2>
+                      <div [id]="'rule' + i" class="accordion-collapse collapse" 
+                           [attr.data-bs-parent]="'#fraudRulesAccordion'">
+                        <div class="accordion-body">
+                          <!-- Rule Details -->
+                          <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                              <div class="p-2 rounded" style="background-color: var(--bg-primary);">
+                                <small class="text-muted d-block mb-1">
+                                  <i class="fas fa-code me-1"></i>Rule Code
+                                </small>
+                                <strong>{{ rule.ruleCode || 'N/A' }}</strong>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="p-2 rounded" style="background-color: var(--bg-primary);">
+                                <small class="text-muted d-block mb-1">
+                                  <i class="fas fa-star me-1"></i>Points Deducted
+                                </small>
+                                <strong class="text-danger">-{{ rule.points || 0 }} points</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Rule Description -->
+                          <div class="mb-3">
+                            <small class="text-muted d-block mb-1">
+                              <i class="fas fa-info-circle me-1"></i>Description
+                            </small>
+                            <p class="mb-0">{{ rule.description }}</p>
+                          </div>
+
+                          <!-- Impact Analysis -->
+                          <div class="alert" 
+                               [class.alert-info]="rule.severity === 'LOW'"
+                               [class.alert-warning]="rule.severity === 'MEDIUM'"
+                               [class.alert-danger]="rule.severity === 'HIGH'"
+                               style="margin-bottom: 0;">
+                            <small>
+                              <strong><i class="fas fa-chart-line me-1"></i>Impact on Risk Score:</strong>
+                              <br>
+                              This {{ rule.severity }} severity rule contributed 
+                              <strong>{{ rule.points || 0 }} points</strong> to the total risk score.
+                              <span *ngIf="rule.severity === 'HIGH'">
+                                High severity violations significantly increase fraud risk.
+                              </span>
+                              <span *ngIf="rule.severity === 'MEDIUM'">
+                                Medium severity violations require careful review.
+                              </span>
+                              <span *ngIf="rule.severity === 'LOW'">
+                                Low severity violations have minimal impact on overall risk.
+                              </span>
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Summary Table -->
+                  <div class="mt-4">
+                    <h6 class="mb-3"><i class="fas fa-table me-2"></i>Rules Summary</h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                          <tr>
+                            <th>#</th>
+                            <th>Rule Name</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th class="text-end">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let rule of fraudCheckResult.flaggedRules; let i = index">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ rule.ruleName }}</td>
+                            <td><span class="badge bg-secondary">{{ rule.category }}</span></td>
+                            <td>
+                              <span class="badge" 
+                                    [class.bg-info]="rule.severity === 'LOW'"
+                                    [class.bg-warning]="rule.severity === 'MEDIUM'"
+                                    [class.bg-danger]="rule.severity === 'HIGH'">
+                                {{ rule.severity }}
+                              </span>
+                            </td>
+                            <td class="text-end text-danger"><strong>-{{ rule.points || 0 }}</strong></td>
+                          </tr>
+                          <tr class="table-light">
+                            <td colspan="4" class="text-end"><strong>Total Points Deducted:</strong></td>
+                            <td class="text-end text-danger">
+                              <strong>-{{ getTotalPointsDeducted() }}</strong>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No Issues Found -->
+                <div *ngIf="!fraudCheckResult.flaggedRules || fraudCheckResult.flaggedRules.length === 0" class="text-center py-4">
+                  <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                  <h6 class="text-success">No Fraud Indicators Found</h6>
+                  <p class="text-muted small">All fraud detection rules passed successfully</p>
+                </div>
+
+                <!-- API Remarks -->
+                <div *ngIf="fraudCheckResult.apiRemarks" class="mt-4">
+                  <div class="alert alert-info">
+                    <strong><i class="fas fa-comment-alt me-2"></i>System Remarks:</strong>
+                    <p class="mb-0 mt-2">{{ fraudCheckResult.apiRemarks }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    <!-- End Verification Tab -->
+
+    <!-- Final Decision Tab -->
+    <div *ngIf="activeTab === 'decision'">
+      <div class="row g-4">
+        
+        <!-- Left Column - Decision Timeline -->
+        <div class="col-lg-5">
+          <!-- Decision History Timeline -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-history me-2"></i>Decision History Timeline</h5>
+            </div>
+            <div class="card-body">
+              <div class="timeline">
+                <!-- Application Submitted -->
+                <div class="timeline-item mb-4">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker bg-primary text-white rounded-circle me-3" 
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Application Submitted</h6>
+                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
+                      </div>
+                      <p class="text-muted small mb-1">Loan application submitted by {{ loan.applicantName }}</p>
+                      <div class="mt-2">
+                        <span class="badge bg-primary">{{ loan.loanType }}</span>
+                        <span class="badge bg-success ms-1">{{ formatCurrency(loan.loanAmount) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Assigned to Officer -->
+                <div class="timeline-item mb-4">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker bg-info text-white rounded-circle me-3" 
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Assigned to Loan Officer</h6>
+                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
+                      </div>
+                      <p class="text-muted small mb-1">Assigned to {{ loan.officerName || 'Loan Officer' }}</p>
+                      <div class="mt-2">
+                        <span class="badge bg-info">{{ loan.officerType || 'LOAN_OFFICER' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="timeline-item mb-4">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker text-white rounded-circle me-3" 
+                         [class.bg-success]="loan.riskLevel === 'LOW'"
+                         [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
+                         [class.bg-danger]="loan.riskLevel === 'HIGH'"
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Risk Assessment Completed</h6>
+                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
+                      </div>
+                      <p class="text-muted small mb-1">Automated risk scoring completed</p>
+                      <div class="mt-2">
+                        <span class="badge" 
+                              [class.bg-success]="loan.riskLevel === 'LOW'"
+                              [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
+                              [class.bg-danger]="loan.riskLevel === 'HIGH'">
+                          {{ loan.riskLevel }} RISK - {{ loan.riskScore }}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Document Verification -->
+                <div class="timeline-item mb-4">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker bg-secondary text-white rounded-circle me-3" 
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-file-check"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Document Verification</h6>
+                        <small class="text-muted">In Progress</small>
+                      </div>
+                      <p class="text-muted small mb-1">{{ documents.length }} documents uploaded</p>
+                      <div class="mt-2">
+                        <span class="badge bg-success me-1">{{ getVerifiedDocumentsCount() }} Verified</span>
+                        <span class="badge bg-warning me-1">{{ getPendingDocumentsCount() }} Pending</span>
+                        <span class="badge bg-danger" *ngIf="getRejectedDocumentsCount() > 0">
+                          {{ getRejectedDocumentsCount() }} Rejected
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fraud Check -->
+                <div class="timeline-item mb-4" *ngIf="fraudCheckTriggered && fraudCheckResult">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker bg-warning text-white rounded-circle me-3" 
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Fraud Detection Completed</h6>
+                        <small class="text-muted">{{ fraudCheckResult.checkedAt ? formatDate(fraudCheckResult.checkedAt) : 'Recently' }}</small>
+                      </div>
+                      <p class="text-muted small mb-1">Comprehensive fraud screening performed</p>
+                      <div class="mt-2">
+                        <span class="badge" 
+                              [class.bg-success]="fraudCheckResult.riskLevel === 'LOW'"
+                              [class.bg-warning]="fraudCheckResult.riskLevel === 'MEDIUM'"
+                              [class.bg-danger]="fraudCheckResult.riskLevel === 'HIGH'">
+                          {{ fraudCheckResult.riskLevel }} - {{ fraudCheckResult.riskScore }}%
+                        </span>
+                        <span class="badge bg-secondary ms-1" *ngIf="fraudCheckResult.flaggedRules">
+                          {{ fraudCheckResult.flaggedRules.length }} Rules Flagged
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Current Status -->
+                <div class="timeline-item mb-4">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker text-white rounded-circle me-3 position-relative" 
+                         [class.bg-success]="loan.status === 'APPROVED'"
+                         [class.bg-danger]="loan.status === 'REJECTED'"
+                         [class.bg-warning]="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'"
+                         [class.bg-info]="loan.status === 'ESCALATED'"
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-clock"></i>
+                      <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle" 
+                            style="width: 12px; height: 12px;"
+                            *ngIf="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'">
+                      </span>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Current Status</h6>
+                        <small class="text-muted">Now</small>
+                      </div>
+                      <p class="text-muted small mb-1">
+                        {{ loan.status === 'APPROVED' ? 'Application approved and ready for disbursement' :
+                           loan.status === 'REJECTED' ? 'Application rejected' :
+                           loan.status === 'ESCALATED' ? 'Escalated to compliance team' :
+                           'Awaiting loan officer decision' }}
+                      </p>
+                      <div class="mt-2">
+                        <span class="badge" 
+                              [class.bg-success]="loan.status === 'APPROVED'"
+                              [class.bg-danger]="loan.status === 'REJECTED'"
+                              [class.bg-warning]="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'"
+                              [class.bg-info]="loan.status === 'ESCALATED'">
+                          {{ loan.status }}
+                        </span>
+                      </div>
+                      <div class="mt-2" *ngIf="loan.remarks">
+                        <div class="alert alert-light mb-0 p-2">
+                          <small><strong>Remarks:</strong> {{ loan.remarks }}</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Final Decision (if processed) -->
+                <div class="timeline-item" *ngIf="loan.processedAt">
+                  <div class="d-flex align-items-start">
+                    <div class="timeline-marker text-white rounded-circle me-3" 
+                         [class.bg-success]="loan.status === 'APPROVED'"
+                         [class.bg-danger]="loan.status === 'REJECTED'"
+                         [class.bg-info]="loan.status === 'ESCALATED'"
+                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <i class="fas fa-gavel"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0">Final Decision Made</h6>
+                        <small class="text-muted">{{ formatDate(loan.processedAt) }}</small>
+                      </div>
+                      <p class="text-muted small mb-1">Decision by {{ loan.officerName }}</p>
+                      <div class="mt-2">
+                        <span class="badge" 
+                              [class.bg-success]="loan.status === 'APPROVED'"
+                              [class.bg-danger]="loan.status === 'REJECTED'"
+                              [class.bg-info]="loan.status === 'ESCALATED'">
+                          {{ loan.status }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div *ngIf="!loan.assignedAt" class="text-center py-4">
+                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No decision history available</h6>
+                <p class="text-muted small">Timeline will appear as decisions are made</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Decision Summary & Actions -->
+        <div class="col-lg-7">
+          <!-- Decision Summary -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Decision Summary</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="text-muted small">Applicant</label>
+                  <h6>{{ loan.applicantName }}</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Loan Amount</label>
+                  <h6 class="text-success">{{ formatCurrency(loan.loanAmount) }}</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Risk Score</label>
+                  <h6 [class.text-success]="loan.riskScore < 40"
+                      [class.text-warning]="loan.riskScore >= 40 && loan.riskScore < 70"
+                      [class.text-danger]="loan.riskScore >= 70">
+                    {{ loan.riskScore }}% - {{ loan.riskLevel }}
+                  </h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Documents Status</label>
+                  <h6>
+                    <span class="badge bg-success me-1">{{ getVerifiedDocumentsCount() }} Verified</span>
+                    <span class="badge bg-warning">{{ getPendingDocumentsCount() }} Pending</span>
+                  </h6>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Decision Actions -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Make Your Decision</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> Your decision will be recorded and cannot be undone. Please review all information carefully.
+              </div>
+
+              <div class="d-grid gap-3">
+                <button class="btn btn-success btn-lg" 
+                        (click)="openActionModal('APPROVE')"
+                        [disabled]="isApproveDisabled()">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <strong>Approve Loan</strong>
+                  <small class="d-block mt-1">Approve this loan application for disbursement</small>
+                </button>
+
+                <button class="btn btn-danger btn-lg" 
+                        (click)="openActionModal('REJECT')"
+                        [disabled]="isRejectDisabled()">
+                  <i class="fas fa-times-circle me-2"></i>
+                  <strong>Reject Loan</strong>
+                  <small class="d-block mt-1">Reject this loan application with reason</small>
+                </button>
+
+                <button class="btn btn-warning btn-lg" 
+                        (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
+                        [disabled]="isEscalateDisabled()">
+                  <i class="fas fa-arrow-up me-2"></i>
+                  <strong>Escalate to Compliance</strong>
+                  <small class="d-block mt-1">Send to compliance team for further review</small>
+                </button>
+
+                <button class="btn btn-outline-warning" 
+                        (click)="openResubmissionModal()"
+                        [disabled]="isResubmissionButtonDisabled()">
+                  <i class="fas fa-redo me-2"></i>Request Document Resubmission
+                </button>
+
+                <hr>
+
+                <button class="btn btn-outline-secondary" (click)="goBack()">
+                  <i class="fas fa-arrow-left me-2"></i>Back to Assigned Loans
+                </button>
+              </div>
+
+              <div *ngIf="!loan.canApproveReject" class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>High Risk Application:</strong> This application has a high risk score and requires compliance officer approval.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Decision Tab -->
+    
   </div>
+  <!-- End Tab Content -->
 
 </div>
+<!-- End Main Container -->
 
 <!-- Action Confirmation Modal -->
-<div class="modal fade" [class.show]="showActionModal" [style.display]="showActionModal ? 'block' : 'none'" tabindex="-1">
+<div class="modal fade" [class.show]="showActionModal" [style.display]="getModalDisplayStyle(showActionModal)" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
       <div class="modal-header" style="border-color: var(--border-color);">
@@ -417,15 +1259,13 @@
              [class.text-success]="actionType === 'APPROVE'"
              [class.text-danger]="actionType === 'REJECT'"
              [class.text-warning]="actionType === 'ESCALATE_TO_COMPLIANCE'"></i>
-          {{ actionType === 'APPROVE' ? 'Approve Loan' : actionType === 'REJECT' ? 'Reject Loan' : 'Escalate to Compliance' }}
+          {{ getActionModalTitle() }}
         </h5>
         <button type="button" class="btn-close" (click)="closeActionModal()" [disabled]="processing"></button>
       </div>
       <div class="modal-body">
         <p style="color: var(--text-primary);">
-          {{ actionType === 'APPROVE' ? 'Are you sure you want to approve this loan application?' : 
-             actionType === 'REJECT' ? 'Please provide a reason for rejecting this loan application:' : 
-             'Escalate this loan to a compliance officer for further review.' }}
+          {{ getActionModalMessage() }}
         </p>
 
         <!-- Rejection Reason (only for REJECT) -->
@@ -456,9 +1296,9 @@
                 [class.btn-danger]="actionType === 'REJECT'"
                 [class.btn-warning]="actionType === 'ESCALATE_TO_COMPLIANCE'"
                 (click)="confirmAction()" 
-                [disabled]="processing || (actionType === 'REJECT' && !rejectionReason)">
+                [disabled]="processing || isActionRejectWithNoReason()">
           <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
-          {{ processing ? 'Processing...' : 'Confirm' }}
+          {{ getConfirmButtonText() }}
         </button>
       </div>
     </div>
@@ -467,7 +1307,7 @@
 <div class="modal-backdrop fade" [class.show]="showActionModal" *ngIf="showActionModal"></div>
 
 <!-- Documents Modal -->
-<div class="modal fade" [class.show]="showDocumentsModal" [style.display]="showDocumentsModal ? 'block' : 'none'" tabindex="-1">
+<div class="modal fade" [class.show]="showDocumentsModal" [style.display]="getModalDisplayStyle(showDocumentsModal)" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
       <div class="modal-header" style="border-color: var(--border-color);">
@@ -500,12 +1340,12 @@
                 </a>
                 <button class="btn btn-sm btn-success me-2" 
                         (click)="verifyDocument(doc, 'VERIFIED')"
-                        [disabled]="doc.verificationStatus === 'VERIFIED' || processing">
+                        [disabled]="isVerifyButtonDisabled(doc)">
                   <i class="fas fa-check me-1"></i>Verify
                 </button>
                 <button class="btn btn-sm btn-danger" 
                         (click)="verifyDocument(doc, 'REJECTED')"
-                        [disabled]="doc.verificationStatus === 'REJECTED' || processing">
+                        [disabled]="isRejectDocButtonDisabled(doc)">
                   <i class="fas fa-times me-1"></i>Reject
                 </button>
               </div>
@@ -525,7 +1365,7 @@
 <div class="modal-backdrop fade" [class.show]="showDocumentsModal" *ngIf="showDocumentsModal"></div>
 
 <!-- Fraud Check Modal -->
-<div class="modal fade" [class.show]="showFraudCheckModal" [style.display]="showFraudCheckModal ? 'block' : 'none'" tabindex="-1">
+<div class="modal fade" [class.show]="showFraudCheckModal" [style.display]="getModalDisplayStyle(showFraudCheckModal)" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
       <div class="modal-header" style="border-color: var(--border-color);">
@@ -552,7 +1392,7 @@
         </button>
         <button type="button" class="btn btn-danger" (click)="triggerFraudCheck()" [disabled]="fraudCheckLoading">
           <span *ngIf="fraudCheckLoading" class="spinner-border spinner-border-sm me-2"></span>
-          {{ fraudCheckLoading ? 'Processing...' : 'Trigger Fraud Check' }}
+          {{ getFraudCheckModalButtonText() }}
         </button>
       </div>
     </div>
@@ -561,7 +1401,7 @@
 <div class="modal-backdrop fade" [class.show]="showFraudCheckModal" *ngIf="showFraudCheckModal"></div>
 
 <!-- Document Resubmission Modal -->
-<div class="modal fade" [class.show]="showResubmissionModal" [style.display]="showResubmissionModal ? 'block' : 'none'" tabindex="-1">
+<div class="modal fade" [class.show]="showResubmissionModal" [style.display]="getModalDisplayStyle(showResubmissionModal)" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
       <div class="modal-header" style="border-color: var(--border-color);">
@@ -609,9 +1449,9 @@
         </button>
         <button type="button" class="btn btn-warning" 
                 (click)="requestResubmission()" 
-                [disabled]="processing || selectedDocumentTypes.length === 0 || !resubmissionReason">
+                [disabled]="isResubmissionDisabled()">
           <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
-          {{ processing ? 'Sending...' : 'Send Request' }}
+          {{ getResubmissionButtonText() }}
         </button>
       </div>
     </div>
