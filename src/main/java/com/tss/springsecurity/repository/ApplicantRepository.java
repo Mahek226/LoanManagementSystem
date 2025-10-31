@@ -30,4 +30,8 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
            "ORDER BY MONTH(a.createdAt)")
     List<Object[]> countApplicantsByMonth();
 	List<Applicant> findByApprovalStatus(String status);
+	
+	// For KYC duplicate detection - PAN is in related PanDetails entity
+	@Query("SELECT DISTINCT a FROM Applicant a JOIN a.panDetails p WHERE p.panNumber = ?1")
+	List<Applicant> findByPanNumber(String panNumber);
 }

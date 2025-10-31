@@ -185,6 +185,210 @@ public class ComplianceOfficerController {
         return ResponseEntity.ok(history);
     }
     
+    // ==================== KYC Verification ====================
+    
+    /**
+     * Perform KYC verification (PAN/Aadhaar)
+     */
+    @PostMapping("/kyc-verification")
+    public ResponseEntity<?> performKYCVerification(@Valid @RequestBody KYCVerificationRequest request) {
+        try {
+            KYCVerificationResponse response = complianceOfficerService.performKYCVerification(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== AML & Sanctions Screening ====================
+    
+    /**
+     * Perform AML screening (RBI, FATF, OFAC, Internal Blacklist)
+     */
+    @PostMapping("/aml-screening")
+    public ResponseEntity<?> performAMLScreening(@Valid @RequestBody AMLScreeningRequest request) {
+        try {
+            AMLScreeningResponse response = complianceOfficerService.performAMLScreening(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Check RBI defaulters list
+     */
+    @GetMapping("/check-rbi-defaulters/{panNumber}")
+    public ResponseEntity<?> checkRBIDefaulters(@PathVariable String panNumber) {
+        try {
+            Map<String, Object> result = complianceOfficerService.checkRBIDefaulters(panNumber);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Check sanctions list (FATF/OFAC)
+     */
+    @GetMapping("/check-sanctions")
+    public ResponseEntity<?> checkSanctionsList(@RequestParam String name) {
+        try {
+            Map<String, Object> result = complianceOfficerService.checkSanctionsList(name);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Check internal blacklist
+     */
+    @GetMapping("/check-blacklist/{applicantId}")
+    public ResponseEntity<?> checkInternalBlacklist(@PathVariable Long applicantId) {
+        try {
+            Map<String, Object> result = complianceOfficerService.checkInternalBlacklist(applicantId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Check PEP (Politically Exposed Person) status
+     */
+    @GetMapping("/check-pep")
+    public ResponseEntity<?> checkPEPStatus(
+            @RequestParam String name,
+            @RequestParam String pan) {
+        try {
+            Map<String, Object> result = complianceOfficerService.checkPEPStatus(name, pan);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== Risk Correlation Analysis ====================
+    
+    /**
+     * Get risk correlation analysis for a loan
+     */
+    @GetMapping("/loan/{loanId}/risk-correlation")
+    public ResponseEntity<?> getRiskCorrelationAnalysis(@PathVariable Long loanId) {
+        try {
+            RiskCorrelationAnalysisResponse response = complianceOfficerService.getRiskCorrelationAnalysis(loanId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== Audit Logs ====================
+    
+    /**
+     * Get audit logs for a specific assignment
+     */
+    @GetMapping("/assignment/{assignmentId}/audit-logs")
+    public ResponseEntity<?> getAuditLogs(@PathVariable Long assignmentId) {
+        try {
+            List<ComplianceAuditLogResponse> logs = complianceOfficerService.getAuditLogs(assignmentId);
+            return ResponseEntity.ok(logs);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get all audit logs for a compliance officer
+     */
+    @GetMapping("/{officerId}/audit-logs")
+    public ResponseEntity<?> getAllAuditLogs(
+            @PathVariable Long officerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            List<ComplianceAuditLogResponse> logs = complianceOfficerService.getAllAuditLogs(officerId, page, size);
+            return ResponseEntity.ok(logs);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== Document Management ====================
+    
+    /**
+     * Get loan documents for compliance review
+     */
+    @GetMapping("/loan/{loanId}/documents")
+    public ResponseEntity<?> getLoanDocuments(@PathVariable Long loanId) {
+        try {
+            List<DocumentResponse> documents = complianceOfficerService.getLoanDocuments(loanId);
+            return ResponseEntity.ok(documents);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get fraud history for an applicant
+     */
+    @GetMapping("/applicant/{applicantId}/fraud-history")
+    public ResponseEntity<?> getFraudHistory(@PathVariable Long applicantId) {
+        try {
+            List<FraudHistoryResponse> history = complianceOfficerService.getFraudHistory(applicantId);
+            return ResponseEntity.ok(history);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Request additional documents from applicant
+     */
+    @PostMapping("/{officerId}/request-documents")
+    public ResponseEntity<?> requestAdditionalDocuments(
+            @PathVariable Long officerId,
+            @Valid @RequestBody AdditionalDocumentRequest request) {
+        try {
+            Map<String, Object> response = complianceOfficerService.requestAdditionalDocuments(officerId, request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== Report Generation ====================
+    
+    /**
+     * Generate compliance report PDF
+     */
+    @GetMapping("/assignment/{assignmentId}/generate-report")
+    public ResponseEntity<?> generateComplianceReport(@PathVariable Long assignmentId) {
+        try {
+            byte[] pdfBytes = complianceOfficerService.generateComplianceReportPDF(assignmentId);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=compliance-report-" + assignmentId + ".pdf")
+                    .body(pdfBytes);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
     // ==================== Response Classes ====================
     
     private record ErrorResponse(String message) {}

@@ -51,4 +51,81 @@ public interface ComplianceOfficerService {
      * Get compliance officer's processing history
      */
     List<LoanScreeningResponse> getProcessingHistory(Long complianceOfficerId, int page, int size);
+    
+    // ==================== KYC Verification ====================
+    
+    /**
+     * Perform KYC verification (PAN/Aadhaar)
+     */
+    KYCVerificationResponse performKYCVerification(KYCVerificationRequest request);
+    
+    // ==================== AML & Sanctions Screening ====================
+    
+    /**
+     * Perform AML screening
+     */
+    AMLScreeningResponse performAMLScreening(AMLScreeningRequest request);
+    
+    /**
+     * Check RBI defaulters list
+     */
+    Map<String, Object> checkRBIDefaulters(String panNumber);
+    
+    /**
+     * Check sanctions list (FATF/OFAC)
+     */
+    Map<String, Object> checkSanctionsList(String name);
+    
+    /**
+     * Check internal blacklist
+     */
+    Map<String, Object> checkInternalBlacklist(Long applicantId);
+    
+    /**
+     * Check PEP status
+     */
+    Map<String, Object> checkPEPStatus(String name, String pan);
+    
+    // ==================== Risk Correlation Analysis ====================
+    
+    /**
+     * Get risk correlation analysis
+     */
+    RiskCorrelationAnalysisResponse getRiskCorrelationAnalysis(Long loanId);
+    
+    // ==================== Audit Logs ====================
+    
+    /**
+     * Get audit logs for assignment
+     */
+    List<ComplianceAuditLogResponse> getAuditLogs(Long assignmentId);
+    
+    /**
+     * Get all audit logs for officer
+     */
+    List<ComplianceAuditLogResponse> getAllAuditLogs(Long officerId, int page, int size);
+    
+    // ==================== Document Management ====================
+    
+    /**
+     * Get loan documents
+     */
+    List<DocumentResponse> getLoanDocuments(Long loanId);
+    
+    /**
+     * Get fraud history
+     */
+    List<FraudHistoryResponse> getFraudHistory(Long applicantId);
+    
+    /**
+     * Request additional documents
+     */
+    Map<String, Object> requestAdditionalDocuments(Long officerId, AdditionalDocumentRequest request);
+    
+    // ==================== Report Generation ====================
+    
+    /**
+     * Generate compliance report PDF
+     */
+    byte[] generateComplianceReportPDF(Long assignmentId);
 }

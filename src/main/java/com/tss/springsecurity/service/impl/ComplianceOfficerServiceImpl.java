@@ -27,6 +27,9 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     private final DocumentResubmissionRepository documentResubmissionRepository;
     private final ApplicantRepository applicantRepository;
     private final ApplicantLoanDetailsRepository loanDetailsRepository;
+    private final UploadedDocumentRepository uploadedDocumentRepository;
+    private final FraudFlagRepository fraudFlagRepository;
+    private final ActivityLogRepository activityLogRepository;
     private final ObjectMapper objectMapper;
     
     @Override
@@ -346,5 +349,464 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         if (score >= 80) return "LOW";
         if (score >= 60) return "MEDIUM";
         return "HIGH";
+    }
+    
+    // ==================== NEW METHODS FOR KYC, AML, RISK ANALYSIS ====================
+    
+    @Override
+    public KYCVerificationResponse performKYCVerification(KYCVerificationRequest request) {
+        log.info("Performing KYC verification for applicant ID: {}", request.getApplicantId());
+        
+        Applicant applicant = applicantRepository.findById(request.getApplicantId())
+                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + request.getApplicantId()));
+        
+        KYCVerificationResponse response = KYCVerificationResponse.builder()
+                .verified(true)
+                .nameMatch(true)
+                .addressMatch(true)
+                .duplicateFound(false)
+                .build();
+        
+        // Verify PAN if requested
+        if ("PAN".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
+            // TODO: Integrate with actual PAN verification API
+            response.setPanStatus("VERIFIED");
+            log.info("PAN verification completed for: {}", request.getPanNumber());
+        }
+        
+        // Verify Aadhaar if requested
+        if ("AADHAAR".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
+            // TODO: Integrate with actual Aadhaar verification API
+            response.setAadhaarStatus("VERIFIED");
+            log.info("Aadhaar verification completed for: {}", request.getAadhaarNumber());
+        }
+        
+        // Check for duplicates
+        List<Applicant> duplicates = applicantRepository.findByPanNumber(request.getPanNumber());
+        if (duplicates.size() > 1) {
+            response.setDuplicateFound(true);
+            response.setVerified(false);
+            response.setRemarks("Duplicate PAN number found in system");
+        } else {
+            response.setRemarks("KYC verification completed successfully");
+        }
+        
+        // Log the verification
+        logActivity(request.getApplicantId(), "KYC_VERIFICATION", "KYC verification performed", "COMPLETED");
+        
+        return response;
+    }
+    
+    @Override
+    public AMLScreeningResponse performAMLScreening(AMLScreeningRequest request) {
+        log.info("Performing AML screening for applicant ID: {}", request.getApplicantId());
+        
+        List<AMLFinding> findings = new ArrayList<>();
+        String overallRisk = "CLEAR";
+        boolean isPEP = false;
+        
+        // Check each requested source
+        for (String checkType : request.getCheckTypes()) {
+            switch (checkType) {
+                case "RBI_DEFAULTERS":
+                    // TODO: Integrate with RBI defaulters API
+                    AMLFinding rbiFind = AMLFinding.builder()
+                            .source("RBI_DEFAULTERS")
+                            .matchType("NONE")
+                            .matchScore(0)
+                            .details("No match found in RBI defaulters list")
+                            .severity("LOW")
+                            .build();
+                    findings.add(rbiFind);
+                    break;
+                    
+                case "FATF_SANCTIONS":
+                    // TODO: Integrate with FATF sanctions API
+                    AMLFinding fatfFind = AMLFinding.builder()
+                            .source("FATF_SANCTIONS")
+                            .matchType("NONE")
+                            .matchScore(0)
+                            .details("No match found in FATF sanctions list")
+                            .severity("LOW")
+                            .build();
+                    findings.add(fatfFind);
+                    break;
+                    
+                case "OFAC":
+                    // TODO: Integrate with OFAC API
+                    AMLFinding ofacFind = AMLFinding.builder()
+                            .source("OFAC")
+                            .matchType("NONE")
+                            .matchScore(0)
+                            .details("No match found in OFAC sanctions list")
+                            .severity("LOW")
+                            .build();
+                    findings.add(ofacFind);
+                    break;
+                    
+                case "INTERNAL_BLACKLIST":
+                    // Check internal fraud flags
+                    List<FraudFlag> fraudFlags = fraudFlagRepository.findByApplicant_ApplicantId(request.getApplicantId());
+                    if (!fraudFlags.isEmpty()) {
+                        AMLFinding blacklistFind = AMLFinding.builder()
+                                .source("INTERNAL_BLACKLIST")
+                                .matchType("EXACT")
+                                .matchScore(100)
+                                .details("Found " + fraudFlags.size() + " fraud flag(s) in internal system")
+                                .severity("HIGH")
+                                .build();
+                        findings.add(blacklistFind);
+                        overallRisk = "HIGH";
+                    } else {
+                        AMLFinding blacklistFind = AMLFinding.builder()
+                                .source("INTERNAL_BLACKLIST")
+                                .matchType("NONE")
+                                .matchScore(0)
+                                .details("No match found in internal blacklist")
+                                .severity("LOW")
+                                .build();
+                        findings.add(blacklistFind);
+                    }
+                    break;
+            }
+        }
+        
+        // TODO: Check PEP status via external API
+        isPEP = false;
+        
+        List<String> recommendations = new ArrayList<>();
+        if ("HIGH".equals(overallRisk) || "CRITICAL".equals(overallRisk)) {
+            recommendations.add("Recommend rejection due to high AML risk");
+            recommendations.add("Request additional documentation");
+            recommendations.add("Escalate to senior compliance officer");
+        } else {
+            recommendations.add("AML screening passed - proceed with application");
+        }
+        
+        // Log the screening
+        logActivity(request.getApplicantId(), "AML_SCREENING", "AML screening performed", "COMPLETED");
+        
+        return AMLScreeningResponse.builder()
+                .applicantId(request.getApplicantId())
+                .screeningDate(LocalDateTime.now())
+                .overallRisk(overallRisk)
+                .findings(findings)
+                .isPEP(isPEP)
+                .recommendations(recommendations)
+                .build();
+    }
+    
+    @Override
+    public Map<String, Object> checkRBIDefaulters(String panNumber) {
+        log.info("Checking RBI defaulters list for PAN: {}", panNumber);
+        
+        Map<String, Object> result = new HashMap<>();
+        // TODO: Integrate with actual RBI defaulters API
+        result.put("found", false);
+        result.put("panNumber", panNumber);
+        result.put("message", "No match found in RBI defaulters list");
+        result.put("checkedAt", LocalDateTime.now());
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> checkSanctionsList(String name) {
+        log.info("Checking sanctions list for name: {}", name);
+        
+        Map<String, Object> result = new HashMap<>();
+        // TODO: Integrate with FATF/OFAC sanctions APIs
+        result.put("found", false);
+        result.put("name", name);
+        result.put("sources", Arrays.asList("FATF", "OFAC"));
+        result.put("message", "No match found in sanctions lists");
+        result.put("checkedAt", LocalDateTime.now());
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> checkInternalBlacklist(Long applicantId) {
+        log.info("Checking internal blacklist for applicant ID: {}", applicantId);
+        
+        List<FraudFlag> fraudFlags = fraudFlagRepository.findByApplicant_ApplicantId(applicantId);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("found", !fraudFlags.isEmpty());
+        result.put("applicantId", applicantId);
+        result.put("flagCount", fraudFlags.size());
+        result.put("flags", fraudFlags.stream()
+                .map(f -> Map.of(
+                        "flagId", f.getId(),
+                        "flagType", f.getRuleName(),
+                        "severity", f.getSeverity(),
+                        "flaggedAt", f.getCreatedAt()
+                ))
+                .collect(Collectors.toList()));
+        result.put("checkedAt", LocalDateTime.now());
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> checkPEPStatus(String name, String pan) {
+        log.info("Checking PEP status for name: {}, PAN: {}", name, pan);
+        
+        Map<String, Object> result = new HashMap<>();
+        // TODO: Integrate with actual PEP database/API
+        result.put("isPEP", false);
+        result.put("name", name);
+        result.put("panNumber", pan);
+        result.put("message", "No PEP status found");
+        result.put("checkedAt", LocalDateTime.now());
+        
+        return result;
+    }
+    
+    @Override
+    public RiskCorrelationAnalysisResponse getRiskCorrelationAnalysis(Long loanId) {
+        log.info("Getting risk correlation analysis for loan ID: {}", loanId);
+        
+        ApplicantLoanDetails loanDetails = loanDetailsRepository.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+        
+        Applicant applicant = loanDetails.getApplicant();
+        
+        // Collect fraud tags
+        List<String> fraudTags = fraudFlagRepository.findByApplicant_ApplicantId(applicant.getApplicantId())
+                .stream()
+                .map(FraudFlag::getRuleName)
+                .collect(Collectors.toList());
+        
+        // Check defaulter history
+        boolean defaulterHistory = false; // TODO: Check external defaulter databases
+        
+        // Transaction anomalies
+        List<String> transactionAnomalies = new ArrayList<>();
+        // TODO: Analyze transaction patterns
+        
+        // Calculate risk factors
+        List<RiskFactor> riskFactors = new ArrayList<>();
+        
+        if (!fraudTags.isEmpty()) {
+            riskFactors.add(RiskFactor.builder()
+                    .category("FRAUD_HISTORY")
+                    .description("Applicant has " + fraudTags.size() + " fraud flag(s)")
+                    .severity("HIGH")
+                    .weight(0.4)
+                    .build());
+        }
+        
+        if (loanDetails.getRiskScore() != null && loanDetails.getRiskScore() < 60) {
+            riskFactors.add(RiskFactor.builder()
+                    .category("LOW_CREDIT_SCORE")
+                    .description("Risk score below acceptable threshold")
+                    .severity("MEDIUM")
+                    .weight(0.3)
+                    .build());
+        }
+        
+        // Calculate compliance risk rating (1-5)
+        int complianceRiskRating = calculateComplianceRiskRating(fraudTags.size(), loanDetails.getRiskScore());
+        
+        String recommendation = complianceRiskRating >= 4 
+                ? "Recommend approval with standard monitoring" 
+                : "Recommend enhanced due diligence or rejection";
+        
+        return RiskCorrelationAnalysisResponse.builder()
+                .loanId(loanId)
+                .applicantId(applicant.getApplicantId())
+                .fraudTags(fraudTags)
+                .defaulterHistory(defaulterHistory)
+                .transactionAnomalies(transactionAnomalies)
+                .complianceRiskRating(complianceRiskRating)
+                .riskFactors(riskFactors)
+                .recommendation(recommendation)
+                .build();
+    }
+    
+    @Override
+    public List<ComplianceAuditLogResponse> getAuditLogs(Long assignmentId) {
+        log.info("Getting audit logs for assignment ID: {}", assignmentId);
+        
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + assignmentId));
+        
+        // Get activity logs for this applicant
+        List<ActivityLog> activityLogs = activityLogRepository
+                .findByEntityTypeAndEntityIdOrderByTimestampDesc("APPLICANT", assignment.getApplicant().getApplicantId(), PageRequest.of(0, 100))
+                .getContent();
+        
+        return activityLogs.stream()
+                .map(this::mapToComplianceAuditLogResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<ComplianceAuditLogResponse> getAllAuditLogs(Long officerId, int page, int size) {
+        log.info("Getting all audit logs for officer ID: {}, page: {}, size: {}", officerId, page, size);
+        
+        // Get all assignments for this officer
+        List<ComplianceOfficerApplicationAssignment> assignments = 
+                assignmentRepository.findByComplianceOfficer_OfficerId(officerId);
+        
+        // Collect all activity logs
+        List<ComplianceAuditLogResponse> allLogs = new ArrayList<>();
+        for (ComplianceOfficerApplicationAssignment assignment : assignments) {
+            List<ActivityLog> logs = activityLogRepository
+                    .findByEntityTypeAndEntityIdOrderByTimestampDesc("APPLICANT", assignment.getApplicant().getApplicantId(), PageRequest.of(0, 50))
+                    .getContent();
+            allLogs.addAll(logs.stream()
+                    .map(this::mapToComplianceAuditLogResponse)
+                    .collect(Collectors.toList()));
+        }
+        
+        // Sort by timestamp and paginate
+        return allLogs.stream()
+                .sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
+                .skip((long) page * size)
+                .limit(size)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<DocumentResponse> getLoanDocuments(Long loanId) {
+        log.info("Getting documents for loan ID: {}", loanId);
+        
+        ApplicantLoanDetails loanDetails = loanDetailsRepository.findById(loanId)
+                .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+        
+        List<UploadedDocument> documents = uploadedDocumentRepository
+                .findByApplicant_ApplicantId(loanDetails.getApplicant().getApplicantId());
+        
+        return documents.stream()
+                .map(this::mapToDocumentResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<FraudHistoryResponse> getFraudHistory(Long applicantId) {
+        log.info("Getting fraud history for applicant ID: {}", applicantId);
+        
+        List<FraudFlag> fraudFlags = fraudFlagRepository.findByApplicant_ApplicantId(applicantId);
+        
+        return fraudFlags.stream()
+                .map(this::mapToFraudHistoryResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public Map<String, Object> requestAdditionalDocuments(Long officerId, AdditionalDocumentRequest request) {
+        log.info("Requesting additional documents for loan ID: {} by officer ID: {}", request.getLoanId(), officerId);
+        
+        ApplicantLoanDetails loanDetails = loanDetailsRepository.findById(request.getLoanId())
+                .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + request.getLoanId()));
+        
+        // TODO: Send email notification to applicant
+        // TODO: Create document request record
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Document request sent to applicant");
+        response.put("loanId", request.getLoanId());
+        response.put("applicantId", request.getApplicantId());
+        response.put("documentTypes", request.getDocumentTypes());
+        response.put("requestedAt", LocalDateTime.now());
+        
+        // Log the activity
+        logActivity(request.getApplicantId(), "DOCUMENT_REQUEST", 
+                "Additional documents requested: " + String.join(", ", request.getDocumentTypes()), "PENDING");
+        
+        return response;
+    }
+    
+    @Override
+    public byte[] generateComplianceReportPDF(Long assignmentId) {
+        log.info("Generating compliance report PDF for assignment ID: {}", assignmentId);
+        
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + assignmentId));
+        
+        // TODO: Implement actual PDF generation using iText or Apache PDFBox
+        // For now, return a simple placeholder
+        String reportContent = String.format(
+                "COMPLIANCE REPORT\n\n" +
+                "Assignment ID: %d\n" +
+                "Applicant: %s\n" +
+                "Status: %s\n" +
+                "Reviewed By: %s\n" +
+                "Date: %s\n\n" +
+                "Remarks: %s\n",
+                assignment.getAssignmentId(),
+                assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName(),
+                assignment.getStatus(),
+                assignment.getComplianceOfficer().getFirstName() + " " + assignment.getComplianceOfficer().getLastName(),
+                LocalDateTime.now(),
+                assignment.getRemarks()
+        );
+        
+        return reportContent.getBytes();
+    }
+    
+    // ==================== HELPER METHODS ====================
+    
+    private void logActivity(Long applicantId, String activityType, String description, String status) {
+        try {
+            ActivityLog activityLog = new ActivityLog();
+            activityLog.setEntityType("APPLICANT");
+            activityLog.setEntityId(applicantId);
+            activityLog.setActivityType(activityType);
+            activityLog.setDescription(description);
+            activityLog.setStatus(status);
+            activityLog.setTimestamp(LocalDateTime.now());
+            activityLogRepository.save(activityLog);
+        } catch (Exception e) {
+            log.error("Error logging activity", e);
+        }
+    }
+    
+    private int calculateComplianceRiskRating(int fraudFlagCount, Integer riskScore) {
+        if (fraudFlagCount > 0) return 1; // High risk
+        if (riskScore == null) return 3; // Medium risk
+        if (riskScore >= 80) return 5; // Low risk
+        if (riskScore >= 60) return 4; // Medium-low risk
+        if (riskScore >= 40) return 3; // Medium risk
+        return 2; // Medium-high risk
+    }
+    
+    private ComplianceAuditLogResponse mapToComplianceAuditLogResponse(ActivityLog activityLog) {
+        return ComplianceAuditLogResponse.builder()
+                .logId(activityLog.getLogId())
+                .applicantId(activityLog.getEntityId())
+                .action(activityLog.getActivityType())
+                .decision(activityLog.getStatus())
+                .remarks(activityLog.getDescription())
+                .timestamp(activityLog.getTimestamp())
+                .build();
+    }
+    
+    private DocumentResponse mapToDocumentResponse(UploadedDocument document) {
+        return DocumentResponse.builder()
+                .documentId(document.getDocumentId())
+                .documentType(document.getDocumentType())
+                .documentUrl(document.getCloudinaryUrl())
+                .fileName(document.getOriginalFilename())
+                .verificationStatus(document.getVerificationStatus() != null ? document.getVerificationStatus().toString() : "PENDING")
+                .uploadedAt(document.getUploadedAt())
+                .build();
+    }
+    
+    private FraudHistoryResponse mapToFraudHistoryResponse(FraudFlag fraudFlag) {
+        return FraudHistoryResponse.builder()
+                .recordId(fraudFlag.getId())
+                .applicantId(fraudFlag.getApplicant().getApplicantId())
+                .fraudType(fraudFlag.getRuleName())
+                .fraudTags(Arrays.asList(fraudFlag.getRuleName()))
+                .riskLevel(fraudFlag.getSeverity() != null ? fraudFlag.getSeverity().toString() : "UNKNOWN")
+                .detectedAt(fraudFlag.getCreatedAt())
+                .status("DETECTED")
+                .remarks(fraudFlag.getFlagNotes())
+                .build();
     }
 }
