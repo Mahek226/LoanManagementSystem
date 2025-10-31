@@ -72,6 +72,82 @@ export interface DashboardStats {
   rejected: number;
   highRisk: number;
   criticalRisk: number;
+  avgDecisionTime?: number;
+  todayReviewed?: number;
+}
+
+export interface KYCVerificationRequest {
+  applicantId: number;
+  panNumber: string;
+  aadhaarNumber: string;
+  verificationType: 'PAN' | 'AADHAAR' | 'BOTH';
+}
+
+export interface KYCVerificationResponse {
+  verified: boolean;
+  panStatus?: string;
+  aadhaarStatus?: string;
+  nameMatch: boolean;
+  addressMatch: boolean;
+  duplicateFound: boolean;
+  remarks?: string;
+}
+
+export interface AMLScreeningRequest {
+  applicantId: number;
+  applicantName: string;
+  panNumber: string;
+  checkTypes: string[]; // ['RBI_DEFAULTERS', 'FATF_SANCTIONS', 'OFAC', 'INTERNAL_BLACKLIST']
+}
+
+export interface AMLScreeningResponse {
+  applicantId: number;
+  screeningDate: string;
+  overallRisk: 'CLEAR' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  findings: AMLFinding[];
+  isPEP: boolean; // Politically Exposed Person
+  recommendations: string[];
+}
+
+export interface AMLFinding {
+  source: string; // 'RBI_DEFAULTERS', 'FATF', 'OFAC', etc.
+  matchType: 'EXACT' | 'PARTIAL' | 'NONE';
+  matchScore: number;
+  details: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface ComplianceAuditLog {
+  logId: number;
+  assignmentId: number;
+  loanId: number;
+  applicantId: number;
+  officerId: number;
+  officerName: string;
+  action: string;
+  decision?: string;
+  remarks?: string;
+  timestamp: string;
+  ipAddress?: string;
+  checksPerformed?: string[];
+}
+
+export interface RiskCorrelationAnalysis {
+  loanId: number;
+  applicantId: number;
+  fraudTags: string[];
+  defaulterHistory: boolean;
+  transactionAnomalies: string[];
+  complianceRiskRating: number; // 1-5
+  riskFactors: RiskFactor[];
+  recommendation: string;
+}
+
+export interface RiskFactor {
+  category: string;
+  description: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  weight: number;
 }
 
 // ==================== Service ====================
@@ -147,6 +223,82 @@ export class ComplianceOfficerService {
    */
   updateOfficerProfile(officerId: number, profileData: any): Observable<any> {
     return this.http.put(`${this.profileUrl}/compliance-officer/${officerId}`, profileData);
+  }
+
+  /**
+   * Perform KYC reverification
+   */
+  verifyKYC(request: KYCVerificationRequest): Observable<KYCVerificationResponse> {
+    return this.http.post<KYCVerificationResponse>(`${this.apiUrl}/kyc-verification`, request);
+  }
+
+  /**
+   * Perform AML & Sanctions screening
+   */
+  performAMLScreening(request: AMLScreeningRequest): Observable<AMLScreeningResponse> {
+    return this.http.post<AMLScreeningResponse>(`${this.apiUrl}/aml-screening`, request);
+  }
+
+  /**
+   * Get risk correlation analysis
+   */
+  getRiskCorrelationAnalysis(loanId: number): Observable<RiskCorrelationAnalysis> {
+    return this.http.get<RiskCorrelationAnalysis>(`${this.apiUrl}/loan/${loanId}/risk-correlation`);
+  }
+
+  /**
+   * Get audit logs for a specific loan/assignment
+   */
+  getAuditLogs(assignmentId: number): Observable<ComplianceAuditLog[]> {
+    return this.http.get<ComplianceAuditLog[]>(`${this.apiUrl}/assignment/${assignmentId}/audit-logs`);
+  }
+
+  /**
+   * Get all audit logs for compliance officer
+   */
+  getAllAuditLogs(officerId: number): Observable<ComplianceAuditLog[]> {
+    return this.http.get<ComplianceAuditLog[]>(`${this.apiUrl}/${officerId}/audit-logs`);
+  }
+
+  /**
+   * Generate compliance report PDF
+   */
+  generateComplianceReport(assignmentId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/assignment/${assignmentId}/generate-report`, {
+      responseType: 'blob'
+    });
+  }
+
+  /**
+   * Check if applicant is on RBI defaulters list
+   */
+  checkRBIDefaulters(panNumber: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/check-rbi-defaulters/${panNumber}`);
+  }
+
+  /**
+   * Check if applicant is on sanctions list (FATF/OFAC)
+   */
+  checkSanctionsList(applicantName: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/check-sanctions`, {
+      params: { name: applicantName }
+    });
+  }
+
+  /**
+   * Check internal blacklist
+   */
+  checkInternalBlacklist(applicantId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/check-blacklist/${applicantId}`);
+  }
+
+  /**
+   * Check if applicant is a Politically Exposed Person (PEP)
+   */
+  checkPEPStatus(applicantName: string, panNumber: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/check-pep`, {
+      params: { name: applicantName, pan: panNumber }
+    });
   }
 
   // ==================== Utility Methods ====================
