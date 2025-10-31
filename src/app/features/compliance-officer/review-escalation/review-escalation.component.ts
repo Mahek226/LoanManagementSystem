@@ -7,7 +7,13 @@ import {
   ComplianceEscalation, 
   ComplianceDecisionRequest,
   FraudHistoryRecord,
-  AdditionalDocumentRequest
+  AdditionalDocumentRequest,
+  KYCVerificationRequest,
+  KYCVerificationResponse,
+  AMLScreeningRequest,
+  AMLScreeningResponse,
+  RiskCorrelationAnalysis,
+  ComplianceAuditLog
 } from '../../../core/services/compliance-officer.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -40,11 +46,36 @@ export class ReviewEscalationComponent implements OnInit {
   showFraudHistoryModal = false;
   showDocumentsModal = false;
   showRequestDocumentsModal = false;
+  showKYCModal = false;
+  showAMLModal = false;
+  showRiskAnalysisModal = false;
+  showAuditLogsModal = false;
 
   // Additional document request
   selectedDocumentTypes: string[] = [];
   documentRequestReason = '';
   availableDocumentTypes = ['PAN_CARD', 'AADHAAR_CARD', 'INCOME_PROOF', 'BANK_STATEMENT', 'PROPERTY_DOCUMENTS', 'EMPLOYMENT_PROOF', 'CREDIT_REPORT'];
+
+  // KYC Verification
+  kycResult: KYCVerificationResponse | null = null;
+  kycVerifying = false;
+  selectedKYCType: 'PAN' | 'AADHAAR' | 'BOTH' = 'BOTH';
+
+  // AML Screening
+  amlResult: AMLScreeningResponse | null = null;
+  amlScreening = false;
+  selectedAMLChecks: string[] = ['RBI_DEFAULTERS', 'FATF_SANCTIONS', 'OFAC', 'INTERNAL_BLACKLIST'];
+
+  // Risk Correlation
+  riskAnalysis: RiskCorrelationAnalysis | null = null;
+  riskAnalysisLoading = false;
+
+  // Audit Logs
+  auditLogs: ComplianceAuditLog[] = [];
+  auditLogsLoading = false;
+
+  // Active tab for review sections
+  activeReviewTab: string = 'overview';
 
   constructor(
     private complianceService: ComplianceOfficerService,
@@ -334,5 +365,216 @@ export class ReviewEscalationComponent implements OnInit {
       'CLEARED': 'badge bg-info'
     };
     return classes[status] || 'badge bg-secondary';
+  }
+
+  // ==================== KYC Verification ====================
+
+  openKYCModal(): void {
+    this.showKYCModal = true;
+    this.kycResult = null;
+  }
+
+  closeKYCModal(): void {
+    this.showKYCModal = false;
+  }
+
+  performKYCVerification(): void {
+    if (!this.escalation) return;
+
+    // Mock data for demonstration - replace with actual applicant data
+    const request: KYCVerificationRequest = {
+      applicantId: this.escalation.applicantId,
+      panNumber: 'ABCDE1234F', // Get from escalation data
+      aadhaarNumber: '123456789012', // Get from escalation data
+      verificationType: this.selectedKYCType
+    };
+
+    this.kycVerifying = true;
+    this.complianceService.verifyKYC(request).subscribe({
+      next: (result) => {
+        this.kycResult = result;
+        this.kycVerifying = false;
+        if (result.verified) {
+          this.successMessage = 'KYC verification completed successfully';
+        } else {
+          this.errorMessage = 'KYC verification failed - please review details';
+        }
+        setTimeout(() => {
+          this.successMessage = '';
+          this.errorMessage = '';
+        }, 3000);
+      },
+      error: (err) => {
+        console.error('KYC verification error:', err);
+        this.errorMessage = 'Failed to perform KYC verification';
+        this.kycVerifying = false;
+      }
+    });
+  }
+
+  // ==================== AML Screening ====================
+
+  openAMLModal(): void {
+    this.showAMLModal = true;
+    this.amlResult = null;
+  }
+
+  closeAMLModal(): void {
+    this.showAMLModal = false;
+  }
+
+  performAMLScreening(): void {
+    if (!this.escalation) return;
+
+    const request: AMLScreeningRequest = {
+      applicantId: this.escalation.applicantId,
+      applicantName: this.escalation.applicantName,
+      panNumber: 'ABCDE1234F', // Get from escalation data
+      checkTypes: this.selectedAMLChecks
+    };
+
+    this.amlScreening = true;
+    this.complianceService.performAMLScreening(request).subscribe({
+      next: (result) => {
+        this.amlResult = result;
+        this.amlScreening = false;
+        if (result.overallRisk === 'CLEAR' || result.overallRisk === 'LOW') {
+          this.successMessage = 'AML screening completed - No major concerns found';
+        } else {
+          this.errorMessage = `AML screening flagged ${result.overallRisk} risk - review findings`;
+        }
+        setTimeout(() => {
+          this.successMessage = '';
+          this.errorMessage = '';
+        }, 3000);
+      },
+      error: (err) => {
+        console.error('AML screening error:', err);
+        this.errorMessage = 'Failed to perform AML screening';
+        this.amlScreening = false;
+      }
+    });
+  }
+
+  toggleAMLCheck(checkType: string): void {
+    const index = this.selectedAMLChecks.indexOf(checkType);
+    if (index > -1) {
+      this.selectedAMLChecks.splice(index, 1);
+    } else {
+      this.selectedAMLChecks.push(checkType);
+    }
+  }
+
+  getAMLRiskClass(risk: string): string {
+    const classes: any = {
+      'CLEAR': 'badge bg-success',
+      'LOW': 'badge bg-info',
+      'MEDIUM': 'badge bg-warning',
+      'HIGH': 'badge bg-danger',
+      'CRITICAL': 'badge bg-danger text-white'
+    };
+    return classes[risk] || 'badge bg-secondary';
+  }
+
+  getSeverityClass(severity: string): string {
+    const classes: any = {
+      'LOW': 'badge bg-info',
+      'MEDIUM': 'badge bg-warning',
+      'HIGH': 'badge bg-danger',
+      'CRITICAL': 'badge bg-danger text-white'
+    };
+    return classes[severity] || 'badge bg-secondary';
+  }
+
+  // ==================== Risk Correlation Analysis ====================
+
+  openRiskAnalysisModal(): void {
+    this.showRiskAnalysisModal = true;
+    this.loadRiskAnalysis();
+  }
+
+  closeRiskAnalysisModal(): void {
+    this.showRiskAnalysisModal = false;
+  }
+
+  loadRiskAnalysis(): void {
+    if (!this.escalation) return;
+
+    this.riskAnalysisLoading = true;
+    this.complianceService.getRiskCorrelationAnalysis(this.escalation.loanId).subscribe({
+      next: (analysis) => {
+        this.riskAnalysis = analysis;
+        this.riskAnalysisLoading = false;
+      },
+      error: (err) => {
+        console.error('Risk analysis error:', err);
+        this.errorMessage = 'Failed to load risk correlation analysis';
+        this.riskAnalysisLoading = false;
+      }
+    });
+  }
+
+  getRiskRatingStars(rating: number): string[] {
+    return Array(5).fill('').map((_, i) => i < rating ? 'fas fa-star text-warning' : 'far fa-star text-muted');
+  }
+
+  // ==================== Audit Logs ====================
+
+  openAuditLogsModal(): void {
+    this.showAuditLogsModal = true;
+    this.loadAuditLogs();
+  }
+
+  closeAuditLogsModal(): void {
+    this.showAuditLogsModal = false;
+  }
+
+  loadAuditLogs(): void {
+    if (!this.escalation) return;
+
+    this.auditLogsLoading = true;
+    this.complianceService.getAuditLogs(this.escalation.assignmentId).subscribe({
+      next: (logs) => {
+        this.auditLogs = logs;
+        this.auditLogsLoading = false;
+      },
+      error: (err) => {
+        console.error('Audit logs error:', err);
+        this.errorMessage = 'Failed to load audit logs';
+        this.auditLogsLoading = false;
+      }
+    });
+  }
+
+  // ==================== Report Generation ====================
+
+  generateComplianceReport(): void {
+    if (!this.escalation) return;
+
+    this.processing = true;
+    this.complianceService.generateComplianceReport(this.escalation.assignmentId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `compliance-report-${this.escalation?.assignmentId}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        this.successMessage = 'Compliance report downloaded successfully';
+        this.processing = false;
+        setTimeout(() => this.successMessage = '', 3000);
+      },
+      error: (err) => {
+        console.error('Report generation error:', err);
+        this.errorMessage = 'Failed to generate compliance report';
+        this.processing = false;
+      }
+    });
+  }
+
+  // ==================== Tab Switching ====================
+
+  switchReviewTab(tab: string): void {
+    this.activeReviewTab = tab;
   }
 }
