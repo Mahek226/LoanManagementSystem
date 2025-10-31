@@ -13,7 +13,8 @@ public class LoanAssignmentRequest {
     @NotNull(message = "Loan ID is required")
     private Long loanId;
     
-    private Long specificOfficerId; // Optional: if admin wants to assign to specific officer
+    @NotNull(message = "Officer ID is required")
+    private Long officerId; // The officer to assign the loan to
     
     private String priority = "MEDIUM"; // LOW, MEDIUM, HIGH
     

@@ -10,9 +10,9 @@ import com.tss.springsecurity.fraud.FraudDetectionResult;
 import com.tss.springsecurity.fraud.FraudDetectionService;
 import com.tss.springsecurity.fraud.FraudRule;
 import com.tss.springsecurity.repository.ApplicantLoanDetailsRepository;
+import com.tss.springsecurity.repository.FraudRuleDefinitionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,18 +29,13 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
     private final FraudDetectionService internalFraudService;
     private final ExternalFraudScreeningService externalFraudService;
     private final ApplicantLoanDetailsRepository loanRepository;
+    private final FraudRuleDefinitionRepository fraudRuleDefinitionRepository;
     
-    @Value("${loan.scoring.internal.max-score:200}")
-    private Integer internalMaxScore;
-    
-    @Value("${loan.scoring.external.max-score:150}")
-    private Integer externalMaxScore;
-    
-    @Value("${loan.scoring.internal.weight:0.6}")
-    private Double internalWeight;
-    
-    @Value("${loan.scoring.external.weight:0.4}")
-    private Double externalWeight;
+    // External fraud rule points (hardcoded in ExternalFraudRuleEngine)
+    // CRIMINAL_CONVICTION: 100, CRIMINAL_OPEN_CASE: 60, LOAN_DEFAULT_HISTORY: 80,
+    // MULTIPLE_ACTIVE_LOANS: 50, HIGH_OUTSTANDING_DEBT: 45, EXCESSIVE_BANK_ACCOUNTS: 30,
+    // MULTIPLE_INACTIVE_ACCOUNTS: 25, EXTERNAL_SYSTEM_ERROR: 25, EXPIRED_DOCUMENT: 20, UNVERIFIED_DOCUMENT: 15
+    private static final int EXTERNAL_MAX_FRAUD_POINTS = 450;
     
     /**
      * Perform enhanced loan screening with normalized scoring
@@ -102,11 +97,12 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
      */
     @Override
     public ScoringConfiguration getScoringConfiguration() {
+        Integer internalMaxScore = fraudRuleDefinitionRepository.getTotalFraudPointsFromActiveRules();
         ScoringConfiguration config = new ScoringConfiguration();
-        config.setInternalMaxScore(internalMaxScore);
-        config.setExternalMaxScore(externalMaxScore);
-        config.setInternalWeight(internalWeight);
-        config.setExternalWeight(externalWeight);
+        config.setInternalMaxScore(internalMaxScore != null ? internalMaxScore : 0);
+        config.setExternalMaxScore(EXTERNAL_MAX_FRAUD_POINTS);
+        config.setInternalWeight(null); // No longer using weights
+        config.setExternalWeight(null); // No longer using weights
         return config;
     }
     
@@ -114,36 +110,98 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
         FraudDetectionResult internal = result.getInternalResult();
         ExternalFraudCheckResult external = result.getExternalResult();
         
-        // Calculate internal normalized score (0-100)
+        // Get raw scores
+        int internalRaw = (internal != null) ? internal.getTotalFraudScore() : 0;
+        int externalRaw = (external != null) ? external.getTotalFraudScore() : 0;
+        int totalRawScore = internalRaw + externalRaw;
+        
+        // Get max possible score from database for internal rules
+        Integer internalMaxScore = fraudRuleDefinitionRepository.getTotalFraudPointsFromActiveRules();
+        if (internalMaxScore == null) {
+            internalMaxScore = 0;
+            log.warn("No active fraud rules found in database, using 0 as max internal score");
+        }
+        
+        // Count violations by severity (CRITICAL, HIGH, MEDIUM, LOW)
+        int criticalCount = 0, highCount = 0, mediumCount = 0, lowCount = 0;
+        
+        // Count internal violations by severity
+        if (internal != null && internal.getTriggeredRules() != null) {
+            for (FraudRule rule : internal.getTriggeredRules()) {
+                String severity = rule.getSeverity();
+                if (severity != null) {
+                    switch (severity.toUpperCase()) {
+                        case "CRITICAL": criticalCount++; break;
+                        case "HIGH": highCount++; break;
+                        case "MEDIUM": mediumCount++; break;
+                        case "LOW": lowCount++; break;
+                    }
+                }
+            }
+        }
+        
+        // Count external violations by severity
+        if (external != null && external.getFraudFlags() != null) {
+            for (ExternalFraudFlag flag : external.getFraudFlags()) {
+                String severity = flag.getSeverity();
+                if (severity != null) {
+                    switch (severity.toUpperCase()) {
+                        case "CRITICAL": criticalCount++; break;
+                        case "HIGH": highCount++; break;
+                        case "MEDIUM": mediumCount++; break;
+                        case "LOW": lowCount++; break;
+                    }
+                }
+            }
+        }
+        
+        // ===== SEVERITY + VOLUME HYBRID SCORING =====
+        // Base Score: Weighted by violation count per severity (max 60% contribution)
+        // Reduced weights to prevent maxing out: CRITICAL=15, HIGH=10, MEDIUM=5, LOW=2
+        double baseScore = (criticalCount * 15.0) + (highCount * 10.0) + (mediumCount * 5.0) + (lowCount * 2.0);
+        baseScore = Math.min(60.0, baseScore); // Cap severity contribution at 60%
+        
+        // Points Score: Normalized raw score (40% weight, higher denominator for better differentiation)
+        double pointsScore = (totalRawScore / 800.0) * 40.0;
+        pointsScore = Math.min(40.0, pointsScore); // Cap at 40%
+        
+        // Final Combined Score
+        double normalizedScore = baseScore + pointsScore;
+        normalizedScore = Math.max(0.0, Math.min(100.0, normalizedScore));
+        
+        // Calculate individual normalized scores for breakdown (using old method for comparison)
         double internalNormalized = 0.0;
-        if (internal != null) {
-            int internalRaw = internal.getTotalFraudScore();
+        if (internalMaxScore > 0) {
             internalNormalized = Math.min(100.0, (double) internalRaw / internalMaxScore * 100.0);
         }
         
-        // Calculate external normalized score (0-100)
         double externalNormalized = 0.0;
-        if (external != null) {
-            int externalRaw = external.getTotalFraudScore();
-            externalNormalized = Math.min(100.0, (double) externalRaw / externalMaxScore * 100.0);
+        if (EXTERNAL_MAX_FRAUD_POINTS > 0) {
+            externalNormalized = Math.min(100.0, (double) externalRaw / EXTERNAL_MAX_FRAUD_POINTS * 100.0);
         }
-        
-        // Calculate weighted combined score
-        double combinedScore = (internalNormalized * internalWeight) + (externalNormalized * externalWeight);
-        
-        // Ensure score is between 0 and 100
-        combinedScore = Math.max(0.0, Math.min(100.0, combinedScore));
         
         result.setInternalNormalizedScore(internalNormalized);
         result.setExternalNormalizedScore(externalNormalized);
-        result.setNormalizedScore(combinedScore);
+        result.setNormalizedScore(normalizedScore);
+        
+        // Store max scores and severity counts for breakdown
+        result.setInternalMaxScore(internalMaxScore);
+        result.setExternalMaxScore(EXTERNAL_MAX_FRAUD_POINTS);
+        result.setSeverityCounts(new int[]{criticalCount, highCount, mediumCount, lowCount});
         
         // Determine risk level based on normalized score
-        String riskLevel = determineRiskLevel(combinedScore);
+        String riskLevel = determineRiskLevel(normalizedScore);
         result.setFinalRiskLevel(riskLevel);
         
-        log.info("Normalized scores - Internal: {}, External: {}, Combined: {}, Risk Level: {}", 
-                internalNormalized, externalNormalized, combinedScore, riskLevel);
+        log.info("Raw scores - Internal: {}, External: {}, Total: {}", internalRaw, externalRaw, totalRawScore);
+        log.info("Severity counts - Critical: {}, High: {}, Medium: {}, Low: {}", criticalCount, highCount, mediumCount, lowCount);
+        log.info("Hybrid scoring - Severity base: {} (uncapped: {}), Points: {} (raw/800×40) → Final: {}%", 
+                baseScore, 
+                (criticalCount * 15.0) + (highCount * 10.0) + (mediumCount * 5.0) + (lowCount * 2.0),
+                String.format("%.1f", pointsScore), 
+                String.format("%.1f", normalizedScore));
+        log.info("Risk Level: {} (Old pure proportional method would give: {}%)", riskLevel, 
+                String.format("%.2f", ((double) totalRawScore / (internalMaxScore + EXTERNAL_MAX_FRAUD_POINTS)) * 100.0));
     }
     
     private String determineRiskLevel(double score) {
@@ -162,7 +220,7 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
         if (result.getInternalResult() != null) {
             FraudDetectionResult internal = result.getInternalResult();
             internalScoring.setRawScore(internal.getTotalFraudScore());
-            internalScoring.setMaxPossibleScore(internalMaxScore);
+            internalScoring.setMaxPossibleScore(result.getInternalMaxScore());
             internalScoring.setNormalizedScore(result.getInternalNormalizedScore());
             internalScoring.setRiskLevel(internal.getRiskLevel());
             internalScoring.setViolatedRulesCount(internal.getTriggeredRules().size());
@@ -174,7 +232,7 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
         if (result.getExternalResult() != null) {
             ExternalFraudCheckResult external = result.getExternalResult();
             externalScoring.setRawScore(external.getTotalFraudScore());
-            externalScoring.setMaxPossibleScore(externalMaxScore);
+            externalScoring.setMaxPossibleScore(result.getExternalMaxScore());
             externalScoring.setNormalizedScore(result.getExternalNormalizedScore());
             externalScoring.setRiskLevel(external.getRiskLevel());
             externalScoring.setViolatedRulesCount(external.getFraudFlags().size());
@@ -182,11 +240,32 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
             externalScoring.setCategories(extractExternalCategories(external));
         }
         
+        // Severity breakdown
+        ScoringBreakdown.SeverityBreakdown severityBreakdown = new ScoringBreakdown.SeverityBreakdown();
+        if (result.getSeverityCounts() != null && result.getSeverityCounts().length >= 4) {
+            int[] counts = result.getSeverityCounts();
+            severityBreakdown.setCriticalCount(counts[0]);
+            severityBreakdown.setHighCount(counts[1]);
+            severityBreakdown.setMediumCount(counts[2]);
+            severityBreakdown.setLowCount(counts[3]);
+            severityBreakdown.setTotalViolations(counts[0] + counts[1] + counts[2] + counts[3]);
+            
+            // Calculate score contributions (using new reduced weights)
+            double baseSeverityScore = (counts[0] * 15.0) + (counts[1] * 10.0) + (counts[2] * 5.0) + (counts[3] * 2.0);
+            baseSeverityScore = Math.min(60.0, baseSeverityScore); // Cap at 60%
+            int totalRawScore = (result.getInternalResult() != null ? result.getInternalResult().getTotalFraudScore() : 0) +
+                               (result.getExternalResult() != null ? result.getExternalResult().getTotalFraudScore() : 0);
+            double pointsContribution = Math.min(40.0, (totalRawScore / 800.0) * 40.0);
+            
+            severityBreakdown.setSeverityScore(baseSeverityScore);
+            severityBreakdown.setPointsScore(pointsContribution);
+        }
+        
         breakdown.setInternalScoring(internalScoring);
         breakdown.setExternalScoring(externalScoring);
-        breakdown.setNormalizationMethod("Weighted Average with Score Capping");
-        breakdown.setCombinationFormula(String.format("(Internal × %.1f) + (External × %.1f)", 
-                internalWeight, externalWeight));
+        breakdown.setSeverityBreakdown(severityBreakdown);
+        breakdown.setNormalizationMethod("Severity + Volume Hybrid Scoring");
+        breakdown.setCombinationFormula("Base = min(60, Critical×15 + High×10 + Medium×5 + Low×2) + Points = min(40, RawScore/800×40)");
         
         result.setScoringBreakdown(breakdown);
     }
@@ -295,6 +374,9 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
         private Double internalNormalizedScore;
         private Double externalNormalizedScore;
         private Double normalizedScore; // Final combined score (0-100)
+        private Integer internalMaxScore; // Max score from database
+        private Integer externalMaxScore; // Max score hardcoded
+        private int[] severityCounts; // [critical, high, medium, low]
         private String finalRiskLevel;
         private String finalRecommendation;
         
@@ -328,6 +410,15 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
         
         public Double getNormalizedScore() { return normalizedScore; }
         public void setNormalizedScore(Double normalizedScore) { this.normalizedScore = normalizedScore; }
+        
+        public Integer getInternalMaxScore() { return internalMaxScore; }
+        public void setInternalMaxScore(Integer internalMaxScore) { this.internalMaxScore = internalMaxScore; }
+        
+        public Integer getExternalMaxScore() { return externalMaxScore; }
+        public void setExternalMaxScore(Integer externalMaxScore) { this.externalMaxScore = externalMaxScore; }
+        
+        public int[] getSeverityCounts() { return severityCounts; }
+        public void setSeverityCounts(int[] severityCounts) { this.severityCounts = severityCounts; }
         
         public String getFinalRiskLevel() { return finalRiskLevel; }
         public void setFinalRiskLevel(String finalRiskLevel) { this.finalRiskLevel = finalRiskLevel; }

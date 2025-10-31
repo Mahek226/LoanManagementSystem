@@ -23,11 +23,13 @@ public class CloudinaryService {
             originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
         String uniqueFilename = applicantId + "_" + UUID.randomUUID().toString() + fileExtension;
 
-        // Upload parameters
+        // Upload parameters - PUBLIC ACCESS for document viewing
         Map<String, Object> uploadParams = ObjectUtils.asMap(
             "folder", "loan_documents/" + folder,
             "public_id", uniqueFilename,
             "resource_type", "auto",
+            "type", "upload",
+            "access_mode", "public",
             "quality", "auto:good",
             "fetch_format", "auto"
         );
@@ -50,11 +52,13 @@ public class CloudinaryService {
             originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
         String uniqueFilename = applicantId + "_" + UUID.randomUUID().toString() + fileExtension;
 
-        // Upload parameters
+        // Upload parameters - PUBLIC ACCESS for document viewing
         Map<String, Object> uploadParams = ObjectUtils.asMap(
             "folder", "loan_documents/" + documentType.toLowerCase(),
             "public_id", uniqueFilename,
             "resource_type", "auto",
+            "type", "upload",
+            "access_mode", "public",
             "quality", "auto:good",
             "fetch_format", "auto"
         );
@@ -84,5 +88,39 @@ public class CloudinaryService {
             }
         }
         return null;
+    }
+
+    /**
+     * Make an existing Cloudinary resource public
+     * This is useful for fixing 401 errors on previously uploaded private documents
+     */
+    public boolean makeResourcePublic(String publicId) {
+        try {
+            Map<String, Object> params = ObjectUtils.asMap(
+                "access_mode", "public",
+                "type", "upload",
+                "invalidate", true
+            );
+            Map<String, Object> result = cloudinary.uploader().explicit(publicId, params);
+            return result != null && result.containsKey("secure_url");
+        } catch (IOException e) {
+            System.err.println("Failed to make resource public: " + publicId + " - " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Batch update existing documents to public access
+     * Use this to fix 401 errors on old uploads
+     */
+    public int makeAllDocumentsPublic(java.util.List<String> cloudinaryUrls) {
+        int successCount = 0;
+        for (String url : cloudinaryUrls) {
+            String publicId = extractPublicIdFromUrl(url);
+            if (publicId != null && makeResourcePublic(publicId)) {
+                successCount++;
+            }
+        }
+        return successCount;
     }
 }

@@ -25,6 +25,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final ApplicantCreditHistoryRepository creditHistoryRepository;
     private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final CompleteLoanApplicationServiceImpl completeLoanApplicationService;
+    private final com.tss.springsecurity.service.DocumentExtractionService documentExtractionService;
     
     public LoanApplicationServiceImpl(
             ApplicantRepository applicantRepository,
@@ -34,7 +35,8 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
             ApplicantPropertyDetailsRepository propertyDetailsRepository,
             ApplicantCreditHistoryRepository creditHistoryRepository,
             ApplicantLoanDetailsRepository loanDetailsRepository,
-            CompleteLoanApplicationServiceImpl completeLoanApplicationService) {
+            CompleteLoanApplicationServiceImpl completeLoanApplicationService,
+            com.tss.springsecurity.service.DocumentExtractionService documentExtractionService) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.employmentRepository = employmentRepository;
@@ -43,6 +45,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         this.creditHistoryRepository = creditHistoryRepository;
         this.loanDetailsRepository = loanDetailsRepository;
         this.completeLoanApplicationService = completeLoanApplicationService;
+        this.documentExtractionService = documentExtractionService;
     }
     
     @Override
@@ -235,6 +238,10 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         // Save Documents if provided
         if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
             saveDocuments(applicant, dto.getDocuments());
+            
+            // TODO: Document extraction will be triggered separately via DocumentUploadController
+            // when documents are uploaded, not during loan submission
+            System.out.println("Documents saved for applicant ID: " + applicant.getApplicantId());
         }
         
         // Save References if provided

@@ -6,8 +6,11 @@ import com.tss.springsecurity.dto.AdminRegisterRequest;
 import com.tss.springsecurity.dto.ApplicantSummaryDTO;
 import com.tss.springsecurity.dto.DashboardStatsResponse;
 import com.tss.springsecurity.entity.Applicant;
+import com.tss.springsecurity.entity.UploadedDocument;
+import com.tss.springsecurity.repository.UploadedDocumentRepository;
 import com.tss.springsecurity.service.AdminService;
 import com.tss.springsecurity.service.ApplicantService;
+import com.tss.springsecurity.service.CloudinaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, allowCredentials = "true")
@@ -27,6 +31,8 @@ public class AdminController {
 
     private final AdminService adminService;
     private final ApplicantService applicantService;
+    private final CloudinaryService cloudinaryService;
+    private final UploadedDocumentRepository documentRepository;
 
     // Auth endpoints
     @PostMapping("/api/admin/auth/register")
@@ -146,8 +152,47 @@ public class AdminController {
         }
     }
 
+    /**
+     * Fix Cloudinary access for existing documents
+     * Makes all private documents public to resolve 401 errors
+     */
+    @PostMapping("/api/admin/fix-cloudinary-access")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> fixCloudinaryAccess() {
+        try {
+            // Get all documents from database
+            List<UploadedDocument> allDocuments = documentRepository.findAll();
+            
+            if (allDocuments.isEmpty()) {
+                return ResponseEntity.ok(new FixCloudinaryResponse(
+                    0, 0, "No documents found in database"
+                ));
+            }
+            
+            // Extract Cloudinary URLs
+            List<String> cloudinaryUrls = allDocuments.stream()
+                .map(UploadedDocument::getCloudinaryUrl)
+                .filter(url -> url != null && !url.isEmpty())
+                .collect(Collectors.toList());
+            
+            // Make all documents public
+            int successCount = cloudinaryService.makeAllDocumentsPublic(cloudinaryUrls);
+            
+            return ResponseEntity.ok(new FixCloudinaryResponse(
+                cloudinaryUrls.size(),
+                successCount,
+                "Successfully updated " + successCount + " out of " + cloudinaryUrls.size() + " documents to public access"
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to fix Cloudinary access: " + e.getMessage()));
+        }
+    }
+
     // Inner classes for responses
     private record ErrorResponse(String message) {}
     private record SuccessResponse(String message) {}
     private record ApprovalRequest(String comments) {}
+    private record FixCloudinaryResponse(int totalDocuments, int successCount, String message) {}
 }
