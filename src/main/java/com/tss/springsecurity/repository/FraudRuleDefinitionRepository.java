@@ -56,4 +56,10 @@ public interface FraudRuleDefinitionRepository extends JpaRepository<FraudRuleDe
      * Count rules by severity
      */
     long countBySeverityAndIsActiveTrue(String severity);
+    
+    /**
+     * Calculate total sum of fraud points from all active rules
+     */
+    @Query("SELECT COALESCE(SUM(f.fraudPoints), 0) FROM FraudRuleDefinition f WHERE f.isActive = true")
+    Integer getTotalFraudPointsFromActiveRules();
 }

@@ -52,6 +52,7 @@ public class EnhancedLoanScreeningResponse {
     public static class ScoringBreakdown {
         private InternalScoring internalScoring;
         private ExternalScoring externalScoring;
+        private SeverityBreakdown severityBreakdown;
         private String normalizationMethod;
         private String combinationFormula;
         
@@ -78,6 +79,19 @@ public class EnhancedLoanScreeningResponse {
             private Integer violatedRulesCount;
             private Boolean personFound;
             private List<String> categories; // Criminal, Loan History, Bank Records, etc.
+        }
+        
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class SeverityBreakdown {
+            private Integer criticalCount;
+            private Integer highCount;
+            private Integer mediumCount;
+            private Integer lowCount;
+            private Integer totalViolations;
+            private Double severityScore; // Score contribution from severity (0-100)
+            private Double pointsScore; // Score contribution from fraud points (0-40)
         }
     }
     
