@@ -18,6 +18,11 @@ export class MyApplicationsComponent implements OnInit {
   loading = false;
   error = '';
   
+  // Detail Modal
+  showDetailModal = false;
+  selectedLoan: any = null;
+  loadingDetails = false;
+  
   applicantId: number = 0;
   searchQuery = '';
   selectedStatus = '';
@@ -82,18 +87,28 @@ export class MyApplicationsComponent implements OnInit {
   }
 
   viewDetails(loanId: number): void {
-    // For now, show details in a modal or navigate to a details page
-    // TODO: Create application details component
+    this.loadingDetails = true;
+    this.showDetailModal = true;
+    this.selectedLoan = null;
+    
     this.applicantService.getLoanDetails(loanId).subscribe({
       next: (details) => {
         console.log('Loan Details:', details);
-        alert(`Loan Details:\nLoan ID: ${details.loanId}\nType: ${details.loanType}\nAmount: ₹${details.loanAmount}\nStatus: ${details.loanStatus}`);
+        this.selectedLoan = details;
+        this.loadingDetails = false;
       },
       error: (err) => {
         console.error('Error loading details:', err);
-        alert('Failed to load loan details');
+        this.error = 'Failed to load loan details';
+        this.loadingDetails = false;
+        this.showDetailModal = false;
       }
     });
+  }
+  
+  closeDetailModal(): void {
+    this.showDetailModal = false;
+    this.selectedLoan = null;
   }
 
   downloadPDF(app: LoanApplication): void {
