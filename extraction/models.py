@@ -16,7 +16,7 @@ class Applicant(Base):
     documents = relationship("Document", back_populates="applicant", cascade="all, delete-orphan")
 
 class Document(Base):
-    __tablename__ = "documents"
+    __tablename__ = "uploaded_documents"
     id = Column(BigInteger, primary_key=True, index=True)
     applicant_id = Column(BigInteger, ForeignKey("applicant.applicant_id"))
     document_type = Column(String(50))
@@ -29,7 +29,7 @@ class Document(Base):
 class ExtractedField(Base):
     __tablename__ = "extracted_fields"
     id = Column(BigInteger, primary_key=True, index=True)
-    document_id = Column(BigInteger, ForeignKey("documents.id"))
+    document_id = Column(BigInteger, ForeignKey("uploaded_documents.document_id"))
     field_name = Column(String(150))
     field_value = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
