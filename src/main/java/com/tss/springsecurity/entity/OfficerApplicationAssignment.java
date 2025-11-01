@@ -27,6 +27,10 @@ public class OfficerApplicationAssignment {
     @JoinColumn(name = "applicant_id", nullable = false)
     private Applicant applicant;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loan_id")
+    private ApplicantLoanDetails loan;
+    
     @Column(name = "status", length = 50)
     private String status; // PENDING, IN_PROGRESS, COMPLETED, REJECTED
     
@@ -35,6 +39,9 @@ public class OfficerApplicationAssignment {
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+    
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
     
     @Column(name = "priority", length = 20)
     private String priority; // LOW, MEDIUM, HIGH

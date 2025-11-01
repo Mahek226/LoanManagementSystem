@@ -19,6 +19,11 @@ public class LoanAssignmentController {
     
     private final LoanAssignmentService loanAssignmentService;
     
+    /**
+     * Assign a loan to a loan officer.
+     * If officerId is not provided, the system will automatically assign to the best available officer
+     * based on loan type category and current workload.
+     */
     @PostMapping("/assign")
     public ResponseEntity<?> assignLoanToOfficer(@Valid @RequestBody LoanAssignmentRequest request) {
         try {

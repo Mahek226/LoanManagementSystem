@@ -25,6 +25,7 @@ public class CompleteLoanApplicationServiceImpl {
     private final OtherDocumentRepository otherDocumentRepository;
     private final ApplicantDependentRepository dependentRepository;
     private final LoanCollateralRepository collateralRepository;
+    private final UploadedDocumentRepository uploadedDocumentRepository;
     
     public CompleteLoanApplicationServiceImpl(
             ApplicantRepository applicantRepository,
@@ -39,7 +40,8 @@ public class CompleteLoanApplicationServiceImpl {
             PassportDetailsRepository passportDetailsRepository,
             OtherDocumentRepository otherDocumentRepository,
             ApplicantDependentRepository dependentRepository,
-            LoanCollateralRepository collateralRepository) {
+            LoanCollateralRepository collateralRepository,
+            UploadedDocumentRepository uploadedDocumentRepository) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.employmentRepository = employmentRepository;
@@ -53,6 +55,7 @@ public class CompleteLoanApplicationServiceImpl {
         this.otherDocumentRepository = otherDocumentRepository;
         this.dependentRepository = dependentRepository;
         this.collateralRepository = collateralRepository;
+        this.uploadedDocumentRepository = uploadedDocumentRepository;
     }
     
     @Transactional
@@ -85,6 +88,9 @@ public class CompleteLoanApplicationServiceImpl {
         
         // 7. Create Loan Details
         ApplicantLoanDetails loan = createLoanDetails(applicant, dto);
+        
+        // Link all previously uploaded documents (with null loan_id) to this loan
+        linkDocumentsToLoan(applicant.getApplicantId(), loan.getLoanId());
         
         // 8. Create Documents
         createDocuments(applicant, dto);
@@ -325,5 +331,32 @@ public class CompleteLoanApplicationServiceImpl {
         }
         
         return baseRate;
+    }
+    
+    /**
+     * Link all documents with null loan_id for this applicant to the specified loan
+     */
+    private void linkDocumentsToLoan(Long applicantId, Long loanId) {
+        // Find the loan entity
+        ApplicantLoanDetails loan = loanDetailsRepository.findById(loanId).orElse(null);
+        if (loan == null) {
+            return;
+        }
+        
+        // Find all documents for this applicant with null loan_id
+        java.util.List<UploadedDocument> documents = uploadedDocumentRepository.findByApplicant_ApplicantId(applicantId);
+        int linkedCount = 0;
+        
+        for (UploadedDocument doc : documents) {
+            if (doc.getLoan() == null) {
+                doc.setLoan(loan);
+                uploadedDocumentRepository.save(doc);
+                linkedCount++;
+            }
+        }
+        
+        if (linkedCount > 0) {
+            System.out.println("Linked " + linkedCount + " document(s) to loan ID: " + loanId);
+        }
     }
 }

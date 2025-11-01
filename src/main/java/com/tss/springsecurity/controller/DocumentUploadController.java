@@ -31,6 +31,9 @@ public class DocumentUploadController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam("documentTypes") List<String> documentTypes) {
         
+        log.info("Document upload request - ApplicantId: {}, LoanId: {}, Files: {}", 
+                applicantId, loanId != null ? loanId : "NOT PROVIDED (will auto-assign)", files.size());
+        
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -129,8 +132,9 @@ public class DocumentUploadController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("documentType") String documentType) {
         
-        log.info("Received upload request - ApplicantId: {}, DocumentType: {}, File: {}", 
-                applicantId, documentType, file.getOriginalFilename());
+        log.info("Received upload request - ApplicantId: {}, LoanId: {}, DocumentType: {}, File: {}", 
+                applicantId, loanId != null ? loanId : "NOT PROVIDED (will auto-assign)", 
+                documentType, file.getOriginalFilename());
         
         Map<String, Object> response = new HashMap<>();
         

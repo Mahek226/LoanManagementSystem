@@ -25,11 +25,40 @@ public class LoanOfficerScreeningController {
     private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
     private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
     private final com.tss.springsecurity.service.ApplicantNotificationService notificationService;
+    private final com.tss.springsecurity.service.ComprehensiveLoanViewService comprehensiveLoanViewService;
+    private final com.tss.springsecurity.service.ComprehensiveDashboardService comprehensiveDashboardService;
+    private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
+    private final com.tss.springsecurity.repository.ApplicantBasicDetailsRepository basicDetailsRepository;
     
     @GetMapping("/{officerId}/assigned-loans")
     public ResponseEntity<List<LoanScreeningResponse>> getAssignedLoans(@PathVariable Long officerId) {
         List<LoanScreeningResponse> loans = screeningService.getAssignedLoansForOfficer(officerId);
         return ResponseEntity.ok(loans);
+    }
+    
+    /**
+     * Get comprehensive dashboard with all KPIs, metrics, and visualizations
+     * Supports filtering by time period
+     */
+    @GetMapping("/{officerId}/comprehensive-dashboard")
+    public ResponseEntity<?> getComprehensiveDashboard(
+            @PathVariable Long officerId,
+            @RequestParam(required = false, defaultValue = "MONTH") String filterType,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        try {
+            java.time.LocalDate start = startDate != null ? java.time.LocalDate.parse(startDate) : null;
+            java.time.LocalDate end = endDate != null ? java.time.LocalDate.parse(endDate) : null;
+            
+            com.tss.springsecurity.dto.ComprehensiveDashboardDTO dashboard = 
+                    comprehensiveDashboardService.getComprehensiveDashboard(officerId, filterType, start, end);
+            
+            return ResponseEntity.ok(dashboard);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error generating dashboard: " + e.getMessage()));
+        }
     }
     
     @GetMapping("/assignment/{assignmentId}/details")
@@ -117,21 +146,22 @@ public class LoanOfficerScreeningController {
         try {
             System.out.println("Starting document extraction for assignment ID: " + assignmentId);
             
-            // Get loan details to find applicant ID
+            // Get loan details to find the specific loan ID
             LoanScreeningResponse loanDetails = screeningService.getLoanDetailsForScreening(assignmentId);
+            Long loanId = loanDetails.getLoanId();
             Long applicantId = loanDetails.getApplicantId();
             
-            System.out.println("Found applicant ID: " + applicantId + " for assignment: " + assignmentId);
+            System.out.println("Found loan ID: " + loanId + " and applicant ID: " + applicantId + " for assignment: " + assignmentId);
             
-            // Get all documents for this applicant
+            // Get only documents for this specific loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByApplicant_ApplicantId(applicantId);
+                documentRepository.findByLoan_LoanId(loanId);
             
-            System.out.println("Found " + documents.size() + " documents for applicant ID: " + applicantId);
+            System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
             if (documents.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No documents found for this applicant"));
+                        .body(new ErrorResponse("No documents found for this loan"));
             }
             
             // Extract each document by downloading from Cloudinary
@@ -238,24 +268,11 @@ public class LoanOfficerScreeningController {
         try {
             System.out.println("Fetching documents for loan ID: " + loanId);
             
+            // Only get documents specifically associated with this loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
                 documentRepository.findByLoan_LoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
-            
-            // If no documents found with loan relationship, try finding by applicant
-            if (documents.isEmpty()) {
-                // Get loan details to find applicant
-                com.tss.springsecurity.entity.ApplicantLoanDetails loan = 
-                    loanRepository.findById(loanId).orElse(null);
-                
-                if (loan != null && loan.getApplicant() != null) {
-                    Long applicantId = loan.getApplicant().getApplicantId();
-                    System.out.println("No documents found with loan_id, trying applicant_id: " + applicantId);
-                    documents = documentRepository.findByApplicant_ApplicantId(applicantId);
-                    System.out.println("Found " + documents.size() + " documents for applicant ID: " + applicantId);
-                }
-            }
             
             List<java.util.Map<String, Object>> documentDetails = new java.util.ArrayList<>();
             for (com.tss.springsecurity.entity.UploadedDocument doc : documents) {
@@ -424,6 +441,74 @@ public class LoanOfficerScreeningController {
     }
     
     /**
+     * Request document resubmission from applicant
+     * Sends notification to applicant to resubmit specific documents
+     */
+    @PostMapping("/{officerId}/request-document-resubmission")
+    public ResponseEntity<?> requestDocumentResubmission(
+            @PathVariable Long officerId,
+            @Valid @RequestBody com.tss.springsecurity.dto.DocumentResubmissionRequest request) {
+        try {
+            System.out.println("Document resubmission requested by officer ID: " + officerId);
+            System.out.println("Assignment ID: " + request.getAssignmentId());
+            System.out.println("Document types: " + request.getDocumentTypes());
+            
+            // Get assignment details
+            com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = 
+                assignmentRepository.findById(request.getAssignmentId())
+                    .orElseThrow(() -> new RuntimeException("Assignment not found"));
+            
+            Long applicantId = assignment.getApplicant().getApplicantId();
+            Long loanId = assignment.getLoan().getLoanId();
+            
+            // Update document status to "RESUBMISSION_REQUESTED" for specified documents
+            List<com.tss.springsecurity.entity.UploadedDocument> documents = 
+                documentRepository.findByLoan_LoanId(loanId);
+            
+            for (com.tss.springsecurity.entity.UploadedDocument doc : documents) {
+                if (request.getDocumentTypes().contains(doc.getDocumentType())) {
+                    doc.setVerificationStatus(com.tss.springsecurity.entity.UploadedDocument.VerificationStatus.RESUBMISSION_REQUESTED);
+                    doc.setVerificationNotes(request.getReason());
+                    doc.setVerifiedBy("Officer #" + officerId);
+                    doc.setVerifiedAt(java.time.LocalDateTime.now());
+                    documentRepository.save(doc);
+                }
+            }
+            
+            // Create notification for applicant
+            String requestedBy = "Loan Officer #" + officerId;
+            notificationService.createDocumentResubmissionRequest(
+                applicantId, 
+                loanId, 
+                request.getAssignmentId(),
+                request.getDocumentTypes(), 
+                request.getReason(),
+                request.getAdditionalComments(),
+                requestedBy
+            );
+            
+            System.out.println("Document resubmission request sent to applicant #" + applicantId);
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("message", "Document resubmission request sent to applicant");
+            response.put("loanId", loanId);
+            response.put("applicantId", applicantId);
+            response.put("documentTypes", request.getDocumentTypes());
+            response.put("reason", request.getReason());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+        }
+    }
+    
+    /**
      * Trigger fraud screening for a loan application
      */
     @PostMapping("/{officerId}/trigger-fraud-check")
@@ -442,14 +527,24 @@ public class LoanOfficerScreeningController {
             com.tss.springsecurity.entity.ApplicantLoanDetails loan = loanRepository.findById(loanId)
                     .orElseThrow(() -> new RuntimeException("Loan not found"));
             
+            // Get PAN and Aadhaar from basic details
+            String panNumber = null;
+            String aadhaarNumber = null;
+            com.tss.springsecurity.entity.ApplicantBasicDetails basicDetails = 
+                basicDetailsRepository.findByApplicant_ApplicantId(applicantId).orElse(null);
+            if (basicDetails != null) {
+                panNumber = basicDetails.getPanNumber();
+                aadhaarNumber = basicDetails.getAadhaarNumber();
+            }
+            
             // TODO: Call external fraud screening API
             // For now, return mock fraud check result
             java.util.Map<String, Object> fraudResult = new java.util.HashMap<>();
             fraudResult.put("checkId", System.currentTimeMillis());
             fraudResult.put("loanId", loanId);
             fraudResult.put("applicantId", applicantId);
-            fraudResult.put("panNumber", loan.getPanNumber());
-            fraudResult.put("aadhaarNumber", loan.getAadhaarNumber());
+            fraudResult.put("panNumber", panNumber);
+            fraudResult.put("aadhaarNumber", aadhaarNumber);
             fraudResult.put("phoneNumber", applicant.getPhone());
             fraudResult.put("email", applicant.getEmail());
             fraudResult.put("fraudTags", new java.util.ArrayList<>());
@@ -488,6 +583,27 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("Fraud check results not found"));
+        }
+    }
+    
+    /**
+     * Get comprehensive loan view with data from all related tables
+     * Fetches: loan details, applicant info, documents, dependents, collaterals,
+     * employment, financials, property, credit history, assignments, verification status
+     */
+    @GetMapping("/loan/{loanId}/comprehensive-view")
+    public ResponseEntity<?> getComprehensiveLoanView(@PathVariable Long loanId) {
+        try {
+            com.tss.springsecurity.dto.ComprehensiveLoanViewDTO loanView = 
+                    comprehensiveLoanViewService.getComprehensiveLoanView(loanId);
+            return ResponseEntity.ok(loanView);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error fetching comprehensive loan view: " + e.getMessage()));
         }
     }
     

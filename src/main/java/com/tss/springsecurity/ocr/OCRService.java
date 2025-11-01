@@ -1,5 +1,6 @@
 package com.tss.springsecurity.ocr;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -55,7 +56,7 @@ public class OCRService {
         Path tempPdf = Files.createTempFile("ocr_pdf_", ".pdf");
         Files.copy(file.getInputStream(), tempPdf, StandardCopyOption.REPLACE_EXISTING);
 
-        try (PDDocument doc = PDDocument.load(tempPdf.toFile())) {
+        try (PDDocument doc = Loader.loadPDF(tempPdf.toFile())) {
             PDFRenderer renderer = new PDFRenderer(doc);
             StringBuilder sb = new StringBuilder();
 

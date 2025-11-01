@@ -196,11 +196,23 @@ public class ApplicantLoanDetails {
     @Column(name = "risk_score")
     private Integer riskScore = 0;
     
+    @Column(name = "risk_level", length = 20)
+    private String riskLevel; // LOW, MEDIUM, HIGH, CRITICAL
+    
     @Column(name = "submitted_at", updatable = false)
     private LocalDateTime submittedAt;
     
+    @Column(name = "application_date")
+    private LocalDateTime applicationDate;
+    
+    @Column(name = "approval_date")
+    private LocalDateTime approvalDate;
+    
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+    
+    @Column(name = "monthly_emi", precision = 15, scale = 2)
+    private BigDecimal monthlyEmi;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"loan", "applicant"})

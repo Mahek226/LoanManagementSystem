@@ -23,4 +23,6 @@ public interface LoanAssignmentService {
     LoanAssignmentResponse getAssignmentById(Long assignmentId);
     
     List<OfficerSummary> getAvailableOfficersByLoanType(String loanType);
+    
+    Long autoSelectBestOfficer(String loanType);
 }

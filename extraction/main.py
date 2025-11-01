@@ -45,7 +45,7 @@ async def extract_document(
         shutil.copyfileobj(file.file, f)
 
     # Insert document record
-    doc_record = Document(applicant_id=applicant_id, document_type=document_type, filename=fname)
+    doc_record = Document(applicant_id=applicant_id, document_type=document_type, document_name=fname)
     db.add(doc_record)
     db.commit()
     db.refresh(doc_record)
@@ -107,7 +107,7 @@ def get_docs(id: int, db: Session = Depends(get_db)):
         out.append({
             "document_id": doc.document_id,
             "document_type": doc.document_type,
-            "filename": doc.filename,
+            "document_name": doc.document_name,
             "uploaded_at": doc.uploaded_at.isoformat(),
             "fields": fields
         })

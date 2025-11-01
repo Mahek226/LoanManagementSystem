@@ -72,7 +72,7 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
             // Step 6: Determine final recommendation
             determineFinalRecommendation(result);
             
-            // Step 7: Update loan risk score
+            // Step 7: Update loan risk score (but NOT status - status is controlled by officers)
             updateLoanRiskScore(applicantId, result.getNormalizedScore());
             
             log.info("Enhanced loan screening completed for applicant ID: {} - Final Score: {}", 
@@ -353,9 +353,11 @@ public class EnhancedLoanScreeningService implements EnhancedLoanScreeningServic
             List<ApplicantLoanDetails> loans = loanRepository.findByApplicant_ApplicantId(applicantId);
             if (!loans.isEmpty()) {
                 ApplicantLoanDetails latestLoan = loans.get(loans.size() - 1);
+                // Update ONLY risk_score, do NOT update status (status is controlled by officers)
                 latestLoan.setRiskScore(normalizedScore.intValue());
                 loanRepository.save(latestLoan);
-                log.info("Updated loan risk score to {} for applicant {}", normalizedScore.intValue(), applicantId);
+                log.info("Updated loan risk score to {} for applicant {} (status unchanged)", 
+                        normalizedScore.intValue(), applicantId);
             }
         } catch (Exception e) {
             log.error("Error updating loan risk score for applicant {}", applicantId, e);

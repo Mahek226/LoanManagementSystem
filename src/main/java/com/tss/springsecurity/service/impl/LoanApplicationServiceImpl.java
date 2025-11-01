@@ -26,6 +26,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final CompleteLoanApplicationServiceImpl completeLoanApplicationService;
     private final com.tss.springsecurity.service.DocumentExtractionService documentExtractionService;
+    private final UploadedDocumentRepository uploadedDocumentRepository;
     
     public LoanApplicationServiceImpl(
             ApplicantRepository applicantRepository,
@@ -36,7 +37,8 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
             ApplicantCreditHistoryRepository creditHistoryRepository,
             ApplicantLoanDetailsRepository loanDetailsRepository,
             CompleteLoanApplicationServiceImpl completeLoanApplicationService,
-            com.tss.springsecurity.service.DocumentExtractionService documentExtractionService) {
+            com.tss.springsecurity.service.DocumentExtractionService documentExtractionService,
+            UploadedDocumentRepository uploadedDocumentRepository) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.employmentRepository = employmentRepository;
@@ -46,6 +48,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         this.loanDetailsRepository = loanDetailsRepository;
         this.completeLoanApplicationService = completeLoanApplicationService;
         this.documentExtractionService = documentExtractionService;
+        this.uploadedDocumentRepository = uploadedDocumentRepository;
     }
     
     @Override
@@ -140,7 +143,10 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         BigDecimal interestRate = calculateInterestRate(dto.getLoanType(), dto.getCreditScore());
         loanDetails.setInterestRate(interestRate);
         
-        loanDetailsRepository.save(loanDetails);
+        loanDetails = loanDetailsRepository.save(loanDetails);
+        
+        // Link all previously uploaded documents (with null loan_id) to this loan
+        linkDocumentsToLoan(applicant.getApplicantId(), loanDetails.getLoanId());
         
         return applicant;
     }
@@ -234,6 +240,9 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         loanDetails.setInterestRate(interestRate);
         
         loanDetails = loanDetailsRepository.save(loanDetails);
+        
+        // Link all previously uploaded documents (with null loan_id) to this loan
+        linkDocumentsToLoan(applicant.getApplicantId(), loanDetails.getLoanId());
         
         // Save Documents if provided
         if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
@@ -402,6 +411,33 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
             // collateral.setCollateralType(colDto.getCollateralType());
             // ... set other fields
             // collateralRepository.save(collateral);
+        }
+    }
+    
+    /**
+     * Link all documents with null loan_id for this applicant to the specified loan
+     */
+    private void linkDocumentsToLoan(Long applicantId, Long loanId) {
+        // Find the loan entity
+        ApplicantLoanDetails loan = loanDetailsRepository.findById(loanId).orElse(null);
+        if (loan == null) {
+            return;
+        }
+        
+        // Find all documents for this applicant with null loan_id
+        List<UploadedDocument> documents = uploadedDocumentRepository.findByApplicant_ApplicantId(applicantId);
+        int linkedCount = 0;
+        
+        for (UploadedDocument doc : documents) {
+            if (doc.getLoan() == null) {
+                doc.setLoan(loan);
+                uploadedDocumentRepository.save(doc);
+                linkedCount++;
+            }
+        }
+        
+        if (linkedCount > 0) {
+            System.out.println("Linked " + linkedCount + " document(s) to loan ID: " + loanId);
         }
     }
 }

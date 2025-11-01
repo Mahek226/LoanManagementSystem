@@ -16,6 +16,8 @@ public interface OfficerApplicationAssignmentRepository extends JpaRepository<Of
     
     List<OfficerApplicationAssignment> findByApplicant_ApplicantId(Long applicantId);
     
+    Optional<OfficerApplicationAssignment> findByLoan_LoanId(Long loanId);
+    
     List<OfficerApplicationAssignment> findByStatus(String status);
     
     Optional<OfficerApplicationAssignment> findByApplicant_ApplicantIdAndStatus(Long applicantId, String status);

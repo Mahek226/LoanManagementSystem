@@ -184,6 +184,47 @@ public class ApplicantNotificationService {
     }
     
     /**
+     * Create document resubmission request notification
+     */
+    @Transactional
+    public ApplicantNotification createDocumentResubmissionRequest(
+            Long applicantId,
+            Long loanId,
+            Long assignmentId,
+            List<String> documentTypes,
+            String reason,
+            String additionalComments,
+            String requestedBy) {
+        
+        String title = "Document Resubmission Required";
+        String message = "The loan officer has requested that you resubmit certain documents for your loan application. " +
+                        "Reason: " + reason;
+        
+        if (additionalComments != null && !additionalComments.isEmpty()) {
+            message += " Additional notes: " + additionalComments;
+        }
+        
+        // Convert list to JSON array string
+        String documentsJson = "[\"" + String.join("\",\"", documentTypes) + "\"]";
+        
+        LocalDateTime dueDate = LocalDateTime.now().plusDays(7); // 7 days to resubmit
+        
+        return createNotification(
+            applicantId,
+            loanId,
+            assignmentId,
+            title,
+            message,
+            NotificationType.DOCUMENT_REQUEST,
+            NotificationPriority.HIGH,
+            requestedBy,
+            dueDate,
+            documentsJson,
+            null
+        );
+    }
+    
+    /**
      * Create info request notification
      */
     @Transactional

@@ -52,4 +52,10 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
      * Find documents by Cloudinary public ID
      */
     UploadedDocument findByCloudinaryPublicId(String cloudinaryPublicId);
+    
+    /**
+     * Find documents by both applicant and loan to ensure only loan-specific documents are returned
+     */
+    @Query("SELECT ud FROM UploadedDocument ud WHERE ud.applicant.applicantId = :applicantId AND (ud.loan.loanId = :loanId OR ud.loan.loanId IS NULL)")
+    List<UploadedDocument> findByApplicantIdAndLoanId(@Param("applicantId") Long applicantId, @Param("loanId") Long loanId);
 }
