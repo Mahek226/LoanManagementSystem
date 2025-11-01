@@ -17,7 +17,7 @@ class Applicant(Base):
 
 class Document(Base):
     __tablename__ = "uploaded_documents"
-    id = Column(BigInteger, primary_key=True, index=True)
+    document_id = Column(BigInteger, primary_key=True, index=True)
     applicant_id = Column(BigInteger, ForeignKey("applicant.applicant_id"))
     document_type = Column(String(50))
     filename = Column(String(255))

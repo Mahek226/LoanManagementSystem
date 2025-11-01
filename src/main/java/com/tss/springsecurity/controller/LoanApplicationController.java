@@ -312,7 +312,7 @@ public class LoanApplicationController {
             loanDetails.setApplicant(applicant);
             
             // Set basic details
-            SimpleLoanApplicationDTO.BasicD etails basic = applicationDTO.getBasicDetails();
+            SimpleLoanApplicationDTO.BasicDetails basic = applicationDTO.getBasicDetails();
             loanDetails.setLoanType(basic.getLoanType());
             loanDetails.setLoanAmount(basic.getLoanAmount());
             loanDetails.setTenureMonths(basic.getTenure());

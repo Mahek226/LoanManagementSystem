@@ -75,13 +75,13 @@ async def extract_document(
             val = v
         if val is None:
             continue
-        ef = ExtractedField(document_id=doc_record.id, field_name=k, field_value=val)
+        ef = ExtractedField(document_id=doc_record.document_id, field_name=k, field_value=val)
         db.add(ef)
     db.commit()
 
     # optional: copy photo or qr if present and agentic_doc returned them - skip here
     return JSONResponse({
-        "document_id": doc_record.id,
+        "document_id": doc_record.document_id,
         "applicant_id": applicant_id,
         "document_type": document_type,
         "extracted": extracted
@@ -105,7 +105,7 @@ def get_docs(id: int, db: Session = Depends(get_db)):
     for doc in applicant.documents:
         fields = {f.field_name: f.field_value for f in doc.fields}
         out.append({
-            "document_id": doc.id,
+            "document_id": doc.document_id,
             "document_type": doc.document_type,
             "filename": doc.filename,
             "uploaded_at": doc.uploaded_at.isoformat(),

@@ -24,6 +24,7 @@ public class LoanOfficerScreeningController {
     private final com.tss.springsecurity.service.DocumentUploadService documentUploadService;
     private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
     private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
+    private final com.tss.springsecurity.service.ApplicantNotificationService notificationService;
     
     @GetMapping("/{officerId}/assigned-loans")
     public ResponseEntity<List<LoanScreeningResponse>> getAssignedLoans(@PathVariable Long officerId) {
@@ -328,17 +329,31 @@ public class LoanOfficerScreeningController {
         try {
             Long loanId = Long.valueOf(request.get("loanId").toString());
             Long applicantId = Long.valueOf(request.get("applicantId").toString());
+            Long assignmentId = request.get("assignmentId") != null ? 
+                Long.valueOf(request.get("assignmentId").toString()) : null;
             @SuppressWarnings("unchecked")
             List<String> documentTypes = (List<String>) request.get("documentTypes");
             String reason = request.get("reason").toString();
             String remarks = request.get("remarks") != null ? request.get("remarks").toString() : "";
             
-            // TODO: Implement notification service to send email/SMS to applicant
-            // For now, just log the request
+            // Get officer name
+            String requestedBy = "Loan Officer #" + officerId;
+            
+            // Create notification for applicant
+            notificationService.createDocumentRequest(
+                applicantId, 
+                loanId, 
+                assignmentId, 
+                documentTypes, 
+                reason, 
+                requestedBy
+            );
+            
             System.out.println("Document resubmission requested for Loan #" + loanId);
             System.out.println("Applicant ID: " + applicantId);
             System.out.println("Document Types: " + documentTypes);
             System.out.println("Reason: " + reason);
+            System.out.println("Notification created successfully");
             
             java.util.Map<String, Object> response = new java.util.HashMap<>();
             response.put("success", true);
@@ -353,6 +368,58 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Request more information from applicant
+     */
+    @PostMapping("/{officerId}/request-more-info")
+    public ResponseEntity<?> requestMoreInfo(
+            @PathVariable Long officerId,
+            @RequestBody java.util.Map<String, Object> request) {
+        try {
+            Long loanId = Long.valueOf(request.get("loanId").toString());
+            Long applicantId = Long.valueOf(request.get("applicantId").toString());
+            Long assignmentId = request.get("assignmentId") != null ? 
+                Long.valueOf(request.get("assignmentId").toString()) : null;
+            @SuppressWarnings("unchecked")
+            List<String> infoItems = (List<String>) request.get("infoItems");
+            String reason = request.get("reason").toString();
+            String remarks = request.get("remarks") != null ? request.get("remarks").toString() : "";
+            
+            // Get officer name
+            String requestedBy = "Loan Officer #" + officerId;
+            
+            // Create notification for applicant
+            notificationService.createInfoRequest(
+                applicantId, 
+                loanId, 
+                assignmentId, 
+                infoItems, 
+                reason, 
+                requestedBy
+            );
+            
+            System.out.println("Additional information requested for Loan #" + loanId);
+            System.out.println("Applicant ID: " + applicantId);
+            System.out.println("Information Items: " + infoItems);
+            System.out.println("Reason: " + reason);
+            System.out.println("Notification created successfully");
+            
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("success", true);
+            response.put("message", "Information request sent to applicant");
+            response.put("loanId", loanId);
+            response.put("applicantId", applicantId);
+            response.put("infoItems", infoItems);
+            response.put("reason", reason);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Failed to request more info: " + e.getMessage()));
         }
     }
     
