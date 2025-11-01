@@ -116,21 +116,22 @@ public class LoanOfficerScreeningController {
         try {
             System.out.println("Starting document extraction for assignment ID: " + assignmentId);
             
-            // Get loan details to find applicant ID
+            // Get loan details to find the specific loan ID
             LoanScreeningResponse loanDetails = screeningService.getLoanDetailsForScreening(assignmentId);
+            Long loanId = loanDetails.getLoanId();
             Long applicantId = loanDetails.getApplicantId();
             
-            System.out.println("Found applicant ID: " + applicantId + " for assignment: " + assignmentId);
+            System.out.println("Found loan ID: " + loanId + " and applicant ID: " + applicantId + " for assignment: " + assignmentId);
             
-            // Get all documents for this applicant
+            // Get only documents for this specific loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByApplicant_ApplicantId(applicantId);
+                documentRepository.findByLoan_LoanId(loanId);
             
-            System.out.println("Found " + documents.size() + " documents for applicant ID: " + applicantId);
+            System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
             if (documents.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No documents found for this applicant"));
+                        .body(new ErrorResponse("No documents found for this loan"));
             }
             
             // Extract each document by downloading from Cloudinary
@@ -237,24 +238,11 @@ public class LoanOfficerScreeningController {
         try {
             System.out.println("Fetching documents for loan ID: " + loanId);
             
+            // Only get documents specifically associated with this loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
                 documentRepository.findByLoan_LoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
-            
-            // If no documents found with loan relationship, try finding by applicant
-            if (documents.isEmpty()) {
-                // Get loan details to find applicant
-                com.tss.springsecurity.entity.ApplicantLoanDetails loan = 
-                    loanRepository.findById(loanId).orElse(null);
-                
-                if (loan != null && loan.getApplicant() != null) {
-                    Long applicantId = loan.getApplicant().getApplicantId();
-                    System.out.println("No documents found with loan_id, trying applicant_id: " + applicantId);
-                    documents = documentRepository.findByApplicant_ApplicantId(applicantId);
-                    System.out.println("Found " + documents.size() + " documents for applicant ID: " + applicantId);
-                }
-            }
             
             List<java.util.Map<String, Object>> documentDetails = new java.util.ArrayList<>();
             for (com.tss.springsecurity.entity.UploadedDocument doc : documents) {

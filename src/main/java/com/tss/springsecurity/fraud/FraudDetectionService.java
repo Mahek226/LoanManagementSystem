@@ -73,24 +73,19 @@ public class FraudDetectionService {
         ApplicantLoanDetails latestLoan = loans.isEmpty() ? null : 
                 loans.get(loans.size() - 1);
         
-        // Save fraud flags to database
+        // Save fraud flags to database (for audit trail)
         saveFraudFlags(applicant, latestLoan, combinedResult);
         
-        // Update loan risk score if loan exists
+        // Update loan risk score if loan exists (but NOT status - status is controlled by officers)
         if (latestLoan != null) {
             latestLoan.setRiskScore(combinedResult.getTotalFraudScore());
-            
-            // Update loan status based on fraud score
-            // Valid statuses: pending, approved, rejected, under_review, disbursed, closed
-            if (combinedResult.getTotalFraudScore() >= 60) {
-                latestLoan.setStatus("rejected"); // Changed from "rejected_fraud" to "rejected"
-            } else if (combinedResult.getTotalFraudScore() >= 30) {
-                latestLoan.setStatus("under_review");
-            }
-            
             loanDetailsRepository.save(latestLoan);
-            log.info("Updated loan ID {} status to: {}", latestLoan.getLoanId(), latestLoan.getStatus());
+            log.info("Updated loan ID {} risk score to: {} (status unchanged)", 
+                    latestLoan.getLoanId(), combinedResult.getTotalFraudScore());
         }
+        
+        log.info("Fraud detection completed for applicant ID: {} - Score: {}, Risk: {}", 
+                applicantId, combinedResult.getTotalFraudScore(), combinedResult.getRiskLevel());
         
         return combinedResult;
     }

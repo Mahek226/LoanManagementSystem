@@ -46,9 +46,20 @@ public class LoanAssignmentServiceImpl implements LoanAssignmentService {
             throw new RuntimeException("Loan is already assigned to an officer");
         }
         
+        // Auto-select officer if not provided
+        Long officerId = request.getOfficerId();
+        if (officerId == null) {
+            log.info("Officer ID not provided, auto-selecting based on loan type: {}", loan.getLoanType());
+            officerId = autoSelectBestOfficer(loan.getLoanType());
+            log.info("Auto-selected officer ID: {}", officerId);
+        }
+        
+        // Create final variable for lambda usage
+        final Long finalOfficerId = officerId;
+        
         // Get the officer to assign to
-        LoanOfficer assignedOfficer = loanOfficerRepository.findById(request.getOfficerId())
-                .orElseThrow(() -> new RuntimeException("Officer not found with ID: " + request.getOfficerId()));
+        LoanOfficer assignedOfficer = loanOfficerRepository.findById(finalOfficerId)
+                .orElseThrow(() -> new RuntimeException("Officer not found with ID: " + finalOfficerId));
         
         // Validate that officer handles this loan type
         if (!assignedOfficer.getLoanType().equalsIgnoreCase(loan.getLoanType())) {
@@ -208,5 +219,30 @@ public class LoanAssignmentServiceImpl implements LoanAssignmentService {
                     );
                 })
                 .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Long autoSelectBestOfficer(String loanType) {
+        log.info("Auto-selecting best officer for loan type: {}", loanType);
+        
+        // Get officers by loan type, ordered by workload (ascending)
+        List<LoanOfficer> officers = loanOfficerRepository.findByLoanTypeOrderByWorkload(loanType);
+        
+        if (officers.isEmpty()) {
+            throw new RuntimeException("No officers available for loan type: " + loanType);
+        }
+        
+        // Select the officer with the least workload (first in the list)
+        LoanOfficer selectedOfficer = officers.get(0);
+        Long workload = assignmentRepository.countActiveAssignmentsByOfficer(selectedOfficer.getOfficerId());
+        
+        log.info("Selected officer: {} {} (ID: {}) with workload: {}",
+                selectedOfficer.getFirstName(),
+                selectedOfficer.getLastName(),
+                selectedOfficer.getOfficerId(),
+                workload);
+        
+        return selectedOfficer.getOfficerId();
     }
 }

@@ -45,10 +45,14 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
         
         // Validate loan exists if provided
+        // If loanId is null, documents will be auto-linked when loan is created
         ApplicantLoanDetails loan = null;
         if (loanId != null) {
             loan = loanDetailsRepository.findById(loanId)
                     .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+            log.info("Documents will be linked to loan ID: {}", loanId);
+        } else {
+            log.info("No loan ID provided. Documents will be auto-linked when loan application is submitted.");
         }
         
         List<UploadedDocument> uploadedDocuments = new ArrayList<>();
@@ -75,10 +79,14 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
                 .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
         
         // Validate loan exists if provided
+        // If loanId is null, document will be auto-linked when loan is created
         ApplicantLoanDetails loan = null;
         if (loanId != null) {
             loan = loanDetailsRepository.findById(loanId)
                     .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+            log.info("Document will be linked to loan ID: {}", loanId);
+        } else {
+            log.info("No loan ID provided. Document will be auto-linked when loan application is submitted.");
         }
         
         return uploadSingleDocument(applicant, loan, file, documentType);
