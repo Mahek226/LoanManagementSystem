@@ -1,0 +1,1228 @@
+<!-- Loading State -->
+<div *ngIf="loading" class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+  <div class="text-center">
+    <div class="spinner-border text-danger" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading comprehensive review data...</p>
+  </div>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="alert alert-danger" role="alert">
+  <i class="fas fa-exclamation-triangle me-2"></i>
+  {{ error }}
+  <button class="btn btn-outline-danger btn-sm ms-3" (click)="loadComprehensiveData()">
+    <i class="fas fa-redo me-1"></i> Retry
+  </button>
+</div>
+
+<!-- Main Content -->
+<div *ngIf="!loading && !error && escalation" class="comprehensive-review">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <button class="btn btn-outline-secondary me-3" (click)="goBack()">
+        <i class="fas fa-arrow-left me-2"></i>Back to Escalations
+      </button>
+      <h2 class="mb-0">Comprehensive Compliance Review</h2>
+      <p class="text-muted mb-0">Assignment ID: {{ assignmentId }} | Loan ID: {{ escalation.loanId }}</p>
+    </div>
+    <div>
+      <button class="btn btn-danger" (click)="openVerdictModal()">
+        <i class="fas fa-gavel me-2"></i>Submit Verdict
+      </button>
+    </div>
+  </div>
+
+  <!-- Risk Overview Card -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-3">
+              <div class="text-center">
+                <div class="risk-circle" [style.border-color]="getRiskColor(escalation.riskLevel)">
+                  <div class="risk-score">{{ escalation.riskScore }}</div>
+                  <div class="risk-label">Risk Score</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-9">
+              <div class="row">
+                <div class="col-md-3">
+                  <h6 class="text-muted mb-1">Applicant</h6>
+                  <p class="fw-bold mb-0">{{ escalation.applicantName }}</p>
+                </div>
+                <div class="col-md-3">
+                  <h6 class="text-muted mb-1">Loan Type</h6>
+                  <p class="fw-bold mb-0">{{ escalation.loanType }}</p>
+                </div>
+                <div class="col-md-3">
+                  <h6 class="text-muted mb-1">Amount</h6>
+                  <p class="fw-bold mb-0">{{ formatCurrency(escalation.loanAmount) }}</p>
+                </div>
+                <div class="col-md-3">
+                  <h6 class="text-muted mb-1">Risk Level</h6>
+                  <span [class]="getRiskBadgeClass(escalation.riskLevel)">{{ escalation.riskLevel }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <ul class="nav nav-tabs mb-4" id="reviewTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link" 
+        [class.active]="activeTab === 'overview'"
+        (click)="setActiveTab('overview')"
+        type="button">
+        <i class="fas fa-eye me-2"></i>Overview
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link" 
+        [class.active]="activeTab === 'documents'"
+        (click)="setActiveTab('documents')"
+        type="button">
+        <i class="fas fa-file-alt me-2"></i>Documents
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link" 
+        [class.active]="activeTab === 'fraud-data'"
+        (click)="setActiveTab('fraud-data')"
+        type="button">
+        <i class="fas fa-shield-alt me-2"></i>External Fraud Data
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link" 
+        [class.active]="activeTab === 'screening'"
+        (click)="setActiveTab('screening')"
+        type="button">
+        <i class="fas fa-search me-2"></i>Screening Results
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button 
+        class="nav-link" 
+        [class.active]="activeTab === 'flags'"
+        (click)="setActiveTab('flags')"
+        type="button">
+        <i class="fas fa-flag me-2"></i>Fraud Flags
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    
+    <!-- Overview Tab -->
+    <div *ngIf="activeTab === 'overview'" class="tab-pane fade show active">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-user me-2"></i>Applicant Information</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-6">
+                  <p><strong>Name:</strong> {{ escalation.applicantName }}</p>
+                  <p><strong>Applicant ID:</strong> {{ escalation.applicantId }}</p>
+                </div>
+                <div class="col-6">
+                  <p><strong>Assigned At:</strong> {{ formatDate(escalation.assignedAt) }}</p>
+                  <p><strong>Status:</strong> 
+                    <span [class]="complianceService.getStatusBadgeClass(escalation.status)">
+                      {{ escalation.status }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-money-bill me-2"></i>Loan Details</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-6">
+                  <p><strong>Loan ID:</strong> {{ escalation.loanId }}</p>
+                  <p><strong>Type:</strong> {{ escalation.loanType }}</p>
+                </div>
+                <div class="col-6">
+                  <p><strong>Amount:</strong> {{ formatCurrency(escalation.loanAmount) }}</p>
+                  <p><strong>Risk Score:</strong> {{ escalation.riskScore }}/100</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escalation Details -->
+      <div class="card mb-4" *ngIf="escalation.escalationReason || escalation.remarks">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Escalation Details</h5>
+        </div>
+        <div class="card-body">
+          <div *ngIf="escalation.escalationReason">
+            <h6>Escalation Reason:</h6>
+            <p class="text-muted">{{ escalation.escalationReason }}</p>
+          </div>
+          <div *ngIf="escalation.remarks">
+            <h6>Officer Remarks:</h6>
+            <p class="text-muted">{{ escalation.remarks }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents Tab -->
+    <div *ngIf="activeTab === 'documents'" class="tab-pane fade show active">
+      <div class="row g-4">
+        <div class="col-12">
+          <!-- Documents List -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-danger text-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Uploaded Documents</h5>
+                <span class="badge bg-light text-dark">{{ loanDocuments.length }} Total</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div *ngIf="loanDocuments.length === 0" class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No documents found</h5>
+                <p class="text-muted">Documents will appear here once uploaded by the applicant</p>
+              </div>
+
+              <div *ngIf="loanDocuments.length > 0">
+                <!-- Document Cards with Extracted Data -->
+                <div *ngFor="let doc of loanDocuments; let i = index" class="card mb-3 border-0 shadow-sm">
+                  <div class="card-header d-flex justify-content-between align-items-center" 
+                       style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white;">
+                    <div>
+                      <h6 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        <strong>{{ doc.documentType.replace('_', ' ') }}</strong>
+                      </h6>
+                      <small class="opacity-75">{{ doc.documentName }}</small>
+                    </div>
+                    <div>
+                      <span class="badge me-2" 
+                            [class.bg-success]="doc.verificationStatus === 'VERIFIED'"
+                            [class.bg-warning]="doc.verificationStatus === 'PENDING'"
+                            [class.bg-danger]="doc.verificationStatus === 'REJECTED'"
+                            [class.bg-info]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
+                        {{ doc.verificationStatus || 'PENDING' }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="card-body">
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <i class="fas fa-clock me-1"></i> Uploaded: {{ formatDate(doc.uploadedAt) }}
+                        </small>
+                        <div *ngIf="doc.verifiedBy" class="mt-1">
+                          <small class="text-muted">
+                            <i class="fas fa-user-check me-1"></i> Verified by: {{ doc.verifiedBy }}
+                          </small>
+                        </div>
+                      </div>
+                      <div class="col-md-6 text-end">
+                        <div class="btn-group" role="group">
+                          <button class="btn btn-sm" 
+                                  [class.btn-info]="hasDocumentUrl(doc)"
+                                  [class.btn-secondary]="!hasDocumentUrl(doc)"
+                                  (click)="viewDocument(doc)"
+                                  [disabled]="!hasDocumentUrl(doc)"
+                                  [title]="!hasDocumentUrl(doc) ? 'Document URL not available' : ''">
+                            <i class="fas fa-eye me-1"></i>
+                            {{ hasExtractedData(doc) ? 'View & Data' : 'View Document' }}
+                          </button>
+                          <button class="btn btn-sm" 
+                                  [class.btn-outline-primary]="hasDocumentUrl(doc)"
+                                  [class.btn-outline-secondary]="!hasDocumentUrl(doc)"
+                                  [disabled]="!hasDocumentUrl(doc)"
+                                  (click)="hasDocumentUrl(doc) && window.open(getDocumentUrl(doc), '_blank')"
+                                  [title]="!hasDocumentUrl(doc) ? 'Document URL not available' : ''">
+                            <i class="fas fa-external-link-alt me-1"></i>Open
+                          </button>
+                          <button class="btn btn-sm btn-warning" 
+                                  (click)="requestDocumentResubmission(doc)"
+                                  [disabled]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
+                            <i class="fas fa-redo me-1"></i>
+                            {{ doc.verificationStatus === 'RESUBMISSION_REQUESTED' ? 'Requested' : 'Resubmit' }}
+                          </button>
+                        </div>
+                        
+                        <!-- Debug info for missing URLs -->
+                        <div *ngIf="!hasDocumentUrl(doc)" class="mt-2">
+                          <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Document URL not available (cloudinaryUrl: {{ doc.cloudinaryUrl || 'null' }}, documentUrl: {{ doc.documentUrl || 'null' }})
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Resubmission Details -->
+                    <div *ngIf="doc.resubmissionRequested" class="alert alert-warning">
+                      <h6><i class="fas fa-exclamation-triangle me-2"></i>Resubmission Requested</h6>
+                      <div *ngIf="doc.resubmissionReason">
+                        <strong>Reason:</strong> {{ doc.resubmissionReason }}
+                      </div>
+                      <div *ngIf="doc.resubmissionInstructions" class="mt-2">
+                        <strong>Instructions:</strong> {{ doc.resubmissionInstructions }}
+                      </div>
+                    </div>
+
+                    <!-- Extracted Data Section -->
+                    <div *ngIf="hasExtractedData(doc)" class="mt-3">
+                      <div class="accordion" [attr.id]="'extractedAccordion' + i">
+                        <div class="accordion-item border-0" style="background-color: #f8f9fa;">
+                          <h2 class="accordion-header" [attr.id]="'heading' + i">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    [attr.data-bs-target]="'#collapse' + i" 
+                                    aria-expanded="false" 
+                                    [attr.aria-controls]="'collapse' + i"
+                                    style="background-color: #fef2f2; color: #dc2626; font-weight: 600;">
+                              <i class="fas fa-search-plus me-2"></i>
+                              Extracted Data
+                            </button>
+                          </h2>
+                          <div [attr.id]="'collapse' + i" 
+                               class="accordion-collapse collapse" 
+                               [attr.aria-labelledby]="'heading' + i" 
+                               [attr.data-bs-parent]="'#extractedAccordion' + i">
+                            <div class="accordion-body bg-white">
+                              <div class="extracted-data-container p-3" style="background-color: #fafafa; border-radius: 8px;">
+                                <ng-container *ngFor="let key of objectKeys(parseExtractedData(doc))">
+                                  <div class="mb-3 pb-2 border-bottom">
+                                    <div class="row">
+                                      <div class="col-md-4">
+                                        <strong class="text-danger">
+                                          <i class="fas fa-tag me-2"></i>{{ formatExtractedField(key) }}:
+                                        </strong>
+                                      </div>
+                                      <div class="col-md-8">
+                                        <!-- Display nested objects -->
+                                        <ng-container *ngIf="isObject(parseExtractedData(doc)[key])">
+                                          <div class="ps-3">
+                                            <ng-container *ngFor="let subKey of objectKeys(parseExtractedData(doc)[key])">
+                                              <div class="mb-1">
+                                                <span class="text-muted">{{ formatExtractedField(subKey) }}:</span>
+                                                <span class="ms-2 fw-semibold">{{ parseExtractedData(doc)[key][subKey] }}</span>
+                                              </div>
+                                            </ng-container>
+                                          </div>
+                                        </ng-container>
+                                        
+                                        <!-- Display arrays -->
+                                        <ng-container *ngIf="isArray(parseExtractedData(doc)[key])">
+                                          <ul class="mb-0">
+                                            <li *ngFor="let item of parseExtractedData(doc)[key]">{{ item }}</li>
+                                          </ul>
+                                        </ng-container>
+                                        
+                                        <!-- Display simple values -->
+                                        <ng-container *ngIf="!isObject(parseExtractedData(doc)[key]) && !isArray(parseExtractedData(doc)[key])">
+                                          <span class="fw-semibold" style="color: #2c3e50;">
+                                            {{ parseExtractedData(doc)[key] }}
+                                          </span>
+                                        </ng-container>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </ng-container>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- No Extracted Data Message -->
+                    <div *ngIf="!hasExtractedData(doc)" class="alert alert-info mb-0">
+                      <i class="fas fa-info-circle me-2"></i>
+                      No extracted data available for this document.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- External Fraud Data Tab -->
+    <div *ngIf="activeTab === 'fraud-data'" class="tab-pane fade show active">
+      <div *ngIf="!externalFraudData" class="text-center py-4">
+        <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No external fraud data available.</p>
+      </div>
+
+      <div *ngIf="externalFraudData">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <i class="fas fa-university fa-2x text-primary mb-2"></i>
+                <h4>{{ externalFraudData.summary.totalBankAccounts }}</h4>
+                <p class="text-muted mb-0">Bank Accounts</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
+                <h4>{{ externalFraudData.summary.totalCriminalCases }}</h4>
+                <p class="text-muted mb-0">Criminal Cases</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <i class="fas fa-history fa-2x text-info mb-2"></i>
+                <h4>{{ externalFraudData.summary.totalLoanHistory }}</h4>
+                <p class="text-muted mb-0">Loan History</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x" 
+                   [class]="externalFraudData.summary.riskLevel === 'HIGH' ? 'text-danger' : 'text-success'"></i>
+                <h4>{{ externalFraudData.summary.riskLevel }}</h4>
+                <p class="text-muted mb-0">External Risk</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bank Records -->
+        <div class="card mb-4" *ngIf="externalFraudData.bankRecords.length > 0">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-university me-2"></i>Bank Records</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Bank Name</th>
+                    <th>Account Type</th>
+                    <th>Balance</th>
+                    <th>Last Transaction</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let bank of externalFraudData.bankRecords">
+                    <td>{{ bank.bankName }}</td>
+                    <td>{{ bank.accountType }}</td>
+                    <td>{{ formatCurrency(bank.balanceAmount) }}</td>
+                    <td>{{ formatDate(bank.lastTransactionDate) }}</td>
+                    <td>
+                      <span [class]="bank.isActive ? 'badge bg-success' : 'badge bg-secondary'">
+                        {{ bank.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Criminal Records -->
+        <div class="card mb-4" *ngIf="externalFraudData.criminalRecords.length > 0">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Criminal Records</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Case Number</th>
+                    <th>Case Type</th>
+                    <th>Court</th>
+                    <th>Status</th>
+                    <th>Verdict Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let criminal of externalFraudData.criminalRecords">
+                    <td>{{ criminal.caseNumber }}</td>
+                    <td>{{ criminal.caseType }}</td>
+                    <td>{{ criminal.courtName }}</td>
+                    <td>
+                      <span [class]="criminal.status === 'CONVICTED' ? 'badge bg-danger' : 
+                                     criminal.status === 'ACQUITTED' ? 'badge bg-success' : 
+                                     criminal.status === 'OPEN' ? 'badge bg-warning' : 'badge bg-secondary'">
+                        {{ criminal.status }}
+                      </span>
+                    </td>
+                    <td>{{ criminal.verdictDate ? formatDate(criminal.verdictDate) : 'N/A' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loan History -->
+        <div class="card mb-4" *ngIf="externalFraudData.loanHistory.length > 0">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Loan History</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Institution</th>
+                    <th>Loan Type</th>
+                    <th>Amount</th>
+                    <th>Outstanding</th>
+                    <th>Status</th>
+                    <th>Default Flag</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let loan of externalFraudData.loanHistory">
+                    <td>{{ loan.institutionName }}</td>
+                    <td>{{ loan.loanType }}</td>
+                    <td>{{ formatCurrency(loan.loanAmount) }}</td>
+                    <td>{{ formatCurrency(loan.outstandingBalance) }}</td>
+                    <td>
+                      <span [class]="loan.status === 'DEFAULTED' ? 'badge bg-danger' : 
+                                     loan.status === 'ACTIVE' ? 'badge bg-success' : 'badge bg-secondary'">
+                        {{ loan.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <span [class]="loan.defaultFlag ? 'badge bg-danger' : 'badge bg-success'">
+                        {{ loan.defaultFlag ? 'Yes' : 'No' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screening Results Tab -->
+    <div *ngIf="activeTab === 'screening'" class="tab-pane fade show active">
+      <div *ngIf="!enhancedScreeningData && !screeningResults" class="text-center py-4">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <p class="text-muted">Loading screening results...</p>
+      </div>
+
+      <div *ngIf="enhancedScreeningData">
+        <!-- Risk Score Summary -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Risk Assessment Summary</h5>
+            <button class="btn btn-outline-primary btn-sm" (click)="openScreeningDetailsModal()">
+              <i class="fas fa-eye me-1"></i>View Full Details
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="risk-score-circle mb-2" 
+                       [class]="'risk-' + enhancedScreeningData.normalizedRiskScore.riskLevel.toLowerCase()">
+                    <span class="risk-score-number">{{ enhancedScreeningData.normalizedRiskScore.finalScore | number:'1.0-1' }}</span>
+                    <small class="risk-score-label">RISK SCORE</small>
+                  </div>
+                  <span class="badge bg-{{ getRiskLevelColor(enhancedScreeningData.normalizedRiskScore.riskLevel) }}">
+                    {{ enhancedScreeningData.normalizedRiskScore.riskLevel }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-9">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-muted mb-2">Internal Scoring</h6>
+                    <p class="mb-1">
+                      <strong>Score:</strong> {{ enhancedScreeningData.scoringBreakdown.internalScoring.normalizedScore | number:'1.0-1' }}/100
+                    </p>
+                    <p class="mb-1">
+                      <strong>Violations:</strong> {{ enhancedScreeningData.scoringBreakdown.internalScoring.violatedRulesCount }}
+                    </p>
+                    <p class="mb-0">
+                      <strong>Risk Level:</strong> 
+                      <span class="badge bg-{{ getRiskLevelColor(enhancedScreeningData.scoringBreakdown.internalScoring.riskLevel) }}">
+                        {{ enhancedScreeningData.scoringBreakdown.internalScoring.riskLevel }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-muted mb-2">External Scoring</h6>
+                    <p class="mb-1">
+                      <strong>Score:</strong> {{ enhancedScreeningData.scoringBreakdown.externalScoring.normalizedScore | number:'1.0-1' }}/100
+                    </p>
+                    <p class="mb-1">
+                      <strong>Violations:</strong> {{ enhancedScreeningData.scoringBreakdown.externalScoring.violatedRulesCount }}
+                    </p>
+                    <p class="mb-0">
+                      <strong>Person Found:</strong> 
+                      <span [class]="enhancedScreeningData.scoringBreakdown.externalScoring.personFound ? 'badge bg-warning' : 'badge bg-success'">
+                        {{ enhancedScreeningData.scoringBreakdown.externalScoring.personFound ? 'Yes' : 'No' }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Severity Breakdown -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Violation Severity Breakdown</h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="severity-stat">
+                  <div class="severity-number text-danger">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.criticalCount }}</div>
+                  <div class="severity-label">Critical</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="severity-stat">
+                  <div class="severity-number text-warning">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.highCount }}</div>
+                  <div class="severity-label">High</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="severity-stat">
+                  <div class="severity-number text-info">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.mediumCount }}</div>
+                  <div class="severity-label">Medium</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="severity-stat">
+                  <div class="severity-number text-secondary">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.lowCount }}</div>
+                  <div class="severity-label">Low</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Recommendation -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Final Recommendation</h5>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h4 class="mb-2">
+                  <span class="badge bg-{{ enhancedScreeningData.finalRecommendation === 'APPROVE' ? 'success' : 
+                                          enhancedScreeningData.finalRecommendation === 'REJECT' ? 'danger' : 'warning' }} fs-6">
+                    {{ enhancedScreeningData.finalRecommendation }}
+                  </span>
+                </h4>
+                <p class="text-muted mb-0">{{ enhancedScreeningData.normalizedRiskScore.scoreInterpretation }}</p>
+              </div>
+              <div class="col-md-4 text-end">
+                <p class="mb-1"><strong>Total Violations:</strong> {{ enhancedScreeningData.scoringBreakdown.severityBreakdown.totalViolations }}</p>
+                <p class="mb-0"><strong>Can Approve/Reject:</strong> 
+                  <span [class]="enhancedScreeningData.canApproveReject ? 'badge bg-success' : 'badge bg-warning'">
+                    {{ enhancedScreeningData.canApproveReject ? 'Yes' : 'No' }}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fallback to Basic Screening Results -->
+      <div *ngIf="!enhancedScreeningData && screeningResults">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          Enhanced screening data is not available. Showing basic screening results.
+        </div>
+        
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Risk Correlation Analysis</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>Compliance Risk Rating:</strong> 
+                  <span class="badge bg-info">{{ screeningResults.complianceRiskRating }}/5</span>
+                </p>
+                <p><strong>Defaulter History:</strong> 
+                  <span [class]="screeningResults.defaulterHistory ? 'badge bg-danger' : 'badge bg-success'">
+                    {{ screeningResults.defaulterHistory ? 'Yes' : 'No' }}
+                  </span>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <p><strong>Recommendation:</strong></p>
+                <p class="text-muted">{{ screeningResults.recommendation }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction Anomalies -->
+        <div class="card mb-4" *ngIf="screeningResults.transactionAnomalies?.length > 0">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Transaction Anomalies</h5>
+          </div>
+          <div class="card-body">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item" *ngFor="let anomaly of screeningResults.transactionAnomalies">
+                <i class="fas fa-warning text-warning me-2"></i>{{ anomaly }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fraud Flags Tab -->
+    <div *ngIf="activeTab === 'flags'" class="tab-pane fade show active">
+      <div *ngIf="fraudFlags.length === 0" class="text-center py-4">
+        <i class="fas fa-flag fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No fraud flags detected.</p>
+      </div>
+
+      <div *ngIf="fraudFlags.length > 0">
+        <div class="row">
+          <div class="col-md-6" *ngFor="let flag of fraudFlags">
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="card-title">{{ flag.category }}</h6>
+                    <p class="card-text text-muted">{{ flag.description }}</p>
+                  </div>
+                  <div>
+                    <span [class]="'badge bg-' + (flag.severity === 'CRITICAL' ? 'danger' : 
+                                                  flag.severity === 'HIGH' ? 'warning' : 
+                                                  flag.severity === 'MEDIUM' ? 'info' : 'secondary')">
+                      {{ flag.severity }}
+                    </span>
+                    <div class="mt-1">
+                      <small class="text-muted">Weight: {{ flag.weight }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verdict Modal -->
+<div class="modal fade" [class.show]="showVerdictModal" [style.display]="showVerdictModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showVerdictModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-gavel me-2"></i>Submit Compliance Verdict
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <form [formGroup]="verdictForm" (ngSubmit)="submitVerdict()">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Recommendation *</label>
+                <select class="form-select" formControlName="recommendation">
+                  <option value="">Select recommendation</option>
+                  <option value="APPROVE">Approve</option>
+                  <option value="REJECT">Reject</option>
+                  <option value="REQUEST_DOCUMENTS">Request Documents</option>
+                  <option value="FURTHER_REVIEW">Further Review Required</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Risk Assessment *</label>
+                <select class="form-select" formControlName="riskAssessment">
+                  <option value="">Select risk level</option>
+                  <option value="LOW">Low Risk</option>
+                  <option value="MEDIUM">Medium Risk</option>
+                  <option value="HIGH">High Risk</option>
+                  <option value="CRITICAL">Critical Risk</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Compliance Notes *</label>
+            <textarea class="form-control" rows="4" formControlName="complianceNotes" 
+                      placeholder="Provide detailed compliance assessment notes..."></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Recommended Action *</label>
+            <textarea class="form-control" rows="3" formControlName="recommendedAction" 
+                      placeholder="Specify the recommended action for the loan officer..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-danger" [disabled]="verdictForm.invalid">
+            <i class="fas fa-gavel me-2"></i>Submit Verdict
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Document Resubmission Modal -->
+<div class="modal fade" [class.show]="showResubmissionModal" [style.display]="showResubmissionModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showResubmissionModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-redo me-2"></i>Request Document Resubmission
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <form [formGroup]="resubmissionForm" (ngSubmit)="submitResubmissionRequest()">
+        <div class="modal-body">
+          <div *ngIf="selectedDocument" class="alert alert-info">
+            <strong>Document:</strong> {{ selectedDocument.documentType }} - {{ selectedDocument.documentName }}
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Reason for Resubmission *</label>
+            <select class="form-select" formControlName="reason">
+              <option value="">Select reason</option>
+              <option value="POOR_QUALITY">Poor Image Quality</option>
+              <option value="INCOMPLETE_INFO">Incomplete Information</option>
+              <option value="EXPIRED_DOCUMENT">Expired Document</option>
+              <option value="MISMATCH_DATA">Data Mismatch</option>
+              <option value="SUSPICIOUS_CONTENT">Suspicious Content</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Instructions *</label>
+            <textarea class="form-control" rows="4" formControlName="instructions" 
+                      placeholder="Provide specific instructions for resubmission..."></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select class="form-select" formControlName="priority">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-warning" [disabled]="resubmissionForm.invalid">
+            <i class="fas fa-redo me-2"></i>Request Resubmission
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Document View Modal -->
+<div class="modal fade show d-block" *ngIf="showDocumentModal && selectedDocument" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeDocumentModal()">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="fas {{ getDocumentIcon(selectedDocument.documentType) }} me-2"></i>
+          {{ selectedDocument.documentType.replace('_', ' ') }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <div class="row g-4">
+          <!-- Document Preview -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-image me-2 text-danger"></i>Document Preview
+                </h6>
+              </div>
+              <div class="card-body text-center">
+                <img [src]="getDocumentUrl(selectedDocument)" 
+                     [alt]="selectedDocument.documentName"
+                     class="img-fluid rounded shadow-sm"
+                     style="max-height: 500px; object-fit: contain;"
+                     onerror="this.src='assets/images/document-placeholder.png'">
+                <div class="mt-3">
+                  <a [href]="getDocumentUrl(selectedDocument)" 
+                     target="_blank" 
+                     class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Document Details -->
+            <div class="card border-0 shadow-sm mt-3" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-info-circle me-2 text-danger"></i>Document Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <small class="text-muted">Document Type</small>
+                    <p class="fw-bold mb-2">{{ selectedDocument.documentType.replace('_', ' ') }}</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Status</small>
+                    <p class="mb-2">
+                      <span class="badge bg-{{ getDocumentStatusColor(selectedDocument.verificationStatus) }}">
+                        {{ selectedDocument.verificationStatus || 'PENDING' }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Uploaded</small>
+                    <p class="fw-bold mb-2">{{ formatDate(selectedDocument.uploadedAt) }}</p>
+                  </div>
+                  <div class="col-6" *ngIf="selectedDocument.verifiedBy">
+                    <small class="text-muted">Verified By</small>
+                    <p class="fw-bold mb-2">{{ selectedDocument.verifiedBy }}</p>
+                  </div>
+                  <div class="col-12" *ngIf="selectedDocument.remarks">
+                    <small class="text-muted">Remarks</small>
+                    <p class="mb-0">{{ selectedDocument.remarks }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Data -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-robot me-2 text-danger"></i>AI Extracted Data
+                </h6>
+              </div>
+              <div class="card-body">
+                <!-- Extracted Data Display -->
+                <div *ngIf="extractedData && objectKeys(extractedData).length > 0">
+                  <div class="alert alert-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>Data extracted successfully!
+                  </div>
+                  
+                  <div class="extracted-data">
+                    <div class="mb-3" *ngFor="let key of objectKeys(extractedData)">
+                      <label class="small text-muted text-uppercase fw-semibold">{{ formatExtractedField(key) }}</label>
+                      
+                      <!-- Display nested objects -->
+                      <div *ngIf="isObject(extractedData[key])" class="p-2 rounded" 
+                           style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        <div *ngFor="let subKey of objectKeys(extractedData[key])" class="mb-1">
+                          <span class="text-muted">{{ formatExtractedField(subKey) }}:</span>
+                          <span class="ms-2 fw-semibold">{{ extractedData[key][subKey] }}</span>
+                        </div>
+                      </div>
+                      
+                      <!-- Display arrays -->
+                      <ul *ngIf="isArray(extractedData[key])" class="mb-0 p-2 rounded" 
+                          style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        <li *ngFor="let item of extractedData[key]">{{ item }}</li>
+                      </ul>
+                      
+                      <!-- Display simple values -->
+                      <p *ngIf="!isObject(extractedData[key]) && !isArray(extractedData[key])" 
+                         class="fw-semibold mb-0 p-2 rounded" 
+                         style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        {{ extractedData[key] || 'Not found' }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No Extracted Data -->
+                <div *ngIf="!extractedData || objectKeys(extractedData).length === 0" class="text-center py-5">
+                  <i class="fas fa-info-circle text-muted" style="font-size: 3rem;"></i>
+                  <p class="mt-3 text-muted">No extracted data available for this document</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="requestDocumentResubmission(selectedDocument); closeDocumentModal()"
+                [disabled]="selectedDocument.verificationStatus === 'RESUBMISSION_REQUESTED'">
+          <i class="fas fa-redo me-2"></i>Request Resubmission
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Screening Details Modal -->
+<div class="modal fade show d-block" *ngIf="showScreeningDetailsModal && enhancedScreeningData" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeScreeningDetailsModal()">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="fas fa-chart-line me-2"></i>Enhanced Screening Details
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeScreeningDetailsModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <div class="row g-4">
+          <!-- Left Column - Scoring Breakdown -->
+          <div class="col-lg-6">
+            <!-- Internal Scoring Details -->
+            <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-home me-2 text-primary"></i>Internal Scoring Details
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-6">
+                    <small class="text-muted">Raw Score</small>
+                    <p class="fw-bold mb-0">{{ enhancedScreeningData.scoringBreakdown.internalScoring.rawScore }} / {{ enhancedScreeningData.scoringBreakdown.internalScoring.maxPossibleScore }}</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Normalized Score</small>
+                    <p class="fw-bold mb-0">{{ enhancedScreeningData.scoringBreakdown.internalScoring.normalizedScore | number:'1.0-1' }}/100</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Risk Level</small>
+                    <p class="mb-0">
+                      <span class="badge bg-{{ getRiskLevelColor(enhancedScreeningData.scoringBreakdown.internalScoring.riskLevel) }}">
+                        {{ enhancedScreeningData.scoringBreakdown.internalScoring.riskLevel }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Violated Rules</small>
+                    <p class="fw-bold mb-0">{{ enhancedScreeningData.scoringBreakdown.internalScoring.violatedRulesCount }}</p>
+                  </div>
+                  <div class="col-12">
+                    <small class="text-muted">Categories</small>
+                    <div class="mt-1">
+                      <span class="badge bg-info me-1" *ngFor="let category of enhancedScreeningData.scoringBreakdown.internalScoring.categories">
+                        {{ category }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- External Scoring Details -->
+            <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-globe me-2 text-warning"></i>External Scoring Details
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-6">
+                    <small class="text-muted">Raw Score</small>
+                    <p class="fw-bold mb-0">{{ enhancedScreeningData.scoringBreakdown.externalScoring.rawScore }} / {{ enhancedScreeningData.scoringBreakdown.externalScoring.maxPossibleScore }}</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Normalized Score</small>
+                    <p class="fw-bold mb-0">{{ enhancedScreeningData.scoringBreakdown.externalScoring.normalizedScore | number:'1.0-1' }}/100</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Risk Level</small>
+                    <p class="mb-0">
+                      <span class="badge bg-{{ getRiskLevelColor(enhancedScreeningData.scoringBreakdown.externalScoring.riskLevel) }}">
+                        {{ enhancedScreeningData.scoringBreakdown.externalScoring.riskLevel }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Person Found</small>
+                    <p class="mb-0">
+                      <span [class]="enhancedScreeningData.scoringBreakdown.externalScoring.personFound ? 'badge bg-warning' : 'badge bg-success'">
+                        {{ enhancedScreeningData.scoringBreakdown.externalScoring.personFound ? 'Yes' : 'No' }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-12">
+                    <small class="text-muted">Categories</small>
+                    <div class="mt-1">
+                      <span class="badge bg-warning me-1" *ngFor="let category of enhancedScreeningData.scoringBreakdown.externalScoring.categories">
+                        {{ category }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column - Rule Violations -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Rule Violations ({{ enhancedScreeningData.ruleViolations.length }})
+                </h6>
+              </div>
+              <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                <div class="violation-item mb-3 p-3 rounded" 
+                     style="background-color: var(--bg-primary);" 
+                     *ngFor="let violation of enhancedScreeningData.ruleViolations">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-1" style="color: var(--text-primary);">{{ violation.ruleName }}</h6>
+                      <small class="text-muted">{{ violation.ruleCode }} • {{ violation.category }}</small>
+                    </div>
+                    <div class="text-end">
+                      <span class="badge bg-{{ getSeverityColor(violation.severity) }}">{{ violation.severity }}</span>
+                      <div class="mt-1">
+                        <small class="text-muted">{{ violation.points }} pts</small>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="mb-2 small" style="color: var(--text-primary);">{{ violation.description }}</p>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-{{ violation.source === 'INTERNAL' ? 'primary' : 'warning' }}">
+                      {{ violation.source }}
+                    </span>
+                    <small class="text-muted">{{ formatDate(violation.detectedAt) }}</small>
+                  </div>
+                </div>
+                
+                <div *ngIf="enhancedScreeningData.ruleViolations.length === 0" class="text-center py-4">
+                  <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                  <p class="text-muted">No rule violations detected</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Methodology Section -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-calculator me-2 text-info"></i>Scoring Methodology
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Normalization Method:</strong></p>
+                    <p class="text-muted small">{{ enhancedScreeningData.scoringBreakdown.normalizationMethod }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Combination Formula:</strong></p>
+                    <p class="text-muted small">{{ enhancedScreeningData.scoringBreakdown.combinationFormula }}</p>
+                  </div>
+                </div>
+                <div class="row mt-3">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Severity Score Contribution:</strong></p>
+                    <p class="text-muted">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.severityScore | number:'1.0-1' }}/100</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Points Score Contribution:</strong></p>
+                    <p class="text-muted">{{ enhancedScreeningData.scoringBreakdown.severityBreakdown.pointsScore | number:'1.0-1' }}/40</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeScreeningDetailsModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+        <button type="button" class="btn btn-primary" (click)="closeScreeningDetailsModal(); setActiveTab('flags')">
+          <i class="fas fa-flag me-2"></i>View Fraud Flags
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showVerdictModal || showResubmissionModal || showDocumentModal || showScreeningDetailsModal" (click)="closeModal()"></div>

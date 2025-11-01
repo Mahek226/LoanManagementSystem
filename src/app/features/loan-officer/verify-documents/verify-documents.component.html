@@ -23,9 +23,44 @@
       <button class="btn btn-secondary" (click)="goBack()">
         <i class="fas fa-arrow-left me-2"></i>Back to Loans
       </button>
-      <button class="btn btn-primary" (click)="proceedToScreening()">
+      <button class="btn btn-primary" 
+              (click)="proceedToScreening()"
+              [disabled]="!allDocumentsVerified()">
         <i class="fas fa-search me-2"></i>Proceed to Screening
       </button>
+    </div>
+  </div>
+
+  <!-- Verification Progress -->
+  <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="documents.length > 0">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+          <i class="fas fa-tasks me-2 text-primary"></i>Verification Progress
+        </h6>
+        <span class="badge" 
+              [class.bg-success]="allDocumentsVerified()"
+              [class.bg-warning]="!allDocumentsVerified()">
+          {{ getVerifiedCount() }} / {{ documents.length }} Verified
+        </span>
+      </div>
+      <div class="progress" style="height: 10px;">
+        <div class="progress-bar" 
+             [class.bg-success]="allDocumentsVerified()"
+             [class.bg-warning]="!allDocumentsVerified()"
+             role="progressbar" 
+             [style.width.%]="(getVerifiedCount() / documents.length) * 100"
+             [attr.aria-valuenow]="getVerifiedCount()"
+             [attr.aria-valuemin]="0"
+             [attr.aria-valuemax]="documents.length">
+        </div>
+      </div>
+      <small class="text-muted mt-2 d-block" *ngIf="!allDocumentsVerified()">
+        <i class="fas fa-info-circle me-1"></i>Complete all document verifications to proceed to screening
+      </small>
+      <small class="text-success mt-2 d-block" *ngIf="allDocumentsVerified()">
+        <i class="fas fa-check-circle me-1"></i>All documents verified! You can now proceed to screening.
+      </small>
     </div>
   </div>
 
@@ -91,23 +126,36 @@
             </div>
           </div>
 
+          <!-- Status Indicators -->
+          <div class="mb-2" *ngIf="isExtracted(doc)">
+            <small class="text-success">
+              <i class="fas fa-check-circle me-1"></i>Data Extracted
+            </small>
+          </div>
+
           <!-- Action Buttons -->
-          <div class="d-grid gap-2">
-            <button class="btn btn-info btn-sm" (click)="viewDocument(doc)">
-              <i class="fas fa-eye me-2"></i>View & Extract
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-primary btn-sm" 
+                    (click)="viewDocument(doc)">
+              <i class="fas fa-eye me-1"></i>View
             </button>
-            <div class="btn-group" role="group">
-              <button class="btn btn-success btn-sm" 
-                      (click)="openVerifyModal(doc, 'VERIFIED')"
-                      [disabled]="doc.verificationStatus === 'VERIFIED'">
-                <i class="fas fa-check me-1"></i>Approve
-              </button>
-              <button class="btn btn-danger btn-sm" 
-                      (click)="openVerifyModal(doc, 'REJECTED')"
-                      [disabled]="doc.verificationStatus === 'REJECTED'">
-                <i class="fas fa-times me-1"></i>Reject
-              </button>
-            </div>
+            <button class="btn btn-success btn-sm" 
+                    (click)="openVerifyModal(doc, 'VERIFIED')"
+                    [disabled]="!canVerify(doc)">
+              <i class="fas fa-check me-1"></i>Verify
+            </button>
+            <button class="btn btn-danger btn-sm" 
+                    (click)="openVerifyModal(doc, 'REJECTED')"
+                    [disabled]="!canVerify(doc)">
+              <i class="fas fa-times me-1"></i>Reject
+            </button>
+          </div>
+
+          <!-- Already Processed Notice -->
+          <div class="mt-2" *ngIf="!canVerify(doc)">
+            <small class="text-muted fst-italic">
+              <i class="fas fa-lock me-1"></i>Already {{ doc.verificationStatus.toLowerCase() }}
+            </small>
           </div>
         </div>
       </div>
@@ -134,7 +182,8 @@
       <!-- Modal Header -->
       <div class="modal-header border-bottom" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
         <h5 class="modal-title text-white fw-bold">
-          <i class="fas fa-file-alt me-2"></i>{{ selectedDocument.documentType.replace('_', ' ') }}
+          <i class="fas {{ getDocumentIcon(selectedDocument.documentType) }} me-2"></i>
+          {{ selectedDocument.documentType.replace('_', ' ') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" (click)="closeDocumentModal()"></button>
       </div>
@@ -147,20 +196,58 @@
             <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
               <div class="card-header border-0">
                 <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
-                  <i class="fas fa-image me-2 text-info"></i>Document Preview
+                  <i class="fas fa-image me-2 text-warning"></i>Document Preview
                 </h6>
               </div>
               <div class="card-body text-center">
-                <img [src]="selectedDocument.documentUrl" 
+                <img [src]="selectedDocument.documentUrl || selectedDocument.cloudinaryUrl" 
                      [alt]="selectedDocument.documentName"
                      class="img-fluid rounded shadow-sm"
-                     style="max-height: 500px; object-fit: contain;">
+                     style="max-height: 500px; object-fit: contain;"
+                     onerror="this.src='assets/images/document-placeholder.png'">
                 <div class="mt-3">
-                  <a [href]="selectedDocument.documentUrl" 
+                  <a [href]="selectedDocument.documentUrl || selectedDocument.cloudinaryUrl" 
                      target="_blank" 
-                     class="btn btn-sm btn-outline-primary">
+                     class="btn btn-sm btn-outline-warning">
                     <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
                   </a>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Document Details -->
+            <div class="card border-0 shadow-sm mt-3" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-info-circle me-2 text-warning"></i>Document Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <small class="text-muted">Document Type</small>
+                    <p class="fw-bold mb-2">{{ selectedDocument.documentType.replace('_', ' ') }}</p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Status</small>
+                    <p class="mb-2">
+                      <span class="badge bg-{{ getStatusColor(selectedDocument.verificationStatus) }}">
+                        {{ selectedDocument.verificationStatus || 'PENDING' }}
+                      </span>
+                    </p>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Uploaded</small>
+                    <p class="fw-bold mb-2">{{ formatDate(selectedDocument.uploadedAt) }}</p>
+                  </div>
+                  <div class="col-6" *ngIf="selectedDocument.verifiedBy">
+                    <small class="text-muted">Verified By</small>
+                    <p class="fw-bold mb-2">{{ selectedDocument.verifiedBy }}</p>
+                  </div>
+                  <div class="col-12" *ngIf="selectedDocument.remarks">
+                    <small class="text-muted">Remarks</small>
+                    <p class="mb-0">{{ selectedDocument.remarks }}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -173,14 +260,19 @@
                 <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
                   <i class="fas fa-robot me-2 text-success"></i>AI Extracted Data
                 </h6>
-                <button class="btn btn-sm btn-success" 
+                <button class="btn btn-sm" 
+                        [class.btn-success]="!isExtracted(selectedDocument) && !extracting"
+                        [class.btn-secondary]="isExtracted(selectedDocument)"
                         (click)="extractDocumentData(selectedDocument)"
-                        [disabled]="extracting">
-                  <span *ngIf="!extracting">
+                        [disabled]="extracting || isExtracted(selectedDocument)">
+                  <span *ngIf="!extracting && !isExtracted(selectedDocument)">
                     <i class="fas fa-magic me-2"></i>Extract Data
                   </span>
                   <span *ngIf="extracting">
                     <i class="fas fa-spinner fa-spin me-2"></i>Extracting...
+                  </span>
+                  <span *ngIf="isExtracted(selectedDocument) && !extracting">
+                    <i class="fas fa-check-circle me-2"></i>Already Extracted
                   </span>
                 </button>
               </div>
@@ -207,8 +299,26 @@
                   
                   <div class="extracted-data">
                     <div class="mb-3" *ngFor="let item of extractedData | keyvalue">
-                      <label class="small text-muted text-uppercase fw-semibold">{{ item.key.replace('_', ' ') }}</label>
-                      <p class="fw-semibold mb-0 p-2 rounded" 
+                      <label class="small text-muted text-uppercase fw-semibold">{{ formatExtractedField(item.key) }}</label>
+                      
+                      <!-- Display nested objects -->
+                      <div *ngIf="isObject(item.value)" class="p-2 rounded" 
+                           style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        <div *ngFor="let subKey of objectKeys(item.value)" class="mb-1">
+                          <span class="text-muted">{{ formatExtractedField(subKey) }}:</span>
+                          <span class="ms-2 fw-semibold">{{ item.value[subKey] }}</span>
+                        </div>
+                      </div>
+                      
+                      <!-- Display arrays -->
+                      <ul *ngIf="isArray(item.value)" class="mb-0 p-2 rounded" 
+                          style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        <li *ngFor="let arrayItem of item.value">{{ arrayItem }}</li>
+                      </ul>
+                      
+                      <!-- Display simple values -->
+                      <p *ngIf="!isObject(item.value) && !isArray(item.value)" 
+                         class="fw-semibold mb-0 p-2 rounded" 
                          style="background-color: var(--bg-primary); color: var(--text-primary);">
                         {{ item.value || 'Not found' }}
                       </p>
@@ -226,10 +336,14 @@
         <button type="button" class="btn btn-secondary" (click)="closeDocumentModal()">
           <i class="fas fa-times me-2"></i>Close
         </button>
-        <button type="button" class="btn btn-success" (click)="openVerifyModal(selectedDocument, 'VERIFIED'); closeDocumentModal()">
+        <button type="button" class="btn btn-success" 
+                (click)="openVerifyModal(selectedDocument, 'VERIFIED'); closeDocumentModal()"
+                [disabled]="!canVerify(selectedDocument)">
           <i class="fas fa-check me-2"></i>Approve Document
         </button>
-        <button type="button" class="btn btn-danger" (click)="openVerifyModal(selectedDocument, 'REJECTED'); closeDocumentModal()">
+        <button type="button" class="btn btn-danger" 
+                (click)="openVerifyModal(selectedDocument, 'REJECTED'); closeDocumentModal()"
+                [disabled]="!canVerify(selectedDocument)">
           <i class="fas fa-times me-2"></i>Reject Document
         </button>
       </div>

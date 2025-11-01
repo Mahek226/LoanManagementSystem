@@ -30,6 +30,10 @@ export class VerifyDocumentsComponent implements OnInit {
   selectedDocument: LoanDocument | null = null;
   extractedData: ExtractedData | null = null;
   
+  // Track extraction status per document
+  extractionCache: Map<number, ExtractedData> = new Map();
+  extractedDocumentIds: Set<number> = new Set();
+  
   // Modal states
   showDocumentModal = false;
   showVerifyModal = false;
@@ -79,6 +83,13 @@ export class VerifyDocumentsComponent implements OnInit {
   viewDocument(document: LoanDocument): void {
     this.selectedDocument = document;
     this.showDocumentModal = true;
+    
+    // Load cached extraction data if available
+    if (this.extractionCache.has(document.documentId)) {
+      this.extractedData = this.extractionCache.get(document.documentId) || null;
+    } else {
+      this.extractedData = null;
+    }
   }
 
   closeDocumentModal(): void {
@@ -88,6 +99,13 @@ export class VerifyDocumentsComponent implements OnInit {
   }
 
   extractDocumentData(document: LoanDocument): void {
+    // Check if already extracted
+    if (this.extractedDocumentIds.has(document.documentId)) {
+      this.error = 'This document has already been extracted. Using cached data.';
+      setTimeout(() => this.error = '', 3000);
+      return;
+    }
+    
     this.extracting = true;
     this.error = '';
     this.extractedData = null;
@@ -96,6 +114,13 @@ export class VerifyDocumentsComponent implements OnInit {
     this.loanOfficerService.extractDocuments(this.assignmentId).subscribe({
       next: (response) => {
         this.extractedData = response.extracted || response;
+        
+        // Cache the extracted data (only if not null)
+        if (this.extractedData) {
+          this.extractionCache.set(document.documentId, this.extractedData);
+          this.extractedDocumentIds.add(document.documentId);
+        }
+        
         this.extracting = false;
         this.successMessage = 'Document data extracted successfully!';
         setTimeout(() => this.successMessage = '', 3000);
@@ -109,6 +134,13 @@ export class VerifyDocumentsComponent implements OnInit {
   }
 
   openVerifyModal(document: LoanDocument, status: 'VERIFIED' | 'REJECTED'): void {
+    // Prevent re-verification of already verified/rejected documents
+    if (document.verificationStatus === 'VERIFIED' || document.verificationStatus === 'REJECTED') {
+      this.error = `This document is already ${document.verificationStatus.toLowerCase()}. Cannot modify status.`;
+      setTimeout(() => this.error = '', 3000);
+      return;
+    }
+    
     this.selectedDocument = document;
     this.verificationStatus = status;
     this.verificationRemarks = '';
@@ -195,5 +227,59 @@ export class VerifyDocumentsComponent implements OnInit {
       month: 'short', 
       day: 'numeric'
     });
+  }
+  
+  // Check if document has been extracted
+  isExtracted(document: LoanDocument): boolean {
+    return this.extractedDocumentIds.has(document.documentId);
+  }
+  
+  // Check if document can be verified (not already verified/rejected)
+  canVerify(document: LoanDocument): boolean {
+    return document.verificationStatus === 'PENDING';
+  }
+  
+  // Check if all documents are verified
+  allDocumentsVerified(): boolean {
+    return this.documents.length > 0 && this.documents.every(doc => doc.verificationStatus === 'VERIFIED');
+  }
+  
+  // Get count of verified documents
+  getVerifiedCount(): number {
+    return this.documents.filter(doc => doc.verificationStatus === 'VERIFIED').length;
+  }
+  
+  // ==================== Enhanced Modal Helper Methods ====================
+  
+  /**
+   * Format extracted field names for display
+   */
+  formatExtractedField(fieldName: string): string {
+    return fieldName
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .replace(/_/g, ' ')
+      .trim();
+  }
+  
+  /**
+   * Check if value is an object
+   */
+  isObject(value: any): boolean {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+  
+  /**
+   * Check if value is an array
+   */
+  isArray(value: any): boolean {
+    return Array.isArray(value);
+  }
+  
+  /**
+   * Get object keys for template iteration
+   */
+  objectKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
   }
 }

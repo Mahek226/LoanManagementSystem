@@ -150,6 +150,165 @@ export interface RiskFactor {
   weight: number;
 }
 
+// ==================== External Fraud Data Interfaces ====================
+
+export interface ExternalFraudData {
+  bankRecords: BankRecord[];
+  criminalRecords: CriminalRecord[];
+  loanHistory: LoanHistoryRecord[];
+  summary: FraudSummary;
+}
+
+export interface BankRecord {
+  id: number;
+  bankName: string;
+  accountNumber: string; // masked
+  accountType: string;
+  balanceAmount: number;
+  lastTransactionDate: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CriminalRecord {
+  id: number;
+  caseNumber: string;
+  caseType: string;
+  description: string;
+  courtName: string;
+  status: string; // OPEN, CLOSED, CONVICTED, ACQUITTED
+  verdictDate?: string;
+  createdAt: string;
+}
+
+export interface LoanHistoryRecord {
+  id: number;
+  loanType: string;
+  institutionName: string;
+  loanAmount: number;
+  outstandingBalance: number;
+  startDate: string;
+  endDate?: string;
+  status: string; // ACTIVE, CLOSED, DEFAULTED
+  defaultFlag: boolean;
+  createdAt: string;
+}
+
+export interface FraudSummary {
+  totalBankAccounts: number;
+  totalCriminalCases: number;
+  totalLoanHistory: number;
+  hasActiveCriminalCases: boolean;
+  hasDefaultedLoans: boolean;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface DocumentResubmissionRequest {
+  documentId: number;
+  assignmentId: number;
+  complianceOfficerId: number;
+  reason: string;
+  instructions: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+}
+
+// DTO that matches the backend DocumentResubmissionRequestDTO
+export interface DocumentResubmissionRequestDTO {
+  documentId: number;
+  loanId: number;
+  complianceOfficerId: number;
+  resubmissionReason: string;
+  specificInstructions?: string;
+  directToApplicant?: boolean;
+}
+
+// Enhanced Loan Screening Response interfaces
+export interface EnhancedLoanScreeningResponse {
+  assignmentId: number;
+  loanId: number;
+  applicantId: number;
+  applicantName: string;
+  loanType: string;
+  loanAmount: number;
+  status: string;
+  remarks?: string;
+  assignedAt: string;
+  processedAt?: string;
+  officerId: number;
+  officerName: string;
+  officerType: string;
+  normalizedRiskScore: NormalizedRiskScore;
+  scoringBreakdown: ScoringBreakdown;
+  ruleViolations: RuleViolation[];
+  finalRecommendation: string;
+  canApproveReject: boolean;
+}
+
+export interface NormalizedRiskScore {
+  finalScore: number;
+  riskLevel: string;
+  scoreInterpretation: string;
+}
+
+export interface ScoringBreakdown {
+  internalScoring: InternalScoring;
+  externalScoring: ExternalScoring;
+  severityBreakdown: SeverityBreakdown;
+  normalizationMethod: string;
+  combinationFormula: string;
+}
+
+export interface InternalScoring {
+  rawScore: number;
+  maxPossibleScore: number;
+  normalizedScore: number;
+  riskLevel: string;
+  violatedRulesCount: number;
+  categories: string[];
+}
+
+export interface ExternalScoring {
+  rawScore: number;
+  maxPossibleScore: number;
+  normalizedScore: number;
+  riskLevel: string;
+  violatedRulesCount: number;
+  personFound: boolean;
+  categories: string[];
+}
+
+export interface SeverityBreakdown {
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  totalViolations: number;
+  severityScore: number;
+  pointsScore: number;
+}
+
+export interface RuleViolation {
+  source: string;
+  ruleCode: string;
+  ruleName: string;
+  category: string;
+  severity: string;
+  points: number;
+  description: string;
+  details: string;
+  detectedAt: string;
+}
+
+export interface ComplianceVerdict {
+  assignmentId: number;
+  complianceOfficerId: number;
+  recommendation: 'APPROVE' | 'REJECT' | 'REQUEST_DOCUMENTS' | 'FURTHER_REVIEW';
+  riskAssessment: string;
+  fraudFindings: string[];
+  complianceNotes: string;
+  recommendedAction: string;
+}
+
 // ==================== Service ====================
 
 @Injectable({
@@ -299,6 +458,72 @@ export class ComplianceOfficerService {
     return this.http.get(`${this.apiUrl}/check-pep`, {
       params: { name: applicantName, pan: panNumber }
     });
+  }
+
+  // ==================== External Fraud Data Methods ====================
+
+  /**
+   * Get external fraud data for an applicant
+   */
+  getExternalFraudData(applicantId: number): Observable<ExternalFraudData> {
+    return this.http.get<ExternalFraudData>(`${this.apiUrl}/applicant/${applicantId}/external-fraud-data`);
+  }
+
+  /**
+   * Get bank records for an applicant
+   */
+  getBankRecords(applicantId: number): Observable<BankRecord[]> {
+    return this.http.get<BankRecord[]>(`${this.apiUrl}/applicant/${applicantId}/bank-records`);
+  }
+
+  /**
+   * Get criminal records for an applicant
+   */
+  getCriminalRecords(applicantId: number): Observable<CriminalRecord[]> {
+    return this.http.get<CriminalRecord[]>(`${this.apiUrl}/applicant/${applicantId}/criminal-records`);
+  }
+
+  /**
+   * Get loan history for an applicant
+   */
+  getLoanHistory(applicantId: number): Observable<LoanHistoryRecord[]> {
+    return this.http.get<LoanHistoryRecord[]>(`${this.apiUrl}/applicant/${applicantId}/loan-history`);
+  }
+
+  /**
+   * Get comprehensive review details for compliance officer
+   */
+  getComprehensiveReviewDetails(assignmentId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/assignment/${assignmentId}/comprehensive-review`);
+  }
+
+  /**
+   * Submit compliance verdict to loan officer
+   */
+  submitComplianceVerdict(verdict: ComplianceVerdict): Observable<any> {
+    return this.http.post(`${this.apiUrl}/submit-verdict`, verdict);
+  }
+
+  /**
+   * Request document resubmission
+   */
+  requestDocumentResubmission(request: DocumentResubmissionRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/document/${request.documentId}/request-resubmission`, request);
+  }
+
+  /**
+   * Request document resubmission using DTO structure
+   */
+  requestDocumentResubmissionDTO(request: DocumentResubmissionRequestDTO): Observable<any> {
+    return this.http.post(`${this.apiUrl}/document/${request.documentId}/request-resubmission`, request);
+  }
+
+  /**
+   * Get enhanced loan screening details
+   */
+  getEnhancedLoanDetails(assignmentId: number): Observable<EnhancedLoanScreeningResponse> {
+    // Use the enhanced screening controller endpoint
+    return this.http.get<EnhancedLoanScreeningResponse>(`/api/enhanced-screening/loan/${assignmentId}`);
   }
 
   // ==================== Utility Methods ====================

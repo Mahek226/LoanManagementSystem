@@ -114,7 +114,7 @@ export const routes: Routes = [
       },
       {
         path: 'review/:id',
-        loadComponent: () => import('./features/compliance-officer/review-escalation/review-escalation.component').then(m => m.ReviewEscalationComponent)
+        loadComponent: () => import('./features/compliance-officer/comprehensive-review/comprehensive-review.component').then(m => m.ComprehensiveReviewComponent)
       },
       {
         path: 'profile',

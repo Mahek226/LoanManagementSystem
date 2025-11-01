@@ -319,68 +319,6 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.5s; background-color: var(--bg-primary);">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-tasks me-2 text-primary"></i>Screening Actions
-          </h5>
-        </div>
-        <div class="card-body d-grid gap-2">
-          <button class="btn btn-primary btn-sm" 
-                  (click)="extractDocuments()"
-                  [disabled]="extractingDocuments || documentsExtracted">
-            <span *ngIf="extractingDocuments" class="spinner-border spinner-border-sm me-2"></span>
-            <i *ngIf="!extractingDocuments" class="fas fa-file-invoice me-2"></i>
-            {{ getExtractButtonText() }}
-          </button>
-          
-          <button class="btn btn-info btn-sm" 
-                  (click)="openFraudCheckModal()"
-                  [disabled]="isFraudCheckDisabled()">
-            <i class="fas fa-shield-alt me-2"></i>{{ getFraudCheckButtonText() }}
-          </button>
-          
-          <button class="btn btn-outline-warning btn-sm" 
-                  (click)="openResubmissionModal()"
-                  [disabled]="isResubmissionButtonDisabled()">
-            <i class="fas fa-redo me-2"></i>Request Document Resubmission
-          </button>
-        </div>
-      </div>
-
-      <!-- Decision Actions -->
-      <div class="card border-0 shadow-sm animate-slide-up" style="animation-delay: 0.6s; background-color: var(--bg-primary);">
-        <div class="card-header border-0" style="background-color: var(--bg-primary);">
-          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
-            <i class="fas fa-gavel me-2 text-primary"></i>Final Decision
-          </h5>
-        </div>
-        <div class="card-body d-grid gap-3">
-          <button class="btn btn-success btn-lg" 
-                  (click)="openActionModal('APPROVE')"
-                  [disabled]="isApproveDisabled()">
-            <i class="fas fa-check-circle me-2"></i>Approve Loan
-          </button>
-          
-          <button class="btn btn-danger btn-lg" 
-                  (click)="openActionModal('REJECT')"
-                  [disabled]="isRejectDisabled()">
-            <i class="fas fa-times-circle me-2"></i>Reject Loan
-          </button>
-          
-          <button class="btn btn-warning btn-lg" 
-                  (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
-                  [disabled]="isEscalateDisabled()">
-            <i class="fas fa-arrow-up me-2"></i>Escalate to Compliance
-          </button>
-
-          <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
-            <i class="fas fa-arrow-left me-2"></i>Back to List
-          </button>
-        </div>
-      </div>
-
         </div>
       </div>
 
@@ -464,48 +402,125 @@
                 <p class="text-muted">Documents will appear here once uploaded by the applicant</p>
               </div>
 
-              <div *ngIf="documents.length > 0" class="table-responsive">
-                <table class="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Document Type</th>
-                      <th>Document Name</th>
-                      <th>Uploaded At</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let doc of documents">
-                      <td><strong>{{ doc.documentType }}</strong></td>
-                      <td>{{ doc.documentName }}</td>
-                      <td>{{ formatDate(doc.uploadedAt) }}</td>
-                      <td>
-                        <span class="badge" 
-                              [class.bg-success]="doc.verificationStatus === 'VERIFIED'"
-                              [class.bg-warning]="doc.verificationStatus === 'PENDING'"
-                              [class.bg-danger]="doc.verificationStatus === 'REJECTED'">
-                          {{ doc.verificationStatus }}
-                        </span>
-                      </td>
-                      <td>
+              <div *ngIf="documents.length > 0">
+                <!-- Document Cards with Extracted Data -->
+                <div *ngFor="let doc of documents; let i = index" class="card mb-3 border-0 shadow-sm">
+                  <div class="card-header d-flex justify-content-between align-items-center" 
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div>
+                      <h6 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        <strong>{{ doc.documentType.replace('_', ' ') }}</strong>
+                      </h6>
+                      <small class="opacity-75">{{ doc.documentName }}</small>
+                    </div>
+                    <div>
+                      <span class="badge me-2" 
+                            [class.bg-success]="doc.verificationStatus === 'VERIFIED'"
+                            [class.bg-warning]="doc.verificationStatus === 'PENDING'"
+                            [class.bg-danger]="doc.verificationStatus === 'REJECTED'">
+                        {{ doc.verificationStatus }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="card-body">
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <i class="fas fa-clock me-1"></i> Uploaded: {{ formatDate(doc.uploadedAt) }}
+                        </small>
+                      </div>
+                      <div class="col-md-6 text-end">
                         <button class="btn btn-sm btn-success me-2" 
                                 (click)="verifyDocument(doc, 'VERIFIED')"
                                 [disabled]="isVerifyButtonDisabled(doc)">
                           <i class="fas fa-check me-1"></i>Verify
                         </button>
-                        <button class="btn btn-sm btn-danger" 
+                        <button class="btn btn-sm btn-danger me-2" 
                                 (click)="verifyDocument(doc, 'REJECTED')"
                                 [disabled]="isRejectDocButtonDisabled(doc)">
                           <i class="fas fa-times me-1"></i>Reject
                         </button>
-                        <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
-                          <i class="fas fa-eye"></i> View
+                        <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-eye me-1"></i> View
                         </a>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      </div>
+                    </div>
+
+                    <!-- Extracted Data Section -->
+                    <div *ngIf="hasExtractedData(doc)" class="mt-3">
+                      <div class="accordion" [attr.id]="'extractedAccordion' + i">
+                        <div class="accordion-item border-0" style="background-color: #f8f9fa;">
+                          <h2 class="accordion-header" [attr.id]="'heading' + i">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    [attr.data-bs-target]="'#collapse' + i" 
+                                    aria-expanded="false" 
+                                    [attr.aria-controls]="'collapse' + i"
+                                    style="background-color: #e3f2fd; color: #1976d2; font-weight: 600;">
+                              <i class="fas fa-search-plus me-2"></i>
+                              Extracted Data
+                            </button>
+                          </h2>
+                          <div [attr.id]="'collapse' + i" 
+                               class="accordion-collapse collapse" 
+                               [attr.aria-labelledby]="'heading' + i" 
+                               [attr.data-bs-parent]="'#extractedAccordion' + i">
+                            <div class="accordion-body bg-white">
+                              <div class="extracted-data-container p-3" style="background-color: #fafafa; border-radius: 8px;">
+                                <ng-container *ngFor="let key of objectKeys(parseExtractedData(doc))">
+                                  <div class="mb-3 pb-2 border-bottom">
+                                    <div class="row">
+                                      <div class="col-md-4">
+                                        <strong class="text-primary">
+                                          <i class="fas fa-tag me-2"></i>{{ formatExtractedField(key) }}:
+                                        </strong>
+                                      </div>
+                                      <div class="col-md-8">
+                                        <!-- Display nested objects -->
+                                        <ng-container *ngIf="isObject(parseExtractedData(doc)[key])">
+                                          <div class="ps-3">
+                                            <ng-container *ngFor="let subKey of objectKeys(parseExtractedData(doc)[key])">
+                                              <div class="mb-1">
+                                                <span class="text-muted">{{ formatExtractedField(subKey) }}:</span>
+                                                <span class="ms-2 fw-semibold">{{ parseExtractedData(doc)[key][subKey] }}</span>
+                                              </div>
+                                            </ng-container>
+                                          </div>
+                                        </ng-container>
+                                        
+                                        <!-- Display arrays -->
+                                        <ng-container *ngIf="isArray(parseExtractedData(doc)[key])">
+                                          <ul class="mb-0">
+                                            <li *ngFor="let item of parseExtractedData(doc)[key]">{{ item }}</li>
+                                          </ul>
+                                        </ng-container>
+                                        
+                                        <!-- Display simple values -->
+                                        <ng-container *ngIf="!isObject(parseExtractedData(doc)[key]) && !isArray(parseExtractedData(doc)[key])">
+                                          <span class="fw-semibold" style="color: #2c3e50;">
+                                            {{ parseExtractedData(doc)[key] }}
+                                          </span>
+                                        </ng-container>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </ng-container>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- No Extracted Data Message -->
+                    <div *ngIf="!hasExtractedData(doc)" class="alert alert-info mb-0">
+                      <i class="fas fa-info-circle me-2"></i>
+                      No extracted data available for this document. Click "Extract Documents" above to process.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -931,222 +946,17 @@
     <div *ngIf="activeTab === 'decision'">
       <div class="row g-4">
         
-        <!-- Left Column - Decision Timeline -->
-        <div class="col-lg-5">
-          <!-- Decision History Timeline -->
-          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
-            <div class="card-header bg-info text-white">
-              <h5 class="mb-0"><i class="fas fa-history me-2"></i>Decision History Timeline</h5>
-            </div>
-            <div class="card-body">
-              <div class="timeline">
-                <!-- Application Submitted -->
-                <div class="timeline-item mb-4">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker bg-primary text-white rounded-circle me-3" 
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-file-alt"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Application Submitted</h6>
-                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
-                      </div>
-                      <p class="text-muted small mb-1">Loan application submitted by {{ loan.applicantName }}</p>
-                      <div class="mt-2">
-                        <span class="badge bg-primary">{{ loan.loanType }}</span>
-                        <span class="badge bg-success ms-1">{{ formatCurrency(loan.loanAmount) }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Assigned to Officer -->
-                <div class="timeline-item mb-4">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker bg-info text-white rounded-circle me-3" 
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-user-tie"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Assigned to Loan Officer</h6>
-                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
-                      </div>
-                      <p class="text-muted small mb-1">Assigned to {{ loan.officerName || 'Loan Officer' }}</p>
-                      <div class="mt-2">
-                        <span class="badge bg-info">{{ loan.officerType || 'LOAN_OFFICER' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Risk Assessment -->
-                <div class="timeline-item mb-4">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker text-white rounded-circle me-3" 
-                         [class.bg-success]="loan.riskLevel === 'LOW'"
-                         [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
-                         [class.bg-danger]="loan.riskLevel === 'HIGH'"
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Risk Assessment Completed</h6>
-                        <small class="text-muted">{{ formatDate(loan.assignedAt) }}</small>
-                      </div>
-                      <p class="text-muted small mb-1">Automated risk scoring completed</p>
-                      <div class="mt-2">
-                        <span class="badge" 
-                              [class.bg-success]="loan.riskLevel === 'LOW'"
-                              [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
-                              [class.bg-danger]="loan.riskLevel === 'HIGH'">
-                          {{ loan.riskLevel }} RISK - {{ loan.riskScore }}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Document Verification -->
-                <div class="timeline-item mb-4">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker bg-secondary text-white rounded-circle me-3" 
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-file-check"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Document Verification</h6>
-                        <small class="text-muted">In Progress</small>
-                      </div>
-                      <p class="text-muted small mb-1">{{ documents.length }} documents uploaded</p>
-                      <div class="mt-2">
-                        <span class="badge bg-success me-1">{{ getVerifiedDocumentsCount() }} Verified</span>
-                        <span class="badge bg-warning me-1">{{ getPendingDocumentsCount() }} Pending</span>
-                        <span class="badge bg-danger" *ngIf="getRejectedDocumentsCount() > 0">
-                          {{ getRejectedDocumentsCount() }} Rejected
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Fraud Check -->
-                <div class="timeline-item mb-4" *ngIf="fraudCheckTriggered && fraudCheckResult">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker bg-warning text-white rounded-circle me-3" 
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Fraud Detection Completed</h6>
-                        <small class="text-muted">{{ fraudCheckResult.checkedAt ? formatDate(fraudCheckResult.checkedAt) : 'Recently' }}</small>
-                      </div>
-                      <p class="text-muted small mb-1">Comprehensive fraud screening performed</p>
-                      <div class="mt-2">
-                        <span class="badge" 
-                              [class.bg-success]="fraudCheckResult.riskLevel === 'LOW'"
-                              [class.bg-warning]="fraudCheckResult.riskLevel === 'MEDIUM'"
-                              [class.bg-danger]="fraudCheckResult.riskLevel === 'HIGH'">
-                          {{ fraudCheckResult.riskLevel }} - {{ fraudCheckResult.riskScore }}%
-                        </span>
-                        <span class="badge bg-secondary ms-1" *ngIf="fraudCheckResult.flaggedRules">
-                          {{ fraudCheckResult.flaggedRules.length }} Rules Flagged
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Current Status -->
-                <div class="timeline-item mb-4">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker text-white rounded-circle me-3 position-relative" 
-                         [class.bg-success]="loan.status === 'APPROVED'"
-                         [class.bg-danger]="loan.status === 'REJECTED'"
-                         [class.bg-warning]="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'"
-                         [class.bg-info]="loan.status === 'ESCALATED'"
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-clock"></i>
-                      <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle" 
-                            style="width: 12px; height: 12px;"
-                            *ngIf="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'">
-                      </span>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Current Status</h6>
-                        <small class="text-muted">Now</small>
-                      </div>
-                      <p class="text-muted small mb-1">
-                        {{ loan.status === 'APPROVED' ? 'Application approved and ready for disbursement' :
-                           loan.status === 'REJECTED' ? 'Application rejected' :
-                           loan.status === 'ESCALATED' ? 'Escalated to compliance team' :
-                           'Awaiting loan officer decision' }}
-                      </p>
-                      <div class="mt-2">
-                        <span class="badge" 
-                              [class.bg-success]="loan.status === 'APPROVED'"
-                              [class.bg-danger]="loan.status === 'REJECTED'"
-                              [class.bg-warning]="loan.status === 'PENDING' || loan.status === 'UNDER_REVIEW'"
-                              [class.bg-info]="loan.status === 'ESCALATED'">
-                          {{ loan.status }}
-                        </span>
-                      </div>
-                      <div class="mt-2" *ngIf="loan.remarks">
-                        <div class="alert alert-light mb-0 p-2">
-                          <small><strong>Remarks:</strong> {{ loan.remarks }}</small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Final Decision (if processed) -->
-                <div class="timeline-item" *ngIf="loan.processedAt">
-                  <div class="d-flex align-items-start">
-                    <div class="timeline-marker text-white rounded-circle me-3" 
-                         [class.bg-success]="loan.status === 'APPROVED'"
-                         [class.bg-danger]="loan.status === 'REJECTED'"
-                         [class.bg-info]="loan.status === 'ESCALATED'"
-                         style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                      <i class="fas fa-gavel"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="mb-0">Final Decision Made</h6>
-                        <small class="text-muted">{{ formatDate(loan.processedAt) }}</small>
-                      </div>
-                      <p class="text-muted small mb-1">Decision by {{ loan.officerName }}</p>
-                      <div class="mt-2">
-                        <span class="badge" 
-                              [class.bg-success]="loan.status === 'APPROVED'"
-                              [class.bg-danger]="loan.status === 'REJECTED'"
-                              [class.bg-info]="loan.status === 'ESCALATED'">
-                          {{ loan.status }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Empty State -->
-              <div *ngIf="!loan.assignedAt" class="text-center py-4">
-                <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                <h6 class="text-muted">No decision history available</h6>
-                <p class="text-muted small">Timeline will appear as decisions are made</p>
-              </div>
-            </div>
+        <!-- Document Verification Alert -->
+        <div class="col-12" *ngIf="!allDocumentsVerified()">
+          <div class="alert alert-warning shadow-sm">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Document Verification Required</strong>
+            <p class="mb-0 mt-2">All documents must be verified before you can make a final decision. Please complete document verification in the "Documents" tab.</p>
           </div>
         </div>
 
-        <!-- Right Column - Decision Summary & Actions -->
-        <div class="col-lg-7">
-          <!-- Decision Summary -->
+        <!-- Decision Summary Card -->
+        <div class="col-lg-6">
           <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
             <div class="card-header bg-primary text-white">
               <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Decision Summary</h5>
@@ -1179,8 +989,10 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Decision Actions -->
+        <!-- Action Buttons -->
+        <div class="col-lg-6">
           <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
             <div class="card-header bg-success text-white">
               <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Make Your Decision</h5>
@@ -1194,7 +1006,7 @@
               <div class="d-grid gap-3">
                 <button class="btn btn-success btn-lg" 
                         (click)="openActionModal('APPROVE')"
-                        [disabled]="isApproveDisabled()">
+                        [disabled]="!allDocumentsVerified() || isApproveDisabled()">
                   <i class="fas fa-check-circle me-2"></i>
                   <strong>Approve Loan</strong>
                   <small class="d-block mt-1">Approve this loan application for disbursement</small>
@@ -1202,7 +1014,7 @@
 
                 <button class="btn btn-danger btn-lg" 
                         (click)="openActionModal('REJECT')"
-                        [disabled]="isRejectDisabled()">
+                        [disabled]="!allDocumentsVerified() || isRejectDisabled()">
                   <i class="fas fa-times-circle me-2"></i>
                   <strong>Reject Loan</strong>
                   <small class="d-block mt-1">Reject this loan application with reason</small>
@@ -1210,16 +1022,10 @@
 
                 <button class="btn btn-warning btn-lg" 
                         (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
-                        [disabled]="isEscalateDisabled()">
+                        [disabled]="!allDocumentsVerified() || isEscalateDisabled()">
                   <i class="fas fa-arrow-up me-2"></i>
                   <strong>Escalate to Compliance</strong>
                   <small class="d-block mt-1">Send to compliance team for further review</small>
-                </button>
-
-                <button class="btn btn-outline-warning" 
-                        (click)="openResubmissionModal()"
-                        [disabled]="isResubmissionButtonDisabled()">
-                  <i class="fas fa-redo me-2"></i>Request Document Resubmission
                 </button>
 
                 <hr>
@@ -1238,7 +1044,7 @@
         </div>
       </div>
     </div>
-    <!-- End Decision Tab -->
+    <!-- End Final Decision Tab -->
     
   </div>
   <!-- End Tab Content -->

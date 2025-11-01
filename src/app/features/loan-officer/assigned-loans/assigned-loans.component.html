@@ -128,8 +128,6 @@
               <th style="color: var(--text-primary); padding: 1rem;">Applicant</th>
               <th style="color: var(--text-primary); padding: 1rem;">Loan Type</th>
               <th style="color: var(--text-primary); padding: 1rem;">Amount</th>
-              <th style="color: var(--text-primary); padding: 1rem;">Risk Level</th>
-              <th style="color: var(--text-primary); padding: 1rem;">Risk Score</th>
               <th style="color: var(--text-primary); padding: 1rem;">Status</th>
               <th style="color: var(--text-primary); padding: 1rem;">Assigned Date</th>
               <th style="color: var(--text-primary); padding: 1rem; text-align: center;">Actions</th>
@@ -159,23 +157,6 @@
               </td>
               <td style="color: var(--text-primary); padding: 1rem;">
                 <span class="fw-semibold text-success">{{ formatCurrency(loan.loanAmount) }}</span>
-              </td>
-              <td style="padding: 1rem;">
-                <span class="badge bg-{{ getRiskColor(loan.riskLevel) }}">
-                  <i class="fas fa-exclamation-triangle me-1" *ngIf="loan.riskLevel === 'HIGH'"></i>
-                  {{ loan.riskLevel }}
-                </span>
-              </td>
-              <td style="color: var(--text-primary); padding: 1rem;">
-                <div class="d-flex align-items-center">
-                  <div class="progress flex-grow-1 me-2" style="height: 8px; width: 60px;">
-                    <div class="progress-bar bg-{{ getRiskColor(loan.riskLevel) }}" 
-                         [style.width.%]="loan.riskScore"
-                         role="progressbar">
-                    </div>
-                  </div>
-                  <span class="fw-semibold">{{ loan.riskScore }}</span>
-                </div>
               </td>
               <td style="padding: 1rem;">
                 <span class="badge bg-{{ getStatusColor(loan.status) }}">{{ loan.status }}</span>
@@ -226,7 +207,6 @@
                 <h5 class="fw-bold mb-1" style="color: var(--text-primary);">{{ loan.applicantName }}</h5>
                 <div class="d-flex gap-2">
                   <span class="badge bg-info small">{{ loan.loanType }}</span>
-                  <span class="badge bg-{{ getRiskColor(loan.riskLevel) }} small">{{ loan.riskLevel }} Risk</span>
                 </div>
               </div>
             </div>
@@ -353,16 +333,27 @@
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Contact Number</label>
-                <p class="fw-semibold mb-0" style="color: var(--text-primary);">+91 XXXX-XXX-XXX</p>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i> Loading...</span>
+                  <span *ngIf="!loadingDetails">{{ getApplicantPhone() }}</span>
+                </p>
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Email Address</label>
-                <p class="fw-semibold mb-0" style="color: var(--text-primary);">applicant&#64;example.com</p>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i> Loading...</span>
+                  <span *ngIf="!loadingDetails">{{ getApplicantEmail() }}</span>
+                </p>
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Employment Status</label>
                 <p class="fw-semibold mb-0" style="color: var(--text-primary);">
-                  <span class="badge bg-success">Employed</span>
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails" class="badge" 
+                        [class.bg-success]="getEmploymentStatus() !== 'N/A'"
+                        [class.bg-secondary]="getEmploymentStatus() === 'N/A'">
+                    {{ getEmploymentStatus() }}
+                  </span>
                 </p>
               </div>
             </div>
@@ -380,35 +371,74 @@
             <div class="row g-3">
               <div class="col-md-3">
                 <label class="small text-muted">Credit Score (CIBIL)</label>
-                <p class="fw-bold mb-0 text-success fs-5">750</p>
-                <small class="text-muted">Excellent</small>
+                <p class="fw-bold mb-0 fs-5" 
+                   [class.text-success]="getCreditScore() >= 700"
+                   [class.text-warning]="getCreditScore() >= 600 && getCreditScore() < 700"
+                   [class.text-danger]="getCreditScore() < 600">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">{{ getCreditScore() || 'N/A' }}</span>
+                </p>
+                <small class="text-muted" *ngIf="!loadingDetails">
+                  {{ getCreditScore() >= 700 ? 'Excellent' : getCreditScore() >= 600 ? 'Good' : 'Poor' }}
+                </small>
               </div>
               <div class="col-md-3">
                 <label class="small text-muted">DTI Ratio</label>
-                <p class="fw-bold mb-0 text-warning fs-5">35.2%</p>
-                <small class="text-muted">Acceptable</small>
+                <p class="fw-bold mb-0 fs-5"
+                   [class.text-success]="getDTIRatio() < 30"
+                   [class.text-warning]="getDTIRatio() >= 30 && getDTIRatio() < 40"
+                   [class.text-danger]="getDTIRatio() >= 40">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">{{ getDTIRatio() ? (getDTIRatio() | number: '1.1-1') + '%' : 'N/A' }}</span>
+                </p>
+                <small class="text-muted" *ngIf="!loadingDetails">
+                  {{ getDTIRatio() < 30 ? 'Excellent' : getDTIRatio() < 40 ? 'Acceptable' : 'High' }}
+                </small>
               </div>
               <div class="col-md-3">
                 <label class="small text-muted">Monthly Income</label>
-                <p class="fw-bold mb-0 text-primary fs-5">₹75,000</p>
-                <small class="text-muted">Verified</small>
+                <p class="fw-bold mb-0 text-primary fs-5">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">{{ getMonthlyIncome() ? formatCurrency(getMonthlyIncome()) : 'N/A' }}</span>
+                </p>
+                <small class="text-muted" *ngIf="!loadingDetails && getMonthlyIncome()">Verified</small>
               </div>
               <div class="col-md-3">
                 <label class="small text-muted">Existing Debt</label>
-                <p class="fw-bold mb-0 text-danger fs-5">₹2,50,000</p>
+                <p class="fw-bold mb-0 text-danger fs-5">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">
+                    {{ detailedLoanData?.existingDebt ? formatCurrency(detailedLoanData.existingDebt) : 'N/A' }}
+                  </span>
+                </p>
                 <small class="text-muted">Total borrowings</small>
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Total Assets</label>
-                <p class="fw-semibold mb-0" style="color: var(--text-primary);">₹15,00,000</p>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">
+                    {{ detailedLoanData?.totalAssets ? formatCurrency(detailedLoanData.totalAssets) : 'N/A' }}
+                  </span>
+                </p>
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Total Liabilities</label>
-                <p class="fw-semibold mb-0" style="color: var(--text-primary);">₹3,50,000</p>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">
+                    {{ detailedLoanData?.totalLiabilities ? formatCurrency(detailedLoanData.totalLiabilities) : 'N/A' }}
+                  </span>
+                </p>
               </div>
               <div class="col-md-4">
                 <label class="small text-muted">Interest Coverage Ratio</label>
-                <p class="fw-semibold mb-0 text-success">3.5x</p>
+                <p class="fw-semibold mb-0 text-success">
+                  <span *ngIf="loadingDetails"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span *ngIf="!loadingDetails">
+                    {{ detailedLoanData?.interestCoverageRatio ? (detailedLoanData.interestCoverageRatio | number: '1.1-1') + 'x' : 'N/A' }}
+                  </span>
+                </p>
               </div>
             </div>
           </div>

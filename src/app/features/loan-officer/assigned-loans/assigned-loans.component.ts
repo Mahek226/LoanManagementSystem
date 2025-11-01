@@ -36,6 +36,8 @@ export class AssignedLoansComponent implements OnInit {
   // Modal state
   showLoanDetailsModal = false;
   selectedLoan: LoanScreeningResponse | null = null;
+  detailedLoanData: any = null; // Comprehensive loan details from backend
+  loadingDetails = false;
 
   constructor(
     private authService: AuthService,
@@ -93,9 +95,37 @@ export class AssignedLoansComponent implements OnInit {
 
   // View loan details in modal
   viewLoanDetails(loan: LoanScreeningResponse): void {
-    // Will open modal with comprehensive loan details
     this.selectedLoan = loan;
     this.showLoanDetailsModal = true;
+    this.loadComprehensiveLoanDetails(loan.assignmentId);
+  }
+  
+  // Load comprehensive loan details from backend (all tables)
+  loadComprehensiveLoanDetails(assignmentId: number): void {
+    this.loadingDetails = true;
+    this.error = '';
+    
+    // Get loanId from selectedLoan
+    const loanId = this.selectedLoan?.loanId;
+    if (!loanId) {
+      this.error = 'Loan ID not found';
+      this.loadingDetails = false;
+      return;
+    }
+    
+    // Use comprehensive view API to fetch data from all related tables
+    this.loanOfficerService.getComprehensiveLoanView(loanId).subscribe({
+      next: (data) => {
+        this.detailedLoanData = data;
+        this.loadingDetails = false;
+      },
+      error: (err) => {
+        console.error('Error loading comprehensive loan details:', err);
+        this.error = 'Failed to load detailed information';
+        this.loadingDetails = false;
+        // Keep modal open with basic data
+      }
+    });
   }
 
   // Verify documents - navigate to document verification
@@ -161,5 +191,35 @@ export class AssignedLoansComponent implements OnInit {
   closeLoanDetailsModal(): void {
     this.showLoanDetailsModal = false;
     this.selectedLoan = null;
+    this.detailedLoanData = null;
+  }
+  
+  // Helper methods for displaying real data
+  getApplicantEmail(): string {
+    return this.detailedLoanData?.applicantEmail || this.detailedLoanData?.email || 'N/A';
+  }
+  
+  getApplicantPhone(): string {
+    return this.detailedLoanData?.applicantPhone || this.detailedLoanData?.phone || 'N/A';
+  }
+  
+  getCreditScore(): number {
+    return this.detailedLoanData?.creditScore || this.detailedLoanData?.cibilScore || 0;
+  }
+  
+  getMonthlyIncome(): number {
+    return this.detailedLoanData?.monthlyIncome || this.detailedLoanData?.salary || 0;
+  }
+  
+  getDTIRatio(): number {
+    if (this.detailedLoanData?.dtiRatio) return this.detailedLoanData.dtiRatio;
+    if (this.detailedLoanData?.existingDebt && this.detailedLoanData?.monthlyIncome) {
+      return (this.detailedLoanData.existingDebt / this.detailedLoanData.monthlyIncome) * 100;
+    }
+    return 0;
+  }
+  
+  getEmploymentStatus(): string {
+    return this.detailedLoanData?.employmentStatus || this.detailedLoanData?.employmentType || 'N/A';
   }
 }

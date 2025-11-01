@@ -86,11 +86,14 @@ export interface LoanDocument {
   documentType: string;
   documentName: string;
   documentUrl: string;
+  cloudinaryUrl?: string; // Alternative URL property
   uploadedAt: string;
   verificationStatus: string; // PENDING, VERIFIED, REJECTED
   verifiedBy?: string;
   verifiedAt?: string;
   remarks?: string;
+  extractedJson?: string; // JSON string of extracted data
+  extractedText?: string; // Plain text extracted data
 }
 
 export interface FraudCheckResult {
@@ -204,6 +207,114 @@ export interface RuleViolation {
   detectedAt: string;
 }
 
+export interface ComprehensiveLoanView {
+  // Basic Loan Information
+  loanId: number;
+  loanType: string;
+  loanAmount: number;
+  tenureMonths: number;
+  interestRate: number;
+  monthlyEmi: number;
+  loanPurpose: string;
+  status: string;
+  appliedDate: string;
+  approvedDate?: string;
+  
+  // Applicant Information
+  applicantId: number;
+  applicantName: string;
+  email: string;
+  phone: string;
+  panNumber?: string;
+  aadhaarNumber?: string;
+  maritalStatus?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
+  
+  // Employment Information
+  employerName?: string;
+  designation?: string;
+  employmentType?: string;
+  monthlyIncome?: number;
+  employmentStartDate?: string;
+  education?: string;
+  
+  // Financial Information
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  creditScore?: number;
+  existingDebt?: number;
+  totalAssets?: number;
+  totalLiabilities?: number;
+  dtiRatio?: number;
+  interestCoverageRatio?: number;
+  
+  // Property Information
+  propertyAddress?: string;
+  propertyValue?: number;
+  propertyType?: string;
+  
+  // Residence Information
+  residenceType?: string;
+  yearsAtCurrentAddress?: number;
+  
+  // Risk Assessment
+  riskLevel: string;
+  riskScore: number;
+  canApproveReject: boolean;
+  
+  // Assignment Information
+  assignmentId?: number;
+  assignedOfficerName?: string;
+  assignedOfficerType?: string;
+  assignedAt?: string;
+  officerRemarks?: string;
+  
+  // Verification Status
+  kycVerified: boolean;
+  bankVerified: boolean;
+  employmentVerified: boolean;
+  incomeVerified: boolean;
+  addressVerified: boolean;
+  propertyVerified: boolean;
+  
+  // Related Data
+  documents: LoanDocument[];
+  references: LoanReference[];
+  dependents: LoanDependent[];
+  collaterals: LoanCollateral[];
+}
+
+export interface LoanReference {
+  referenceId: number;
+  name: string;
+  relationship: string;
+  phoneNumber: string;
+  email?: string;
+  address?: string;
+}
+
+export interface LoanDependent {
+  dependentId: number;
+  name: string;
+  relationship: string;
+  age: number;
+  occupation?: string;
+}
+
+export interface LoanCollateral {
+  collateralId: number;
+  collateralType: string;
+  description: string;
+  estimatedValue: number;
+  ownershipProof?: string;
+  verificationStatus?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -259,6 +370,11 @@ export class LoanOfficerService {
   // Request document resubmission
   requestDocumentResubmission(officerId: number, request: DocumentResubmissionRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}/${officerId}/request-resubmission`, request);
+  }
+
+  // Get comprehensive loan view with all related data
+  getComprehensiveLoanView(loanId: number): Observable<ComprehensiveLoanView> {
+    return this.http.get<ComprehensiveLoanView>(`${this.apiUrl}/loan/${loanId}/comprehensive-view`);
   }
 
   // Profile Management

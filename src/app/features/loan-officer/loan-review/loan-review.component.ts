@@ -620,6 +620,12 @@ export class LoanReviewComponent implements OnInit {
     return this.documents.filter(d => d.verificationStatus === 'REJECTED').length;
   }
 
+  // Check if all documents are verified
+  allDocumentsVerified(): boolean {
+    if (this.documents.length === 0) return false;
+    return this.documents.every(d => d.verificationStatus === 'VERIFIED');
+  }
+
   // Document verification button states
   isVerifyButtonDisabled(doc: any): boolean {
     return doc.verificationStatus === 'VERIFIED' || this.processing;
@@ -649,5 +655,48 @@ export class LoanReviewComponent implements OnInit {
     const totalPoints = this.getTotalPointsDeducted();
     const riskScore = this.fraudCheckResult.riskScore || 1;
     return Math.round((totalPoints * 100) / riskScore);
+  }
+
+  // Parse extracted JSON data
+  parseExtractedData(doc: LoanDocument): any {
+    if (!doc.extractedJson) return null;
+    try {
+      return JSON.parse(doc.extractedJson);
+    } catch (e) {
+      console.error('Error parsing extracted JSON:', e);
+      return null;
+    }
+  }
+
+  // Check if document has extracted data
+  hasExtractedData(doc: LoanDocument): boolean {
+    return !!doc.extractedJson && doc.extractedJson !== '{}';
+  }
+
+  // Format extracted field for display
+  formatExtractedField(key: string): string {
+    // Convert snake_case and camelCase to Title Case
+    return key
+      .replace(/_/g, ' ')
+      .replace(/([A-Z])/g, ' $1')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+      .trim();
+  }
+
+  // Get object keys for ngFor
+  objectKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
+  }
+
+  // Check if value is an object (for nested data)
+  isObject(val: any): boolean {
+    return val !== null && typeof val === 'object' && !Array.isArray(val);
+  }
+
+  // Check if value is an array
+  isArray(val: any): boolean {
+    return Array.isArray(val);
   }
 }
