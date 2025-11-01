@@ -128,4 +128,43 @@ public interface ComplianceOfficerService {
      * Generate compliance report PDF
      */
     byte[] generateComplianceReportPDF(Long assignmentId);
+    
+    // ==================== Comprehensive Compliance Review ====================
+    
+    /**
+     * Get comprehensive review details including documents, external fraud data, and screening results
+     */
+    ComplianceReviewDetailsResponse getComprehensiveReviewDetails(Long assignmentId);
+    
+    /**
+     * Submit compliance verdict to loan officer
+     */
+    ComplianceVerdictResponse submitComplianceVerdict(ComplianceVerdictRequest request);
+    
+    /**
+     * Request document resubmission with detailed reasons
+     */
+    Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request);
+    
+    // ==================== External Fraud Data ====================
+    
+    /**
+     * Get external fraud data for an applicant from external_lms database
+     */
+    Map<String, Object> getExternalFraudData(Long applicantId);
+    
+    /**
+     * Get bank records for an applicant from external database
+     */
+    List<Map<String, Object>> getBankRecords(Long applicantId);
+    
+    /**
+     * Get criminal records for an applicant from external database
+     */
+    List<Map<String, Object>> getCriminalRecords(Long applicantId);
+    
+    /**
+     * Get historical and current loans for an applicant from external database
+     */
+    List<Map<String, Object>> getLoanHistory(Long applicantId);
 }

@@ -389,6 +389,117 @@ public class ComplianceOfficerController {
         }
     }
     
+    // ==================== Comprehensive Compliance Review ====================
+    
+    /**
+     * Get comprehensive review details including:
+     * 1. Loan draft and documents (same as applicant sees)
+     * 2. External fraud data (bank records, criminal records, loan history from external_lms)
+     * 3. Screening risk level and mismatched rules
+     * 4. Flags allocated
+     */
+    @GetMapping("/assignment/{assignmentId}/comprehensive-review")
+    public ResponseEntity<?> getComprehensiveReviewDetails(@PathVariable Long assignmentId) {
+        try {
+            ComplianceReviewDetailsResponse response = complianceOfficerService.getComprehensiveReviewDetails(assignmentId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Submit compliance verdict to loan officer
+     * Compliance officer CANNOT directly approve/reject - only provides recommendation to loan officer
+     */
+    @PostMapping("/submit-verdict")
+    public ResponseEntity<?> submitComplianceVerdict(
+            @Valid @RequestBody ComplianceVerdictRequest request) {
+        try {
+            ComplianceVerdictResponse response = complianceOfficerService.submitComplianceVerdict(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Request document resubmission for a specific document
+     * Request goes to loan officer first, who can then forward to applicant
+     */
+    @PostMapping("/document/{documentId}/request-resubmission")
+    public ResponseEntity<?> requestDocumentResubmission(
+            @Valid @RequestBody DocumentResubmissionRequestDTO request) {
+        try {
+            Map<String, Object> response = complianceOfficerService.requestDocumentResubmissionDetailed(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== External Fraud Data Endpoints ====================
+    
+    /**
+     * Get external fraud data for an applicant from external_lms database
+     * Includes bank records, criminal records, and historical/current loans
+     */
+    @GetMapping("/applicant/{applicantId}/external-fraud-data")
+    public ResponseEntity<?> getExternalFraudData(@PathVariable Long applicantId) {
+        try {
+            Map<String, Object> fraudData = complianceOfficerService.getExternalFraudData(applicantId);
+            return ResponseEntity.ok(fraudData);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get bank records for an applicant from external database
+     */
+    @GetMapping("/applicant/{applicantId}/bank-records")
+    public ResponseEntity<?> getBankRecords(@PathVariable Long applicantId) {
+        try {
+            List<Map<String, Object>> bankRecords = complianceOfficerService.getBankRecords(applicantId);
+            return ResponseEntity.ok(bankRecords);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get criminal records for an applicant from external database
+     */
+    @GetMapping("/applicant/{applicantId}/criminal-records")
+    public ResponseEntity<?> getCriminalRecords(@PathVariable Long applicantId) {
+        try {
+            List<Map<String, Object>> criminalRecords = complianceOfficerService.getCriminalRecords(applicantId);
+            return ResponseEntity.ok(criminalRecords);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get historical and current loans for an applicant from external database
+     */
+    @GetMapping("/applicant/{applicantId}/loan-history")
+    public ResponseEntity<?> getLoanHistory(@PathVariable Long applicantId) {
+        try {
+            List<Map<String, Object>> loanHistory = complianceOfficerService.getLoanHistory(applicantId);
+            return ResponseEntity.ok(loanHistory);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
     // ==================== Response Classes ====================
     
     private record ErrorResponse(String message) {}

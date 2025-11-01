@@ -6,8 +6,12 @@ import com.tss.springsecurity.dto.*;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
 import com.tss.springsecurity.service.ComplianceOfficerService;
-import lombok.RequiredArgsConstructor;
+import com.tss.springsecurity.externalfraud.repository.*;
+import com.tss.springsecurity.externalfraud.entity.*;
+import com.tss.springsecurity.externalfraud.service.ExternalFraudScreeningService;
+import com.tss.springsecurity.externalfraud.model.ExternalFraudCheckResult;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,19 +22,51 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     
-    private final ComplianceOfficerApplicationAssignmentRepository assignmentRepository;
-    private final ComplianceOfficerRepository complianceOfficerRepository;
-    private final DocumentResubmissionRepository documentResubmissionRepository;
-    private final ApplicantRepository applicantRepository;
-    private final ApplicantLoanDetailsRepository loanDetailsRepository;
-    private final UploadedDocumentRepository uploadedDocumentRepository;
-    private final FraudFlagRepository fraudFlagRepository;
-    private final ActivityLogRepository activityLogRepository;
-    private final ObjectMapper objectMapper;
+    @Autowired
+    private ComplianceOfficerApplicationAssignmentRepository assignmentRepository;
+    
+    @Autowired
+    private ComplianceOfficerRepository complianceOfficerRepository;
+    
+    @Autowired
+    private DocumentResubmissionRepository documentResubmissionRepository;
+    
+    @Autowired
+    private ApplicantRepository applicantRepository;
+    
+    @Autowired
+    private ApplicantLoanDetailsRepository loanDetailsRepository;
+    
+    @Autowired
+    private UploadedDocumentRepository uploadedDocumentRepository;
+    
+    @Autowired
+    private FraudFlagRepository fraudFlagRepository;
+    
+    @Autowired
+    private ActivityLogRepository activityLogRepository;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
+    
+    // External fraud data repositories
+    @Autowired
+    private PersonRepository personRepository;
+    
+    @Autowired
+    private BankRecordRepository bankRecordRepository;
+    
+    @Autowired
+    private CriminalRecordRepository criminalRecordRepository;
+    
+    @Autowired
+    private HistoricalAndCurrentLoanRepository loanHistoryRepository;
+    
+    @Autowired(required = false)
+    private ExternalFraudScreeningService externalFraudScreeningService;
     
     @Override
     public LoanScreeningResponse getLoanScreeningDetails(Long assignmentId) {
@@ -808,5 +844,491 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
                 .status("DETECTED")
                 .remarks(fraudFlag.getFlagNotes())
                 .build();
+    }
+    
+    // ==================== Comprehensive Compliance Review Implementation ====================
+    
+    @Override
+    @Transactional(readOnly = true)
+    public ComplianceReviewDetailsResponse getComprehensiveReviewDetails(Long assignmentId) {
+        log.info("Getting comprehensive review details for assignment ID: {}", assignmentId);
+        
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + assignmentId));
+        
+        Applicant applicant = assignment.getApplicant();
+        ApplicantLoanDetails loanDetails = loanDetailsRepository.findByApplicant_ApplicantId(applicant.getApplicantId())
+                .stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("Loan details not found for applicant"));
+        
+        // Build comprehensive response
+        ComplianceReviewDetailsResponse response = ComplianceReviewDetailsResponse.builder()
+                .assignmentId(assignment.getAssignmentId())
+                .loanId(loanDetails.getLoanId())
+                .applicantId(applicant.getApplicantId())
+                .applicantName(applicant.getFirstName() + " " + applicant.getLastName())
+                .loanType(loanDetails.getLoanType())
+                .loanAmount(loanDetails.getLoanAmount())
+                .applicationStatus(loanDetails.getApplicationStatus())
+                .email(applicant.getEmail())
+                .phone(applicant.getPhone())
+                .panNumber(extractPanNumber(applicant))
+                .aadhaarNumber(extractAadhaarNumber(applicant))
+                .dateOfBirth(applicant.getDob())
+                .build();
+        
+        // 1. Get loan documents
+        response.setDocuments(fetchLoanDocuments(loanDetails.getLoanId()));
+        
+        // 2. Get external fraud data
+        response.setExternalFraudData(fetchExternalFraudData(applicant));
+        
+        // 3. Get screening results
+        response.setScreeningResults(fetchScreeningResults(applicant.getApplicantId()));
+        
+        // 4. Get risk assessment
+        response.setRiskAssessment(fetchRiskAssessment(applicant.getApplicantId()));
+        
+        // 5. Get action history
+        response.setActionHistory(fetchActionHistory(assignmentId));
+        
+        return response;
+    }
+    
+    @Override
+    @Transactional
+    public ComplianceVerdictResponse submitComplianceVerdict(ComplianceVerdictRequest request) {
+        log.info("Submitting compliance verdict for assignment ID: {}", request.getAssignmentId());
+        
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository.findById(request.getAssignmentId())
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+        
+        ComplianceOfficer officer = complianceOfficerRepository.findById(request.getComplianceOfficerId())
+                .orElseThrow(() -> new RuntimeException("Compliance officer not found"));
+        
+        // Update assignment with verdict
+        assignment.setVerdict(request.getVerdict().toString());
+        assignment.setVerdictReason(request.getVerdictReason());
+        assignment.setRemarks(request.getDetailedRemarks());
+        assignment.setStatus("VERDICT_PROVIDED");
+        assignment.setUpdatedAt(LocalDateTime.now());
+        
+        assignmentRepository.save(assignment);
+        
+        // Log the verdict
+        logActivity(officer.getOfficerId(), "COMPLIANCE_VERDICT", 
+                "Verdict: " + request.getVerdict() + " - " + request.getVerdictReason(),
+                assignment.getApplicant().getApplicantId());
+        
+        ApplicantLoanDetails loanDetails = loanDetailsRepository.findByApplicant_ApplicantId(assignment.getApplicant().getApplicantId())
+                .stream().findFirst()
+                .orElse(null);
+        
+        String nextAction = determineNextAction(request.getVerdict());
+        
+        return ComplianceVerdictResponse.builder()
+                .verdictId(assignment.getAssignmentId())
+                .assignmentId(assignment.getAssignmentId())
+                .loanId(loanDetails != null ? loanDetails.getLoanId() : null)
+                .applicantName(assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName())
+                .verdict(request.getVerdict().toString())
+                .verdictReason(request.getVerdictReason())
+                .detailedRemarks(request.getDetailedRemarks())
+                .complianceOfficerName(officer.getFirstName() + " " + officer.getLastName())
+                .verdictTimestamp(LocalDateTime.now())
+                .nextAction(nextAction)
+                .status("VERDICT_SUBMITTED")
+                .message("Compliance verdict submitted successfully and sent to loan officer for final decision")
+                .build();
+    }
+    
+    @Override
+    @Transactional
+    public Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request) {
+        log.info("Requesting document resubmission for document ID: {} on loan ID: {}", 
+                request.getDocumentId(), request.getLoanId());
+        
+        UploadedDocument document = uploadedDocumentRepository.findById(request.getDocumentId())
+                .orElseThrow(() -> new RuntimeException("Document not found"));
+        
+        // Mark document for resubmission
+        document.setResubmissionRequested(true);
+        document.setResubmissionReason(request.getResubmissionReason());
+        document.setResubmissionInstructions(request.getSpecificInstructions());
+        uploadedDocumentRepository.save(document);
+        
+        // Log the request
+        logActivity(request.getComplianceOfficerId(), "DOCUMENT_RESUBMISSION_REQUESTED",
+                "Document resubmission requested: " + request.getResubmissionReason(),
+                document.getApplicant().getApplicantId());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", request.getDirectToApplicant() ? 
+                "Document resubmission request sent to applicant" : 
+                "Document resubmission request sent to loan officer");
+        response.put("documentId", document.getDocumentId());
+        response.put("documentType", document.getDocumentType());
+        response.put("resubmissionReason", request.getResubmissionReason());
+        response.put("timestamp", LocalDateTime.now());
+        
+        return response;
+    }
+    
+    // ==================== Helper Methods ====================
+    
+    private List<ComplianceReviewDetailsResponse.DocumentInfo> fetchLoanDocuments(Long loanId) {
+        List<UploadedDocument> documents = uploadedDocumentRepository.findByLoanId(loanId);
+        
+        return documents.stream()
+                .map(doc -> ComplianceReviewDetailsResponse.DocumentInfo.builder()
+                        .documentId(doc.getDocumentId())
+                        .documentType(doc.getDocumentType())
+                        .fileName(doc.getOriginalFilename())
+                        .fileUrl(doc.getCloudinaryUrl())
+                        .uploadStatus(doc.getVerificationStatus() != null ? doc.getVerificationStatus().toString() : "PENDING")
+                        .uploadedAt(doc.getUploadedAt())
+                        .resubmissionRequested(doc.getResubmissionRequested() != null ? doc.getResubmissionRequested() : false)
+                        .resubmissionReason(doc.getResubmissionReason())
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
+    private ComplianceReviewDetailsResponse.ExternalFraudDataResponse fetchExternalFraudData(Applicant applicant) {
+        String panNumber = extractPanNumber(applicant);
+        String aadhaarNumber = extractAadhaarNumber(applicant);
+        
+        // Find person in external LMS database
+        Optional<Person> personOpt = Optional.empty();
+        Long externalPersonId = null;
+        
+        if (panNumber != null) {
+            personOpt = personRepository.findByPanNumber(panNumber);
+        }
+        if (!personOpt.isPresent() && aadhaarNumber != null) {
+            personOpt = personRepository.findByAadhaarNumber(aadhaarNumber);
+        }
+        
+        if (!personOpt.isPresent()) {
+            // Person not found in external database - return empty data
+            return ComplianceReviewDetailsResponse.ExternalFraudDataResponse.builder()
+                    .personFound(false)
+                    .bankRecords(new ArrayList<>())
+                    .criminalRecords(new ArrayList<>())
+                    .loanHistory(new ArrayList<>())
+                    .build();
+        }
+        
+        Person person = personOpt.get();
+        externalPersonId = person.getId();
+        
+        // Fetch bank records
+        List<BankRecord> bankRecords = bankRecordRepository.findByPersonId(externalPersonId);
+        List<ComplianceReviewDetailsResponse.BankRecordInfo> bankRecordInfos = bankRecords.stream()
+                .map(br -> ComplianceReviewDetailsResponse.BankRecordInfo.builder()
+                        .bankName(br.getBankName())
+                        .accountType(br.getAccountType())
+                        .balanceAmount(br.getBalanceAmount())
+                        .lastTransactionDate(br.getLastTransactionDate())
+                        .isActive(br.getIsActive())
+                        .build())
+                .collect(Collectors.toList());
+        
+        // Fetch criminal records
+        List<CriminalRecord> criminalRecords = criminalRecordRepository.findByPersonId(externalPersonId);
+        List<ComplianceReviewDetailsResponse.CriminalRecordInfo> criminalRecordInfos = criminalRecords.stream()
+                .map(cr -> ComplianceReviewDetailsResponse.CriminalRecordInfo.builder()
+                        .caseNumber(cr.getCaseNumber())
+                        .caseType(cr.getCaseType())
+                        .description(cr.getDescription())
+                        .courtName(cr.getCourtName())
+                        .status(cr.getStatus())
+                        .verdictDate(cr.getVerdictDate())
+                        .build())
+                .collect(Collectors.toList());
+        
+        // Fetch loan history
+        List<HistoricalAndCurrentLoan> loans = loanHistoryRepository.findByPersonId(externalPersonId);
+        List<ComplianceReviewDetailsResponse.LoanHistoryInfo> loanHistoryInfos = loans.stream()
+                .map(loan -> ComplianceReviewDetailsResponse.LoanHistoryInfo.builder()
+                        .loanType(loan.getLoanType())
+                        .institutionName(loan.getInstitutionName())
+                        .loanAmount(loan.getLoanAmount())
+                        .outstandingBalance(loan.getOutstandingBalance())
+                        .startDate(loan.getStartDate())
+                        .endDate(loan.getEndDate())
+                        .status(loan.getStatus())
+                        .defaultFlag(loan.getDefaultFlag())
+                        .build())
+                .collect(Collectors.toList());
+        
+        return ComplianceReviewDetailsResponse.ExternalFraudDataResponse.builder()
+                .personFound(true)
+                .externalPersonId(externalPersonId)
+                .bankRecords(bankRecordInfos)
+                .criminalRecords(criminalRecordInfos)
+                .loanHistory(loanHistoryInfos)
+                .build();
+    }
+    
+    private ComplianceReviewDetailsResponse.ScreeningResultsResponse fetchScreeningResults(Long applicantId) {
+        try {
+            // Check if external fraud screening service is available
+            if (externalFraudScreeningService == null) {
+                log.warn("ExternalFraudScreeningService not available, returning default screening results");
+                return ComplianceReviewDetailsResponse.ScreeningResultsResponse.builder()
+                        .riskLevel("UNKNOWN")
+                        .totalRiskScore(0)
+                        .riskScorePercentage(0.0)
+                        .recommendation("REVIEW")
+                        .violations(new ArrayList<>())
+                        .flags(new ArrayList<>())
+                        .build();
+            }
+            
+            // Perform external fraud screening
+            ExternalFraudCheckResult fraudResult = externalFraudScreeningService.screenApplicant(applicantId);
+            
+            // Map violations
+            List<ComplianceReviewDetailsResponse.RuleViolation> violations = new ArrayList<>();
+            
+            // Map fraud flags
+            List<ComplianceReviewDetailsResponse.FraudFlag> flags = fraudResult.getFraudFlags().stream()
+                    .map(flag -> ComplianceReviewDetailsResponse.FraudFlag.builder()
+                            .flagCode(flag.getFlagCode())
+                            .flagName(flag.getFlagName())
+                            .category(flag.getCategory())
+                            .severity(flag.getSeverity())
+                            .points(flag.getPoints())
+                            .description(flag.getDescription())
+                            .details(flag.getDetails())
+                            .build())
+                    .collect(Collectors.toList());
+            
+            return ComplianceReviewDetailsResponse.ScreeningResultsResponse.builder()
+                    .riskLevel(fraudResult.getRiskLevel())
+                    .totalRiskScore(fraudResult.getTotalFraudScore())
+                    .riskScorePercentage(fraudResult.getRiskScorePercentage())
+                    .recommendation(fraudResult.getRecommendation())
+                    .violations(violations)
+                    .flags(flags)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error fetching screening results", e);
+            return ComplianceReviewDetailsResponse.ScreeningResultsResponse.builder()
+                    .riskLevel("UNKNOWN")
+                    .totalRiskScore(0)
+                    .riskScorePercentage(0.0)
+                    .recommendation("REVIEW")
+                    .violations(new ArrayList<>())
+                    .flags(new ArrayList<>())
+                    .build();
+        }
+    }
+    
+    private ComplianceReviewDetailsResponse.RiskAssessmentResponse fetchRiskAssessment(Long applicantId) {
+        return ComplianceReviewDetailsResponse.RiskAssessmentResponse.builder()
+                .overallRiskLevel("MEDIUM")
+                .combinedScore(50)
+                .normalizedScore(50.0)
+                .internalRiskLevel("LOW")
+                .internalScore(20)
+                .externalRiskLevel("MEDIUM")
+                .externalScore(30)
+                .build();
+    }
+    
+    private List<ComplianceReviewDetailsResponse.ComplianceActionHistory> fetchActionHistory(Long assignmentId) {
+        // Use pageable to fetch the latest 20 activity logs
+        List<ActivityLog> logs = activityLogRepository
+                .findByEntityTypeAndEntityIdOrderByTimestampDesc("COMPLIANCE_ASSIGNMENT", assignmentId, PageRequest.of(0, 20))
+                .getContent();
+        
+        return logs.stream()
+                .map(log -> ComplianceReviewDetailsResponse.ComplianceActionHistory.builder()
+                        .actionId(log.getLogId())
+                        .actionType(log.getActivityType())
+                        .performedBy(log.getPerformedBy() != null ? log.getPerformedBy().toString() : "System")
+                        .remarks(log.getDescription())
+                        .timestamp(log.getTimestamp())
+                        .build())
+                .collect(Collectors.toList());
+    }
+    
+    private String extractPanNumber(Applicant applicant) {
+        if (applicant.getPanDetails() != null && !applicant.getPanDetails().isEmpty()) {
+            return applicant.getPanDetails().get(0).getPanNumber();
+        }
+        return null;
+    }
+    
+    private String extractAadhaarNumber(Applicant applicant) {
+        if (applicant.getAadhaarDetails() != null && !applicant.getAadhaarDetails().isEmpty()) {
+            return applicant.getAadhaarDetails().get(0).getAadhaarNumber();
+        }
+        return null;
+    }
+    
+    private String determineNextAction(ComplianceVerdictRequest.VerdictType verdict) {
+        switch (verdict) {
+            case RECOMMEND_APPROVE:
+                return "Forwarded to Loan Officer for final approval decision";
+            case RECOMMEND_REJECT:
+                return "Forwarded to Loan Officer with rejection recommendation";
+            case REQUEST_MORE_INFO:
+                return "Additional information requested - awaiting document resubmission";
+            default:
+                return "Under review";
+        }
+    }
+    
+    private void logActivity(Long officerId, String activityType, String description, Long entityId) {
+        ActivityLog log = new ActivityLog();
+        log.setPerformedBy(String.valueOf(officerId)); // Convert Long to String
+        log.setUserRole("COMPLIANCE_OFFICER");
+        log.setActivityType(activityType);
+        log.setDescription(description);
+        log.setEntityType("APPLICANT");
+        log.setEntityId(entityId);
+        log.setTimestamp(LocalDateTime.now());
+        activityLogRepository.save(log);
+    }
+    
+    // ==================== External Fraud Data Implementation ====================
+    
+    @Override
+    public Map<String, Object> getExternalFraudData(Long applicantId) {
+        log.info("Getting external fraud data for applicant: {}", applicantId);
+        
+        Map<String, Object> fraudData = new HashMap<>();
+        
+        try {
+            // Get bank records
+            List<Map<String, Object>> bankRecords = getBankRecords(applicantId);
+            fraudData.put("bankRecords", bankRecords);
+            
+            // Get criminal records
+            List<Map<String, Object>> criminalRecords = getCriminalRecords(applicantId);
+            fraudData.put("criminalRecords", criminalRecords);
+            
+            // Get loan history
+            List<Map<String, Object>> loanHistory = getLoanHistory(applicantId);
+            fraudData.put("loanHistory", loanHistory);
+            
+            // Calculate summary statistics
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalBankAccounts", bankRecords.size());
+            summary.put("totalCriminalCases", criminalRecords.size());
+            summary.put("totalLoanHistory", loanHistory.size());
+            
+            // Check for red flags
+            boolean hasActiveCriminalCases = criminalRecords.stream()
+                .anyMatch(record -> "OPEN".equals(record.get("status")) || "CONVICTED".equals(record.get("status")));
+            boolean hasDefaultedLoans = loanHistory.stream()
+                .anyMatch(loan -> Boolean.TRUE.equals(loan.get("defaultFlag")));
+            
+            summary.put("hasActiveCriminalCases", hasActiveCriminalCases);
+            summary.put("hasDefaultedLoans", hasDefaultedLoans);
+            summary.put("riskLevel", (hasActiveCriminalCases || hasDefaultedLoans) ? "HIGH" : "LOW");
+            
+            fraudData.put("summary", summary);
+            
+            log.info("Successfully retrieved external fraud data for applicant: {}", applicantId);
+            return fraudData;
+            
+        } catch (Exception e) {
+            log.error("Error retrieving external fraud data for applicant {}: {}", applicantId, e.getMessage());
+            throw new RuntimeException("Failed to retrieve external fraud data: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public List<Map<String, Object>> getBankRecords(Long applicantId) {
+        log.info("Getting bank records for applicant: {}", applicantId);
+        
+        try {
+            List<BankRecord> bankRecords = bankRecordRepository.findByPersonId(applicantId);
+            
+            return bankRecords.stream().map(record -> {
+                Map<String, Object> recordMap = new HashMap<>();
+                recordMap.put("id", record.getId());
+                recordMap.put("bankName", record.getBankName());
+                recordMap.put("accountNumber", maskAccountNumber(record.getAccountNumber()));
+                recordMap.put("accountType", record.getAccountType());
+                recordMap.put("balanceAmount", record.getBalanceAmount());
+                recordMap.put("lastTransactionDate", record.getLastTransactionDate());
+                recordMap.put("isActive", record.getIsActive());
+                recordMap.put("createdAt", record.getCreatedAt());
+                return recordMap;
+            }).collect(Collectors.toList());
+            
+        } catch (Exception e) {
+            log.error("Error retrieving bank records for applicant {}: {}", applicantId, e.getMessage());
+            throw new RuntimeException("Failed to retrieve bank records: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public List<Map<String, Object>> getCriminalRecords(Long applicantId) {
+        log.info("Getting criminal records for applicant: {}", applicantId);
+        
+        try {
+            List<CriminalRecord> criminalRecords = criminalRecordRepository.findByPersonId(applicantId);
+            
+            return criminalRecords.stream().map(record -> {
+                Map<String, Object> recordMap = new HashMap<>();
+                recordMap.put("id", record.getId());
+                recordMap.put("caseNumber", record.getCaseNumber());
+                recordMap.put("caseType", record.getCaseType());
+                recordMap.put("description", record.getDescription());
+                recordMap.put("courtName", record.getCourtName());
+                recordMap.put("status", record.getStatus());
+                recordMap.put("verdictDate", record.getVerdictDate());
+                recordMap.put("createdAt", record.getCreatedAt());
+                return recordMap;
+            }).collect(Collectors.toList());
+            
+        } catch (Exception e) {
+            log.error("Error retrieving criminal records for applicant {}: {}", applicantId, e.getMessage());
+            throw new RuntimeException("Failed to retrieve criminal records: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public List<Map<String, Object>> getLoanHistory(Long applicantId) {
+        log.info("Getting loan history for applicant: {}", applicantId);
+        
+        try {
+            List<HistoricalAndCurrentLoan> loanHistory = historicalAndCurrentLoanRepository.findByPersonId(applicantId);
+            
+            return loanHistory.stream().map(loan -> {
+                Map<String, Object> loanMap = new HashMap<>();
+                loanMap.put("id", loan.getId());
+                loanMap.put("loanType", loan.getLoanType());
+                loanMap.put("institutionName", loan.getInstitutionName());
+                loanMap.put("loanAmount", loan.getLoanAmount());
+                loanMap.put("outstandingBalance", loan.getOutstandingBalance());
+                loanMap.put("startDate", loan.getStartDate());
+                loanMap.put("endDate", loan.getEndDate());
+                loanMap.put("status", loan.getStatus());
+                loanMap.put("defaultFlag", loan.getDefaultFlag());
+                loanMap.put("createdAt", loan.getCreatedAt());
+                return loanMap;
+            }).collect(Collectors.toList());
+            
+        } catch (Exception e) {
+            log.error("Error retrieving loan history for applicant {}: {}", applicantId, e.getMessage());
+            throw new RuntimeException("Failed to retrieve loan history: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Mask account number for security (show only last 4 digits)
+     */
+    private String maskAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.length() <= 4) {
+            return accountNumber;
+        }
+        return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
 }

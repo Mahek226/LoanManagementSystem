@@ -76,6 +76,16 @@ public class UploadedDocument {
     @Column(name = "verified_by")
     private String verifiedBy;
     
+    // Resubmission fields for compliance officer
+    @Column(name = "resubmission_requested")
+    private Boolean resubmissionRequested = false;
+    
+    @Column(name = "resubmission_reason", columnDefinition = "TEXT")
+    private String resubmissionReason;
+    
+    @Column(name = "resubmission_instructions", columnDefinition = "TEXT")
+    private String resubmissionInstructions;
+    
     // Relationship to extracted fields
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ExtractedField> extractedFields;
