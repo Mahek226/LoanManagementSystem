@@ -78,6 +78,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/loan-officer/assigned-loans/assigned-loans.component').then(m => m.AssignedLoansComponent)
       },
       {
+        path: 'verify-documents/:assignmentId',
+        loadComponent: () => import('./features/loan-officer/verify-documents/verify-documents.component').then(m => m.VerifyDocumentsComponent)
+      },
+      {
         path: 'review/:id',
         loadComponent: () => import('./features/loan-officer/loan-review/loan-review.component').then(m => m.LoanReviewComponent)
       },

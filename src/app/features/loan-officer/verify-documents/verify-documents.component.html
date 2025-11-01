@@ -1,0 +1,316 @@
+<!-- Document Verification Component -->
+
+<!-- Loading State -->
+<div *ngIf="loading && documents.length === 0" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted">Loading documents...</p>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" *ngIf="!loading || documents.length > 0">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+        <i class="fas fa-file-check me-2 text-warning"></i>Document Verification
+      </h2>
+      <p class="text-muted mb-0">Review and verify applicant documents with AI extraction</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left me-2"></i>Back to Loans
+      </button>
+      <button class="btn btn-primary" (click)="proceedToScreening()">
+        <i class="fas fa-search me-2"></i>Proceed to Screening
+      </button>
+    </div>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show">
+    <i class="fas fa-check-circle me-2"></i>{{ successMessage }}
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show">
+    <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = ''"></button>
+  </div>
+
+  <!-- Documents Grid -->
+  <div class="row g-4">
+    <div class="col-lg-4 col-md-6" *ngFor="let doc of documents; let i = index">
+      <div class="card border-0 shadow-sm h-100 animate-slide-up" 
+           [style.animation-delay.s]="i * 0.1"
+           style="background-color: var(--bg-primary);">
+        <div class="card-body">
+          <!-- Document Header -->
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-3">
+              <div class="document-icon bg-warning bg-opacity-10 rounded-3 p-3">
+                <i class="fas {{ getDocumentIcon(doc.documentType) }} text-warning fs-3"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-1" style="color: var(--text-primary);">
+                  {{ doc.documentType.replace('_', ' ') }}
+                </h5>
+                <small class="text-muted">{{ doc.documentName }}</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Status -->
+          <div class="mb-3">
+            <span class="badge bg-{{ getStatusColor(doc.verificationStatus) }} fs-6">
+              <i class="fas fa-circle me-1"></i>{{ doc.verificationStatus }}
+            </span>
+          </div>
+
+          <!-- Document Details -->
+          <div class="mb-3">
+            <div class="row g-2">
+              <div class="col-12">
+                <small class="text-muted d-block">Uploaded On</small>
+                <strong style="color: var(--text-primary);">{{ formatDate(doc.uploadedAt) }}</strong>
+              </div>
+              <div class="col-12" *ngIf="doc.verifiedBy">
+                <small class="text-muted d-block">Verified By</small>
+                <strong style="color: var(--text-primary);">{{ doc.verifiedBy }}</strong>
+              </div>
+              <div class="col-12" *ngIf="doc.verifiedAt">
+                <small class="text-muted d-block">Verified On</small>
+                <strong style="color: var(--text-primary);">{{ formatDate(doc.verifiedAt) }}</strong>
+              </div>
+              <div class="col-12" *ngIf="doc.remarks">
+                <small class="text-muted d-block">Remarks</small>
+                <p class="mb-0 small" style="color: var(--text-primary);">{{ doc.remarks }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-grid gap-2">
+            <button class="btn btn-info btn-sm" (click)="viewDocument(doc)">
+              <i class="fas fa-eye me-2"></i>View & Extract
+            </button>
+            <div class="btn-group" role="group">
+              <button class="btn btn-success btn-sm" 
+                      (click)="openVerifyModal(doc, 'VERIFIED')"
+                      [disabled]="doc.verificationStatus === 'VERIFIED'">
+                <i class="fas fa-check me-1"></i>Approve
+              </button>
+              <button class="btn btn-danger btn-sm" 
+                      (click)="openVerifyModal(doc, 'REJECTED')"
+                      [disabled]="doc.verificationStatus === 'REJECTED'">
+                <i class="fas fa-times me-1"></i>Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="col-12" *ngIf="documents.length === 0 && !loading">
+      <div class="text-center py-5">
+        <i class="fas fa-folder-open text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3 text-muted">No Documents Found</h4>
+        <p class="text-muted">No documents have been uploaded for this loan application</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Document View Modal with Extraction -->
+<div class="modal fade show d-block" *ngIf="showDocumentModal && selectedDocument" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeDocumentModal()">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="fas fa-file-alt me-2"></i>{{ selectedDocument.documentType.replace('_', ' ') }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <div class="row g-4">
+          <!-- Document Preview -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-image me-2 text-info"></i>Document Preview
+                </h6>
+              </div>
+              <div class="card-body text-center">
+                <img [src]="selectedDocument.documentUrl" 
+                     [alt]="selectedDocument.documentName"
+                     class="img-fluid rounded shadow-sm"
+                     style="max-height: 500px; object-fit: contain;">
+                <div class="mt-3">
+                  <a [href]="selectedDocument.documentUrl" 
+                     target="_blank" 
+                     class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Data -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
+              <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+                  <i class="fas fa-robot me-2 text-success"></i>AI Extracted Data
+                </h6>
+                <button class="btn btn-sm btn-success" 
+                        (click)="extractDocumentData(selectedDocument)"
+                        [disabled]="extracting">
+                  <span *ngIf="!extracting">
+                    <i class="fas fa-magic me-2"></i>Extract Data
+                  </span>
+                  <span *ngIf="extracting">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Extracting...
+                  </span>
+                </button>
+              </div>
+              <div class="card-body">
+                <!-- Before Extraction -->
+                <div *ngIf="!extractedData && !extracting" class="text-center py-5">
+                  <i class="fas fa-magic text-muted" style="font-size: 3rem;"></i>
+                  <p class="mt-3 text-muted">Click "Extract Data" to analyze this document using AI</p>
+                </div>
+
+                <!-- Extracting -->
+                <div *ngIf="extracting" class="text-center py-5">
+                  <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Extracting...</span>
+                  </div>
+                  <p class="mt-3 text-muted">Analyzing document with AI...</p>
+                </div>
+
+                <!-- Extracted Data Display -->
+                <div *ngIf="extractedData && !extracting">
+                  <div class="alert alert-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>Data extracted successfully!
+                  </div>
+                  
+                  <div class="extracted-data">
+                    <div class="mb-3" *ngFor="let item of extractedData | keyvalue">
+                      <label class="small text-muted text-uppercase fw-semibold">{{ item.key.replace('_', ' ') }}</label>
+                      <p class="fw-semibold mb-0 p-2 rounded" 
+                         style="background-color: var(--bg-primary); color: var(--text-primary);">
+                        {{ item.value || 'Not found' }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+        <button type="button" class="btn btn-success" (click)="openVerifyModal(selectedDocument, 'VERIFIED'); closeDocumentModal()">
+          <i class="fas fa-check me-2"></i>Approve Document
+        </button>
+        <button type="button" class="btn btn-danger" (click)="openVerifyModal(selectedDocument, 'REJECTED'); closeDocumentModal()">
+          <i class="fas fa-times me-2"></i>Reject Document
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verification Confirmation Modal -->
+<div class="modal fade show d-block" *ngIf="showVerifyModal && selectedDocument" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeVerifyModal()">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom" 
+           [class.bg-success]="verificationStatus === 'VERIFIED'"
+           [class.bg-danger]="verificationStatus === 'REJECTED'"
+           class="bg-opacity-10">
+        <h5 class="modal-title fw-bold" style="color: var(--text-primary);">
+          <i class="fas" 
+             [class.fa-check-circle]="verificationStatus === 'VERIFIED'"
+             [class.fa-times-circle]="verificationStatus === 'REJECTED'"
+             class="me-2"
+             [class.text-success]="verificationStatus === 'VERIFIED'"
+             [class.text-danger]="verificationStatus === 'REJECTED'"></i>
+          {{ verificationStatus === 'VERIFIED' ? 'Approve' : 'Reject' }} Document
+        </h5>
+        <button type="button" class="btn-close" (click)="closeVerifyModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body">
+        <p style="color: var(--text-primary);">
+          Are you sure you want to <strong>{{ verificationStatus.toLowerCase() }}</strong> this document?
+        </p>
+        
+        <div class="alert" 
+             [class.alert-success]="verificationStatus === 'VERIFIED'"
+             [class.alert-danger]="verificationStatus === 'REJECTED'">
+          <strong>Document:</strong> {{ selectedDocument.documentType.replace('_', ' ') }}<br>
+          <strong>File:</strong> {{ selectedDocument.documentName }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">
+            Remarks <span class="text-danger" *ngIf="verificationStatus === 'REJECTED'">*</span>
+          </label>
+          <textarea class="form-control" 
+                    rows="3"
+                    [(ngModel)]="verificationRemarks"
+                    [placeholder]="verificationStatus === 'VERIFIED' ? 'Optional remarks...' : 'Please provide reason for rejection...'"
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+          <small class="text-muted" *ngIf="verificationStatus === 'REJECTED'">
+            Rejection reason is required
+          </small>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeVerifyModal()">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn"
+                [class.btn-success]="verificationStatus === 'VERIFIED'"
+                [class.btn-danger]="verificationStatus === 'REJECTED'"
+                (click)="submitVerification()"
+                [disabled]="loading">
+          <span *ngIf="!loading">
+            <i class="fas" 
+               [class.fa-check]="verificationStatus === 'VERIFIED'"
+               [class.fa-times]="verificationStatus === 'REJECTED'"
+               class="me-2"></i>
+            Confirm {{ verificationStatus === 'VERIFIED' ? 'Approval' : 'Rejection' }}
+          </span>
+          <span *ngIf="loading">
+            <i class="fas fa-spinner fa-spin me-2"></i>Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

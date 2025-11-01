@@ -42,6 +42,43 @@ export interface DashboardStats {
   highRiskCount: number;
   mediumRiskCount: number;
   lowRiskCount: number;
+  // Financial Performance
+  totalFundedAmount: number;
+  averageInterestRate: number;
+  averageDTI: number;
+  approvalRate: number;
+  pullThroughRate: number;
+  defaultRate: number;
+  // Loan Quality
+  goodLoansCount: number;
+  badLoansCount: number;
+  underwritingAccuracy: number;
+  portfolioYield: number;
+  loanQualityIndex: number;
+  // Breakdown by Purpose
+  personalLoans: number;
+  homeLoans: number;
+  carLoans: number;
+  educationLoans: number;
+  businessLoans: number;
+  // Monthly Trends
+  monthlyApplications: MonthlyTrend[];
+  monthlyApprovals: MonthlyTrend[];
+  monthlyDefaults: MonthlyTrend[];
+  // Geographic Data
+  loansByState: StateData[];
+}
+
+export interface MonthlyTrend {
+  month: string;
+  count: number;
+  amount: number;
+}
+
+export interface StateData {
+  state: string;
+  count: number;
+  amount: number;
 }
 
 export interface LoanDocument {
@@ -248,18 +285,81 @@ export class LoanOfficerService {
     return this.http.get<EnhancedLoanScreeningResponse>(`${environment.apiUrl}/enhanced-screening/loan/${assignmentId}`);
   }
 
-  // Calculate dashboard statistics
+  // Calculate comprehensive dashboard statistics
   calculateStats(loans: LoanScreeningResponse[]): DashboardStats {
+    const approved = loans.filter(l => l.status === 'APPROVED');
+    const rejected = loans.filter(l => l.status === 'REJECTED');
+    const totalProcessed = approved.length + rejected.length;
+    
+    // Financial calculations
+    const totalFundedAmount = approved.reduce((sum, l) => sum + l.loanAmount, 0);
+    const approvalRate = totalProcessed > 0 ? (approved.length / totalProcessed) * 100 : 0;
+    
+    // Loan type breakdown
+    const personalLoans = loans.filter(l => l.loanType === 'Personal Loan').length;
+    const homeLoans = loans.filter(l => l.loanType === 'Home Loan').length;
+    const carLoans = loans.filter(l => l.loanType === 'Car Loan').length;
+    const educationLoans = loans.filter(l => l.loanType === 'Education Loan').length;
+    const businessLoans = loans.filter(l => l.loanType === 'Business Loan').length;
+    
+    // Quality metrics (good loans = LOW risk approved, bad loans = HIGH risk approved or any defaulted)
+    const goodLoansCount = approved.filter(l => l.riskLevel === 'LOW').length;
+    const badLoansCount = approved.filter(l => l.riskLevel === 'HIGH').length;
+    const loanQualityIndex = approved.length > 0 ? (goodLoansCount / approved.length) * 100 : 0;
+    
     return {
       totalAssigned: loans.length,
       pendingReview: loans.filter(l => l.status === 'PENDING' || l.status === 'ASSIGNED' || l.status === 'IN_PROGRESS').length,
-      approved: loans.filter(l => l.status === 'APPROVED').length,
-      rejected: loans.filter(l => l.status === 'REJECTED').length,
+      approved: approved.length,
+      rejected: rejected.length,
       escalated: loans.filter(l => l.status === 'ESCALATED' || l.status === 'ESCALATED_TO_COMPLIANCE').length,
       highRiskCount: loans.filter(l => l.riskLevel === 'HIGH').length,
       mediumRiskCount: loans.filter(l => l.riskLevel === 'MEDIUM').length,
-      lowRiskCount: loans.filter(l => l.riskLevel === 'LOW').length
+      lowRiskCount: loans.filter(l => l.riskLevel === 'LOW').length,
+      // Financial Performance
+      totalFundedAmount: totalFundedAmount,
+      averageInterestRate: 8.5, // Mock data - should come from backend
+      averageDTI: 35.2, // Mock data - should come from backend
+      approvalRate: approvalRate,
+      pullThroughRate: 75.5, // Mock data - should come from backend
+      defaultRate: 2.3, // Mock data - should come from backend
+      // Loan Quality
+      goodLoansCount: goodLoansCount,
+      badLoansCount: badLoansCount,
+      underwritingAccuracy: 94.5, // Mock data - should come from backend
+      portfolioYield: 9.2, // Mock data - should come from backend
+      loanQualityIndex: loanQualityIndex,
+      // Breakdown by Purpose
+      personalLoans: personalLoans,
+      homeLoans: homeLoans,
+      carLoans: carLoans,
+      educationLoans: educationLoans,
+      businessLoans: businessLoans,
+      // Monthly Trends (mock data - should come from backend)
+      monthlyApplications: this.generateMonthlyTrends(loans),
+      monthlyApprovals: this.generateMonthlyTrends(approved),
+      monthlyDefaults: [],
+      // Geographic Data (mock data - should come from backend)
+      loansByState: this.generateStateData(loans)
     };
+  }
+  
+  private generateMonthlyTrends(loans: LoanScreeningResponse[]): MonthlyTrend[] {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return months.map(month => ({
+      month: month,
+      count: Math.floor(Math.random() * 50) + 10,
+      amount: Math.floor(Math.random() * 5000000) + 1000000
+    }));
+  }
+  
+  private generateStateData(loans: LoanScreeningResponse[]): StateData[] {
+    const states = ['Maharashtra', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Gujarat'];
+    return states.map(state => ({
+      state: state,
+      count: Math.floor(Math.random() * 100) + 20,
+      amount: Math.floor(Math.random() * 10000000) + 2000000
+    }));
   }
 
   // Utility methods

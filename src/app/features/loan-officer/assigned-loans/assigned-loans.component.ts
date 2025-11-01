@@ -32,6 +32,10 @@ export class AssignedLoansComponent implements OnInit {
   
   // View mode
   viewMode: 'table' | 'card' = 'table';
+  
+  // Modal state
+  showLoanDetailsModal = false;
+  selectedLoan: LoanScreeningResponse | null = null;
 
   constructor(
     private authService: AuthService,
@@ -87,6 +91,26 @@ export class AssignedLoansComponent implements OnInit {
     this.applyFilters();
   }
 
+  // View loan details in modal
+  viewLoanDetails(loan: LoanScreeningResponse): void {
+    // Will open modal with comprehensive loan details
+    this.selectedLoan = loan;
+    this.showLoanDetailsModal = true;
+  }
+
+  // Verify documents - navigate to document verification
+  verifyDocuments(assignmentId: number, loanId: number): void {
+    this.router.navigate(['/loan-officer/verify-documents', assignmentId], {
+      queryParams: { loanId: loanId }
+    });
+  }
+
+  // Start screening process
+  startScreening(assignmentId: number): void {
+    this.router.navigate(['/loan-officer/review', assignmentId]);
+  }
+
+  // Legacy method - kept for compatibility
   reviewLoan(assignmentId: number): void {
     this.router.navigate(['/loan-officer/review', assignmentId]);
   }
@@ -132,5 +156,10 @@ export class AssignedLoansComponent implements OnInit {
 
   toggleView(mode: 'table' | 'card'): void {
     this.viewMode = mode;
+  }
+
+  closeLoanDetailsModal(): void {
+    this.showLoanDetailsModal = false;
+    this.selectedLoan = null;
   }
 }

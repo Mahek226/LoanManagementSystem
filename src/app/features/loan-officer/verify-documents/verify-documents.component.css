@@ -1,0 +1,76 @@
+/* Document Verification Component Styles */
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.document-icon {
+  transition: all 0.3s ease;
+}
+
+.card:hover .document-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.extracted-data {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.extracted-data::-webkit-scrollbar {
+  width: 8px;
+}
+
+.extracted-data::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.extracted-data::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.extracted-data::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+}
+
+.btn-group .btn {
+  flex: 1;
+}
+
+.modal-dialog {
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
