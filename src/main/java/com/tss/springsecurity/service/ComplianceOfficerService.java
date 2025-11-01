@@ -128,4 +128,21 @@ public interface ComplianceOfficerService {
      * Generate compliance report PDF
      */
     byte[] generateComplianceReportPDF(Long assignmentId);
+    
+    // ==================== Comprehensive Compliance Review ====================
+    
+    /**
+     * Get comprehensive review details including documents, external fraud data, and screening results
+     */
+    ComplianceReviewDetailsResponse getComprehensiveReviewDetails(Long assignmentId);
+    
+    /**
+     * Submit compliance verdict to loan officer
+     */
+    ComplianceVerdictResponse submitComplianceVerdict(ComplianceVerdictRequest request);
+    
+    /**
+     * Request document resubmission with detailed reasons
+     */
+    Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request);
 }

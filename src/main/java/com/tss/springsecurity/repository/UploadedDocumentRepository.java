@@ -58,4 +58,11 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
      */
     @Query("SELECT ud FROM UploadedDocument ud WHERE ud.applicant.applicantId = :applicantId AND (ud.loan.loanId = :loanId OR ud.loan.loanId IS NULL)")
     List<UploadedDocument> findByApplicantIdAndLoanId(@Param("applicantId") Long applicantId, @Param("loanId") Long loanId);
+    
+    /**
+     * Find documents by loan ID (alias method)
+     */
+    default List<UploadedDocument> findByLoanId(Long loanId) {
+        return findByLoan_LoanId(loanId);
+    }
 }

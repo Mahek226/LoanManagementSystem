@@ -42,6 +42,12 @@ public class ComplianceOfficerApplicationAssignment {
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
     
+    @Column(name = "verdict", length = 50)
+    private String verdict; // APPROVED, REJECTED, FLAGGED
+    
+    @Column(name = "verdict_reason", columnDefinition = "TEXT")
+    private String verdictReason;
+    
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     

@@ -33,4 +33,13 @@ public class ExternalFraudFlag {
                 .triggered(true)
                 .build();
     }
+    
+    // Alias methods for backward compatibility
+    public String getFlagCode() {
+        return ruleCode;
+    }
+    
+    public String getFlagName() {
+        return ruleName;
+    }
 }
