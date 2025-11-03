@@ -390,7 +390,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-university fa-2x text-primary mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalBankAccounts }}</h4>
+                <h4>{{ externalFraudData.bankRecords.totalAccounts }}</h4>
                 <p class="text-muted mb-0">Bank Accounts</p>
               </div>
             </div>
@@ -399,7 +399,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalCriminalCases }}</h4>
+                <h4>{{ externalFraudData.criminalRecords.totalCases }}</h4>
                 <p class="text-muted mb-0">Criminal Cases</p>
               </div>
             </div>
@@ -408,7 +408,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-history fa-2x text-info mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalLoanHistory }}</h4>
+                <h4>{{ externalFraudData.loanHistory.totalLoans }}</h4>
                 <p class="text-muted mb-0">Loan History</p>
               </div>
             </div>
@@ -417,8 +417,8 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-exclamation-triangle fa-2x" 
-                   [class]="externalFraudData.summary.riskLevel === 'HIGH' ? 'text-danger' : 'text-success'"></i>
-                <h4>{{ externalFraudData.summary.riskLevel }}</h4>
+                   [class]="externalFraudData.riskAssessment.riskLevel === 'HIGH' ? 'text-danger' : 'text-success'"></i>
+                <h4>{{ externalFraudData.riskAssessment.riskLevel }}</h4>
                 <p class="text-muted mb-0">External Risk</p>
               </div>
             </div>
@@ -426,7 +426,7 @@
         </div>
 
         <!-- Bank Records -->
-        <div class="card mb-4" *ngIf="externalFraudData.bankRecords.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.bankRecords.accounts.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-university me-2"></i>Bank Records</h5>
           </div>
@@ -443,11 +443,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let bank of externalFraudData.bankRecords">
+                  <tr *ngFor="let bank of externalFraudData.bankRecords.accounts">
                     <td>{{ bank.bankName }}</td>
                     <td>{{ bank.accountType }}</td>
-                    <td>{{ formatCurrency(bank.balanceAmount) }}</td>
-                    <td>{{ formatDate(bank.lastTransactionDate) }}</td>
+                    <td>{{ formatCurrency(bank.balance) }}</td>
+                    <td>{{ formatDate(bank.lastTransaction) }}</td>
                     <td>
                       <span [class]="bank.isActive ? 'badge bg-success' : 'badge bg-secondary'">
                         {{ bank.isActive ? 'Active' : 'Inactive' }}
@@ -461,7 +461,7 @@
         </div>
 
         <!-- Criminal Records -->
-        <div class="card mb-4" *ngIf="externalFraudData.criminalRecords.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.criminalRecords.cases.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Criminal Records</h5>
           </div>
@@ -478,7 +478,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let criminal of externalFraudData.criminalRecords">
+                  <tr *ngFor="let criminal of externalFraudData.criminalRecords.cases">
                     <td>{{ criminal.caseNumber }}</td>
                     <td>{{ criminal.caseType }}</td>
                     <td>{{ criminal.courtName }}</td>
@@ -498,7 +498,7 @@
         </div>
 
         <!-- Loan History -->
-        <div class="card mb-4" *ngIf="externalFraudData.loanHistory.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.loanHistory.loans.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-history me-2"></i>Loan History</h5>
           </div>
@@ -516,7 +516,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let loan of externalFraudData.loanHistory">
+                  <tr *ngFor="let loan of externalFraudData.loanHistory.loans">
                     <td>{{ loan.institutionName }}</td>
                     <td>{{ loan.loanType }}</td>
                     <td>{{ formatCurrency(loan.loanAmount) }}</td>

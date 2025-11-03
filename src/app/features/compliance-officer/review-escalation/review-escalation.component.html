@@ -197,7 +197,7 @@
 
     <!-- Additional Information Cards -->
     <div class="row g-4 mb-4">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card card-custom h-100">
           <div class="card-body text-center">
             <i class="fas fa-history fa-2x text-danger mb-3"></i>
@@ -209,7 +209,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card card-custom h-100">
           <div class="card-body text-center">
             <i class="fas fa-file-alt fa-2x text-primary mb-3"></i>
@@ -221,7 +221,23 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-shield-alt fa-2x text-info mb-3"></i>
+            <h6 class="fw-bold">External Fraud Data</h6>
+            <p class="text-muted small mb-3" *ngIf="externalFraudData">
+              Risk: <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskLevel)">{{ externalFraudData.riskAssessment.riskLevel }}</span>
+            </p>
+            <p class="text-muted small mb-3" *ngIf="!externalFraudData && !externalFraudLoading">No data available</p>
+            <p class="text-muted small mb-3" *ngIf="externalFraudLoading">Loading...</p>
+            <button class="btn btn-sm btn-outline-info" (click)="openExternalFraudModal()" [disabled]="externalFraudLoading">
+              <i class="fas fa-eye me-1"></i>View Data
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
         <div class="card card-custom h-100">
           <div class="card-body text-center">
             <i class="fas fa-plus-circle fa-2x text-warning mb-3"></i>
@@ -1199,8 +1215,369 @@
   </div>
 </div>
 
+<!-- External Fraud Data Modal -->
+<div class="modal fade" [class.show]="showExternalFraudModal" [style.display]="showExternalFraudModal ? 'block' : 'none'" id="externalFraudModal" tabindex="-1" *ngIf="showExternalFraudModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-shield-alt me-2"></i>
+          External Fraud Data - {{ escalation?.applicantName }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeExternalFraudModal()" [disabled]="externalFraudLoading"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading State -->
+        <div *ngIf="externalFraudLoading" class="text-center py-5">
+          <div class="spinner-border text-info mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted">Loading external fraud data...</p>
+        </div>
+
+        <!-- No Data State -->
+        <div *ngIf="!externalFraudData && !externalFraudLoading" class="text-center py-5">
+          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+          <h6 class="text-muted">No External Fraud Data Available</h6>
+          <p class="text-muted mb-0">No external fraud screening data found for this applicant.</p>
+        </div>
+
+        <!-- External Fraud Data Content -->
+        <div *ngIf="externalFraudData && !externalFraudLoading">
+          <!-- Personal Information Summary -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">
+                <i class="fas fa-user me-2"></i>
+                Personal Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Full Name</small>
+                  <strong>{{ externalFraudData.firstName }} {{ externalFraudData.lastName }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Date of Birth</small>
+                  <strong>{{ formatDate(externalFraudData.dateOfBirth) }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Gender</small>
+                  <strong>{{ externalFraudData.gender }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">PAN Number</small>
+                  <strong>{{ externalFraudData.panNumber }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Aadhaar Number</small>
+                  <strong>{{ externalFraudData.aadhaarNumber }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Phone Number</small>
+                  <strong>{{ externalFraudData.phoneNumber }}</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted d-block">Email</small>
+                  <strong>{{ externalFraudData.email }}</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted d-block">Matched By</small>
+                  <span class="badge bg-info">{{ externalFraudData.matchedBy }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Assessment -->
+          <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Risk Assessment
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <div class="display-6 fw-bold text-danger">{{ externalFraudData.riskAssessment.overallRiskScore }}</div>
+                    <small class="text-muted">Risk Score</small>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Risk Level</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskLevel)">{{ externalFraudData.riskAssessment.riskLevel }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Recommendation</small>
+                  <span class="badge" [class.bg-danger]="externalFraudData.riskAssessment.recommendation === 'REJECT'" [class.bg-success]="externalFraudData.riskAssessment.recommendation === 'APPROVE'">{{ externalFraudData.riskAssessment.recommendation }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Assessment Date</small>
+                  <strong>{{ formatDate(externalFraudData.riskAssessment.assessmentDate) }}</strong>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <h6 class="fw-bold mb-2">Risk Factors:</h6>
+                <ul class="list-unstyled">
+                  <li *ngFor="let factor of externalFraudData.riskAssessment.riskFactors" class="mb-1">
+                    <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                    {{ factor }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Document Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.documentRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.documentRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Criminal Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.criminalRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.criminalRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Financial Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.financialRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.financialRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Banking Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.bankingRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.bankingRisk }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabbed Content -->
+          <ul class="nav nav-tabs" id="fraudDataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bank-records" type="button" role="tab">
+                <i class="fas fa-university me-2"></i>
+                Bank Records ({{ externalFraudData.bankRecords.totalAccounts }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="criminal-tab" data-bs-toggle="tab" data-bs-target="#criminal-records" type="button" role="tab">
+                <i class="fas fa-gavel me-2"></i>
+                Criminal Records ({{ externalFraudData.criminalRecords.totalCases }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="loan-tab" data-bs-toggle="tab" data-bs-target="#loan-history" type="button" role="tab">
+                <i class="fas fa-money-bill me-2"></i>
+                Loan History ({{ externalFraudData.loanHistory.totalLoans }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#government-documents" type="button" role="tab">
+                <i class="fas fa-id-card me-2"></i>
+                Documents ({{ externalFraudData.governmentDocuments.totalDocuments }})
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content mt-3" id="fraudDataTabContent">
+            <!-- Bank Records Tab -->
+            <div class="tab-pane fade show active" id="bank-records" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Bank Account Summary</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-info">Total Balance: {{ formatCurrency(externalFraudData.bankRecords.totalBalance) }}</span>
+                      <span class="badge bg-success ms-2">Active: {{ externalFraudData.bankRecords.activeAccounts }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Bank Name</th>
+                          <th>Account Type</th>
+                          <th>Balance</th>
+                          <th>Last Transaction</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let account of externalFraudData.bankRecords.accounts">
+                          <td><strong>{{ account.bankName }}</strong></td>
+                          <td>{{ account.accountType }}</td>
+                          <td>{{ formatCurrency(account.balance) }}</td>
+                          <td>{{ formatDate(account.lastTransaction) }}</td>
+                          <td>
+                            <span class="badge" [class.bg-success]="account.isActive" [class.bg-secondary]="!account.isActive">
+                              {{ account.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Criminal Records Tab -->
+            <div class="tab-pane fade" id="criminal-records" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Criminal Case History</h6>
+                </div>
+                <div class="card-body">
+                  <div *ngIf="externalFraudData.criminalRecords.cases.length === 0" class="text-center py-4">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p class="text-muted mb-0">No criminal records found</p>
+                  </div>
+                  <div *ngFor="let case of externalFraudData.criminalRecords.cases" class="border rounded p-3 mb-3">
+                    <div class="row">
+                      <div class="col-md-8">
+                        <h6 class="fw-bold mb-1">{{ case.caseNumber }}</h6>
+                        <p class="mb-2">{{ case.description }}</p>
+                        <small class="text-muted">{{ case.courtName }}</small>
+                      </div>
+                      <div class="col-md-4 text-end">
+                        <div class="mb-2">
+                          <span [class]="getCriminalStatusClass(case.status)">{{ case.status }}</span>
+                        </div>
+                        <div class="mb-1">
+                          <small class="text-muted d-block">Case Type</small>
+                          <strong>{{ case.caseType }}</strong>
+                        </div>
+                        <div *ngIf="case.verdictDate">
+                          <small class="text-muted d-block">Verdict Date</small>
+                          <strong>{{ formatDate(case.verdictDate) }}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan History Tab -->
+            <div class="tab-pane fade" id="loan-history" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Loan History Summary</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-warning">Default Rate: {{ externalFraudData.loanHistory.defaultRate }}%</span>
+                      <span class="badge bg-danger ms-2">Defaulted: {{ externalFraudData.loanHistory.defaultedLoans }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <small class="text-muted d-block">Total Amount Borrowed</small>
+                      <h5 class="text-primary">{{ formatCurrency(externalFraudData.loanHistory.totalAmountBorrowed) }}</h5>
+                    </div>
+                    <div class="col-md-6">
+                      <small class="text-muted d-block">Total Outstanding Balance</small>
+                      <h5 class="text-danger">{{ formatCurrency(externalFraudData.loanHistory.totalOutstandingBalance) }}</h5>
+                    </div>
+                  </div>
+                  
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Institution</th>
+                          <th>Loan Type</th>
+                          <th>Amount</th>
+                          <th>Outstanding</th>
+                          <th>Start Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let loan of externalFraudData.loanHistory.loans">
+                          <td><strong>{{ loan.institutionName }}</strong></td>
+                          <td>{{ loan.loanType }}</td>
+                          <td>{{ formatCurrency(loan.loanAmount) }}</td>
+                          <td>{{ formatCurrency(loan.outstandingBalance) }}</td>
+                          <td>{{ formatDate(loan.startDate) }}</td>
+                          <td>
+                            <span [class]="getLoanStatusClass(loan.status)">{{ loan.status }}</span>
+                            <i *ngIf="loan.defaultFlag" class="fas fa-exclamation-triangle text-danger ms-2" title="Default Flag"></i>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Government Documents Tab -->
+            <div class="tab-pane fade" id="government-documents" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Government Document Verification</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-success">Verified: {{ externalFraudData.governmentDocuments.verifiedDocuments }}</span>
+                      <span class="badge bg-info ms-2">Rate: {{ externalFraudData.governmentDocuments.verificationRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Document Type</th>
+                          <th>Document Number</th>
+                          <th>Issuing Authority</th>
+                          <th>Issue Date</th>
+                          <th>Expiry Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let doc of externalFraudData.governmentDocuments.documents">
+                          <td><strong>{{ doc.documentType }}</strong></td>
+                          <td>{{ doc.documentNumber }}</td>
+                          <td>{{ doc.issuingAuthority }}</td>
+                          <td>{{ formatDate(doc.issuedDate) }}</td>
+                          <td>{{ doc.expiryDate ? formatDate(doc.expiryDate) : 'N/A' }}</td>
+                          <td>
+                            <span [class]="getVerificationStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeExternalFraudModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Backdrops -->
 <div class="modal-backdrop fade" [class.show]="showKYCModal" *ngIf="showKYCModal"></div>
 <div class="modal-backdrop fade" [class.show]="showAMLModal" *ngIf="showAMLModal"></div>
 <div class="modal-backdrop fade" [class.show]="showRiskAnalysisModal" *ngIf="showRiskAnalysisModal"></div>
 <div class="modal-backdrop fade" [class.show]="showAuditLogsModal" *ngIf="showAuditLogsModal"></div>
+<div class="modal-backdrop fade" [class.show]="showExternalFraudModal" *ngIf="showExternalFraudModal"></div>
