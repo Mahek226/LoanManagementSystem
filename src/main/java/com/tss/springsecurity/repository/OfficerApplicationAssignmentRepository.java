@@ -27,4 +27,9 @@ public interface OfficerApplicationAssignmentRepository extends JpaRepository<Of
     
     @Query("SELECT a FROM OfficerApplicationAssignment a WHERE a.officer.loanType = :loanType AND a.status IN ('PENDING', 'IN_PROGRESS') GROUP BY a.officer ORDER BY COUNT(a.officer) ASC")
     List<OfficerApplicationAssignment> findOfficersWithLeastWorkloadByLoanType(@Param("loanType") String loanType);
+    
+    // Additional methods for document resubmission functionality
+    List<OfficerApplicationAssignment> findByOfficer_OfficerIdAndStatusIn(Long officerId, List<String> statuses);
+    
+    List<OfficerApplicationAssignment> findByApplicant_ApplicantIdAndOfficer_OfficerId(Long applicantId, Long officerId);
 }

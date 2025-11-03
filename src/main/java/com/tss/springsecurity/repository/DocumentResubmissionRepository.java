@@ -22,4 +22,7 @@ public interface DocumentResubmissionRepository extends JpaRepository<DocumentRe
     
     @Query("SELECT COUNT(dr) FROM DocumentResubmission dr WHERE dr.status = :status")
     Long countByStatus(@Param("status") String status);
+    
+    // Additional methods for document resubmission functionality
+    List<DocumentResubmission> findByApplicant_ApplicantIdAndStatus(Long applicantId, String status);
 }

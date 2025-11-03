@@ -951,11 +951,50 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         UploadedDocument document = uploadedDocumentRepository.findById(request.getDocumentId())
                 .orElseThrow(() -> new RuntimeException("Document not found"));
         
-        // Mark document for resubmission
+        // Find the compliance assignment for this loan
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository
+                .findByApplicant_ApplicantId(document.getApplicant().getApplicantId())
+                .stream()
+                .filter(a -> "PENDING".equals(a.getStatus()) || "IN_PROGRESS".equals(a.getStatus()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No active compliance assignment found for this applicant"));
+        
+        // Get the compliance officer
+        ComplianceOfficer complianceOfficer = complianceOfficerRepository.findById(request.getComplianceOfficerId())
+                .orElseThrow(() -> new RuntimeException("Compliance officer not found"));
+        
+        // Create document resubmission record in document_resubmission table
+        DocumentResubmission resubmission = new DocumentResubmission();
+        resubmission.setAssignment(assignment);
+        resubmission.setApplicant(document.getApplicant());
+        resubmission.setRequestedByOfficer(complianceOfficer);
+        
+        // Create JSON array with single document type
+        try {
+            resubmission.setRequestedDocuments(objectMapper.writeValueAsString(
+                java.util.Arrays.asList(document.getDocumentType())));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error processing document types", e);
+        }
+        
+        resubmission.setReason(request.getResubmissionReason());
+        resubmission.setAdditionalComments(request.getSpecificInstructions());
+        resubmission.setPriorityLevel(3); // Default to MEDIUM priority
+        resubmission.setStatus("REQUESTED");
+        
+        // Save the resubmission record
+        DocumentResubmission savedResubmission = documentResubmissionRepository.save(resubmission);
+        
+        // Mark document for resubmission (for backward compatibility)
         document.setResubmissionRequested(true);
         document.setResubmissionReason(request.getResubmissionReason());
         document.setResubmissionInstructions(request.getSpecificInstructions());
         uploadedDocumentRepository.save(document);
+        
+        // Update assignment status to indicate document resubmission requested
+        assignment.setStatus("DOCUMENT_RESUBMISSION_REQUESTED");
+        assignment.setRemarks("Document resubmission requested: " + request.getResubmissionReason());
+        assignmentRepository.save(assignment);
         
         // Log the request
         logActivity(request.getComplianceOfficerId(), "DOCUMENT_RESUBMISSION_REQUESTED",
@@ -970,6 +1009,7 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         response.put("documentId", document.getDocumentId());
         response.put("documentType", document.getDocumentType());
         response.put("resubmissionReason", request.getResubmissionReason());
+        response.put("resubmissionId", savedResubmission.getResubmissionId());
         response.put("timestamp", LocalDateTime.now());
         
         return response;

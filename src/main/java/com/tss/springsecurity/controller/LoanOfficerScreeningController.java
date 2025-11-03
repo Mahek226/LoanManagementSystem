@@ -7,6 +7,7 @@ import com.tss.springsecurity.dto.ScreeningDashboardResponse;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/loan-officer")
 @RequiredArgsConstructor
+@Slf4j
 public class LoanOfficerScreeningController {
     
     private final LoanOfficerScreeningService screeningService;
@@ -29,6 +31,7 @@ public class LoanOfficerScreeningController {
     private final com.tss.springsecurity.service.ComprehensiveDashboardService comprehensiveDashboardService;
     private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
     private final com.tss.springsecurity.repository.ApplicantBasicDetailsRepository basicDetailsRepository;
+    private final com.tss.springsecurity.repository.DocumentResubmissionRepository documentResubmissionRepository;
     
     @GetMapping("/{officerId}/assigned-loans")
     public ResponseEntity<List<LoanScreeningResponse>> getAssignedLoans(@PathVariable Long officerId) {
@@ -604,6 +607,217 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Error fetching comprehensive loan view: " + e.getMessage()));
+        }
+    }
+    
+    // ==================== Document Resubmission Requests from Compliance Officer ====================
+    
+    /**
+     * Get document resubmission requests from compliance officers for this loan officer
+     */
+    @GetMapping("/{officerId}/document-resubmission-requests")
+    public ResponseEntity<?> getDocumentResubmissionRequests(@PathVariable Long officerId) {
+        try {
+            log.info("Getting document resubmission requests for loan officer ID: {}", officerId);
+            
+            // Get all document resubmission requests with status "REQUESTED"
+            List<com.tss.springsecurity.entity.DocumentResubmission> docRequests = 
+                documentResubmissionRepository.findByStatusOrderByPriorityLevelDescRequestedAtDesc("REQUESTED");
+            
+            log.info("Found {} document resubmission requests with status REQUESTED", docRequests.size());
+            
+            List<java.util.Map<String, Object>> requests = new java.util.ArrayList<>();
+            
+            for (com.tss.springsecurity.entity.DocumentResubmission docRequest : docRequests) {
+                log.info("Processing document request ID: {} for applicant ID: {}", 
+                    docRequest.getResubmissionId(), docRequest.getApplicant().getApplicantId());
+                
+                // Find the loan officer assignment for this applicant - try multiple statuses
+                List<String> assignmentStatuses = java.util.Arrays.asList("PENDING", "IN_PROGRESS", "ASSIGNED");
+                java.util.Optional<com.tss.springsecurity.entity.OfficerApplicationAssignment> loanOfficerAssignment = 
+                    assignmentRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId())
+                    .stream()
+                    .filter(a -> assignmentStatuses.contains(a.getStatus()))
+                    .findFirst();
+                
+                if (loanOfficerAssignment.isPresent()) {
+                    com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = loanOfficerAssignment.get();
+                    log.info("Found loan officer assignment ID: {} with officer ID: {} for applicant ID: {}", 
+                        assignment.getAssignmentId(), assignment.getOfficer().getOfficerId(), 
+                        docRequest.getApplicant().getApplicantId());
+                    
+                    // Only include requests where this loan officer is assigned
+                    if (assignment.getOfficer().getOfficerId().equals(officerId)) {
+                        log.info("Including request for officer ID: {}", officerId);
+                        
+                        // Get loan information from the compliance assignment (which should have the loan)
+                        com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
+                        if (assignment.getLoan() != null) {
+                            loan = assignment.getLoan();
+                        } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
+                            loan = docRequest.getAssignment().getLoan();
+                        } else {
+                            // Try to find loan by applicant ID
+                            java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
+                                loanRepository.findByApplicant_ApplicantId(assignment.getApplicant().getApplicantId());
+                            if (!loans.isEmpty()) {
+                                loan = loans.get(0); // Get the first loan for this applicant
+                            }
+                        }
+                        
+                        if (loan == null) {
+                            log.warn("Could not find loan for assignment ID: {}, skipping this request", assignment.getAssignmentId());
+                            continue;
+                        }
+                        
+                        java.util.Map<String, Object> request = new java.util.HashMap<>();
+                        request.put("resubmissionId", docRequest.getResubmissionId());
+                        request.put("assignmentId", assignment.getAssignmentId());
+                        request.put("loanId", loan.getLoanId());
+                        request.put("applicantId", assignment.getApplicant().getApplicantId());
+                        request.put("applicantName", assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName());
+                        request.put("loanType", loan.getLoanType());
+                        request.put("loanAmount", loan.getLoanAmount());
+                        request.put("requestedDocuments", docRequest.getRequestedDocuments());
+                        request.put("reason", docRequest.getReason());
+                        request.put("additionalComments", docRequest.getAdditionalComments());
+                        request.put("priorityLevel", docRequest.getPriorityLevel());
+                        request.put("requestedAt", docRequest.getRequestedAt());
+                        request.put("requestedBy", docRequest.getRequestedByOfficer().getFirstName() + " " + 
+                                                  docRequest.getRequestedByOfficer().getLastName());
+                        request.put("complianceOfficerId", docRequest.getRequestedByOfficer().getOfficerId());
+                        request.put("status", docRequest.getStatus());
+                        requests.add(request);
+                    } else {
+                        log.info("Skipping request - different officer ID: {} vs {}", 
+                            assignment.getOfficer().getOfficerId(), officerId);
+                    }
+                } else {
+                    log.warn("No loan officer assignment found for applicant ID: {}", 
+                        docRequest.getApplicant().getApplicantId());
+                }
+            }
+            
+            log.info("Returning {} document resubmission requests for officer ID: {}", requests.size(), officerId);
+            return ResponseEntity.ok(requests);
+            
+        } catch (Exception e) {
+            log.error("Error getting document resubmission requests for officer ID: {}", officerId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to get document resubmission requests: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Process document resubmission request from compliance officer
+     * Loan officer can either approve and forward to applicant, or reject with reason
+     */
+    @PostMapping("/{officerId}/process-document-resubmission-request")
+    public ResponseEntity<?> processDocumentResubmissionRequest(
+            @PathVariable Long officerId,
+            @RequestBody java.util.Map<String, Object> request) {
+        try {
+            Long resubmissionId = Long.valueOf(request.get("resubmissionId").toString());
+            String action = request.get("action").toString(); // APPROVE, REJECT
+            String loanOfficerRemarks = request.get("remarks") != null ? request.get("remarks").toString() : "";
+            
+            // Get the document resubmission request
+            com.tss.springsecurity.entity.DocumentResubmission docRequest = 
+                documentResubmissionRepository.findById(resubmissionId)
+                    .orElseThrow(() -> new RuntimeException("Document resubmission request not found"));
+            
+            if ("APPROVE".equals(action)) {
+                // Forward the request to applicant
+                try {
+                    // Parse the requested documents JSON
+                    com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    @SuppressWarnings("unchecked")
+                    List<String> documentTypes = objectMapper.readValue(docRequest.getRequestedDocuments(), List.class);
+                    
+                    // Create notification for applicant
+                    String requestedBy = "Loan Officer #" + officerId + " (forwarded from Compliance)";
+                    notificationService.createDocumentResubmissionRequest(
+                        docRequest.getApplicant().getApplicantId(),
+                        docRequest.getAssignment().getApplicant().getLoanDetails().get(0).getLoanId(),
+                        docRequest.getAssignment().getAssignmentId(),
+                        documentTypes,
+                        docRequest.getReason(),
+                        docRequest.getAdditionalComments() + 
+                        (loanOfficerRemarks.isEmpty() ? "" : " | Loan Officer Notes: " + loanOfficerRemarks),
+                        requestedBy
+                    );
+                    
+                    // Update document resubmission status
+                    docRequest.setStatus("FORWARDED_TO_APPLICANT");
+                    docRequest.setReviewedAt(java.time.LocalDateTime.now());
+                    documentResubmissionRepository.save(docRequest);
+                    
+                    // Update assignment status
+                    List<com.tss.springsecurity.entity.OfficerApplicationAssignment> assignments = 
+                        assignmentRepository.findByApplicant_ApplicantIdAndOfficer_OfficerId(
+                            docRequest.getApplicant().getApplicantId(), officerId);
+                    
+                    for (com.tss.springsecurity.entity.OfficerApplicationAssignment assignment : assignments) {
+                        assignment.setStatus("DOCUMENT_RESUBMISSION_FORWARDED");
+                        assignment.setRemarks("Document resubmission request forwarded to applicant. " + loanOfficerRemarks);
+                        assignmentRepository.save(assignment);
+                    }
+                    
+                    java.util.Map<String, Object> response = new java.util.HashMap<>();
+                    response.put("success", true);
+                    response.put("message", "Document resubmission request forwarded to applicant");
+                    response.put("resubmissionId", resubmissionId);
+                    response.put("action", "FORWARDED");
+                    
+                    return ResponseEntity.ok(response);
+                    
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to forward request to applicant: " + e.getMessage());
+                }
+                
+            } else if ("REJECT".equals(action)) {
+                String rejectionReason = request.get("rejectionReason") != null ? 
+                    request.get("rejectionReason").toString() : "Rejected by loan officer";
+                
+                // Update document resubmission status
+                docRequest.setStatus("REJECTED_BY_LOAN_OFFICER");
+                docRequest.setReviewedAt(java.time.LocalDateTime.now());
+                docRequest.setAdditionalComments(docRequest.getAdditionalComments() + 
+                    " | Rejected by Loan Officer: " + rejectionReason + 
+                    (loanOfficerRemarks.isEmpty() ? "" : " | Remarks: " + loanOfficerRemarks));
+                documentResubmissionRepository.save(docRequest);
+                
+                // Update assignment status
+                List<com.tss.springsecurity.entity.OfficerApplicationAssignment> assignments = 
+                    assignmentRepository.findByApplicant_ApplicantIdAndOfficer_OfficerId(
+                        docRequest.getApplicant().getApplicantId(), officerId);
+                
+                for (com.tss.springsecurity.entity.OfficerApplicationAssignment assignment : assignments) {
+                    assignment.setStatus("DOCUMENT_RESUBMISSION_REJECTED");
+                    assignment.setRemarks("Document resubmission request rejected. Reason: " + rejectionReason + 
+                                        (loanOfficerRemarks.isEmpty() ? "" : " | " + loanOfficerRemarks));
+                    assignmentRepository.save(assignment);
+                }
+                
+                java.util.Map<String, Object> response = new java.util.HashMap<>();
+                response.put("success", true);
+                response.put("message", "Document resubmission request rejected");
+                response.put("resubmissionId", resubmissionId);
+                response.put("action", "REJECTED");
+                response.put("rejectionReason", rejectionReason);
+                
+                return ResponseEntity.ok(response);
+                
+            } else {
+                throw new RuntimeException("Invalid action: " + action + ". Must be APPROVE or REJECT");
+            }
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to process document resubmission request: " + e.getMessage()));
         }
     }
     
