@@ -58,7 +58,8 @@
         <i class="fas fa-info-circle me-2"></i>Overview
       </button>
     </li>
-    <li class="nav-item" role="presentation">
+    <!-- Documents tab only shown in screening mode -->
+    <li class="nav-item" role="presentation" *ngIf="viewMode === 'screening'">
       <button class="nav-link" [class.active]="activeTab === 'documents'" (click)="switchTab('documents')" type="button" role="tab">
         <i class="fas fa-folder-open me-2"></i>Documents <span class="badge bg-primary ms-1">{{ documents.length }}</span>
       </button>
@@ -190,7 +191,7 @@
                   </div>
                 </div>
                 <div class="d-grid">
-                  <button class="btn btn-outline-primary" (click)="openDocumentsModal()">
+                  <button class="btn btn-outline-primary" (click)="navigateToVerifyDocuments()">
                     <i class="fas fa-eye me-2"></i>View & Verify All Documents
                   </button>
                 </div>
@@ -359,8 +360,8 @@
     </div>
     <!-- End Overview Tab -->
 
-    <!-- Documents Tab -->
-    <div *ngIf="activeTab === 'documents'">
+    <!-- Documents Tab - Only shown in screening mode -->
+    <div *ngIf="activeTab === 'documents' && viewMode === 'screening'">
       <div class="row g-4">
         <div class="col-12">
           <!-- Document Extraction Section -->
@@ -577,14 +578,25 @@
             <div class="card-body">
               <div class="screening-step mb-3">
                 <div class="d-flex align-items-start">
-                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-check"></i>
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getDocumentVerificationProgress() === 100"
+                       [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.bg-secondary]="getDocumentVerificationProgress() === 0"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getDocumentVerificationProgress() === 100"
+                       [class.fa-sync]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.fa-clock]="getDocumentVerificationProgress() === 0"></i>
                   </div>
                   <div class="flex-grow-1">
                     <h6 class="mb-1">1. Document Verification</h6>
-                    <p class="text-muted small mb-1">All uploaded documents verified for authenticity</p>
+                    <p class="text-muted small mb-1">{{ getVerifiedDocumentsCount() }} of {{ documents.length }} documents verified</p>
                     <div class="progress" style="height: 5px;">
-                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                      <div class="progress-bar" 
+                           [class.bg-success]="getDocumentVerificationProgress() === 100"
+                           [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                           [class.bg-secondary]="getDocumentVerificationProgress() === 0"
+                           [style.width.%]="getDocumentVerificationProgress()"></div>
                     </div>
                   </div>
                 </div>
@@ -592,14 +604,22 @@
 
               <div class="screening-step mb-3">
                 <div class="d-flex align-items-start">
-                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-check"></i>
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getIdentityVerificationStatus()"
+                       [class.bg-secondary]="!getIdentityVerificationStatus()"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getIdentityVerificationStatus()"
+                       [class.fa-clock]="!getIdentityVerificationStatus()"></i>
                   </div>
                   <div class="flex-grow-1">
                     <h6 class="mb-1">2. Identity Validation</h6>
-                    <p class="text-muted small mb-1">PAN and Aadhaar cross-verification completed</p>
+                    <p class="text-muted small mb-1">{{ getIdentityVerificationText() }}</p>
                     <div class="progress" style="height: 5px;">
-                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                      <div class="progress-bar" 
+                           [class.bg-success]="getIdentityVerificationStatus()"
+                           [class.bg-secondary]="!getIdentityVerificationStatus()"
+                           [style.width.%]="getIdentityVerificationStatus() ? 100 : 0"></div>
                     </div>
                   </div>
                 </div>
@@ -607,14 +627,25 @@
 
               <div class="screening-step mb-3">
                 <div class="d-flex align-items-start">
-                  <div class="step-icon bg-success text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-check"></i>
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getFinancialAnalysisStatus()"
+                       [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                       [class.bg-secondary]="!loan"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getFinancialAnalysisStatus()"
+                       [class.fa-exclamation-triangle]="!getFinancialAnalysisStatus() && loan"
+                       [class.fa-clock]="!loan"></i>
                   </div>
                   <div class="flex-grow-1">
                     <h6 class="mb-1">3. Financial Analysis</h6>
-                    <p class="text-muted small mb-1">Income verification and debt analysis</p>
+                    <p class="text-muted small mb-1">{{ getFinancialAnalysisText() }}</p>
                     <div class="progress" style="height: 5px;">
-                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                      <div class="progress-bar" 
+                           [class.bg-success]="getFinancialAnalysisStatus()"
+                           [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                           [class.bg-secondary]="!loan"
+                           [style.width.%]="getFinancialAnalysisProgress()"></div>
                     </div>
                   </div>
                 </div>
@@ -622,15 +653,27 @@
 
               <div class="screening-step mb-3">
                 <div class="d-flex align-items-start">
-                  <div class="step-icon bg-info text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-sync fa-spin" *ngIf="!fraudCheckTriggered"></i>
-                    <i class="fas fa-check" *ngIf="fraudCheckTriggered"></i>
+                  <div class="step-icon rounded-circle me-3 text-white" 
+                       [class.bg-success]="fraudCheckResult"
+                       [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                       [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                       [class.bg-info]="!fraudCheckResult"
+                       style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-sync fa-spin" *ngIf="!fraudCheckResult && fraudCheckLoading"></i>
+                    <i class="fas fa-check" *ngIf="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"></i>
+                    <i class="fas fa-exclamation-triangle" *ngIf="fraudCheckResult && (fraudCheckResult.riskLevel === 'MEDIUM' || fraudCheckResult.riskLevel === 'HIGH')"></i>
+                    <i class="fas fa-clock" *ngIf="!fraudCheckResult && !fraudCheckLoading"></i>
                   </div>
                   <div class="flex-grow-1">
                     <h6 class="mb-1">4. Fraud Rule Engine</h6>
-                    <p class="text-muted small mb-1">{{ fraudCheckTriggered ? 'Fraud rules evaluated successfully' : 'Pending fraud check execution' }}</p>
+                    <p class="text-muted small mb-1">{{ getFraudCheckStatusText() }}</p>
                     <div class="progress" style="height: 5px;">
-                      <div class="progress-bar" [class.bg-success]="fraudCheckTriggered" [class.bg-info]="!fraudCheckTriggered" [style.width.%]="fraudCheckTriggered ? 100 : 60"></div>
+                      <div class="progress-bar" 
+                           [class.bg-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                           [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                           [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                           [class.bg-info]="!fraudCheckResult"
+                           [style.width.%]="getFraudCheckProgress()"></div>
                     </div>
                   </div>
                 </div>
@@ -638,14 +681,24 @@
 
               <div class="screening-step">
                 <div class="d-flex align-items-start">
-                  <div class="step-icon bg-secondary text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-file-alt"></i>
+                  <div class="step-icon rounded-circle me-3 text-white" 
+                       [class.bg-success]="loan && loan.riskLevel === 'LOW'"
+                       [class.bg-warning]="loan && loan.riskLevel === 'MEDIUM'"
+                       [class.bg-danger]="loan && loan.riskLevel === 'HIGH'"
+                       [class.bg-secondary]="!loan"
+                       style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-chart-line"></i>
                   </div>
                   <div class="flex-grow-1">
                     <h6 class="mb-1">5. Final Risk Assessment</h6>
-                    <p class="text-muted small mb-1">Comprehensive risk score calculation</p>
+                    <p class="text-muted small mb-1">{{ getFinalRiskAssessmentText() }}</p>
                     <div class="progress" style="height: 5px;">
-                      <div class="progress-bar bg-primary" [style.width.%]="loan.riskScore"></div>
+                      <div class="progress-bar" 
+                           [class.bg-success]="loan && loan.riskLevel === 'LOW'"
+                           [class.bg-warning]="loan && loan.riskLevel === 'MEDIUM'"
+                           [class.bg-danger]="loan && loan.riskLevel === 'HIGH'"
+                           [class.bg-secondary]="!loan"
+                           [style.width.%]="loan ? loan.riskScore : 0"></div>
                     </div>
                   </div>
                 </div>
@@ -683,31 +736,61 @@
               <div class="row g-3">
                 <div class="col-6">
                   <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
-                    <i class="fas fa-user-check fa-2x text-primary mb-2"></i>
+                    <i class="fas fa-user-check fa-2x mb-2" 
+                       [class.text-success]="getIdentityVerificationStatus()"
+                       [class.text-secondary]="!getIdentityVerificationStatus()"></i>
                     <h6 class="mb-1">Identity</h6>
-                    <span class="badge bg-success">Verified</span>
+                    <span class="badge" 
+                          [class.bg-success]="getIdentityVerificationStatus()"
+                          [class.bg-secondary]="!getIdentityVerificationStatus()">
+                      {{ getIdentityVerificationStatus() ? 'Verified' : 'Pending' }}
+                    </span>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
-                    <i class="fas fa-file-alt fa-2x text-info mb-2"></i>
+                    <i class="fas fa-file-alt fa-2x mb-2" 
+                       [class.text-success]="getDocumentVerificationProgress() === 100"
+                       [class.text-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.text-secondary]="getDocumentVerificationProgress() === 0"></i>
                     <h6 class="mb-1">Documents</h6>
-                    <span class="badge bg-success">{{ getVerifiedDocumentsCount() }}/{{ documents.length }}</span>
+                    <span class="badge" 
+                          [class.bg-success]="getDocumentVerificationProgress() === 100"
+                          [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                          [class.bg-secondary]="getDocumentVerificationProgress() === 0">
+                      {{ getVerifiedDocumentsCount() }}/{{ documents.length }}
+                    </span>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
-                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <i class="fas fa-money-bill-wave fa-2x mb-2" 
+                       [class.text-success]="getFinancialAnalysisStatus()"
+                       [class.text-warning]="!getFinancialAnalysisStatus() && loan"
+                       [class.text-secondary]="!loan"></i>
                     <h6 class="mb-1">Financial</h6>
-                    <span class="badge bg-success">Stable</span>
+                    <span class="badge" 
+                          [class.bg-success]="getFinancialAnalysisStatus()"
+                          [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                          [class.bg-secondary]="!loan">
+                      {{ getFinancialStatusText() }}
+                    </span>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
-                    <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
+                    <i class="fas fa-shield-alt fa-2x mb-2" 
+                       [class.text-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                       [class.text-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                       [class.text-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                       [class.text-secondary]="!fraudCheckResult"></i>
                     <h6 class="mb-1">Fraud Check</h6>
-                    <span class="badge" [class.bg-success]="fraudCheckTriggered" [class.bg-secondary]="!fraudCheckTriggered">
-                      {{ fraudCheckTriggered ? 'Complete' : 'Pending' }}
+                    <span class="badge" 
+                          [class.bg-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                          [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                          [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                          [class.bg-secondary]="!fraudCheckResult">
+                      {{ getFraudCheckBadgeText() }}
                     </span>
                   </div>
                 </div>
@@ -725,28 +808,46 @@
                 <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
                 <h6 class="text-muted">No fraud check performed yet</h6>
                 <p class="text-muted small">Click "Run Fraud Check" to perform comprehensive fraud detection</p>
+                
+                <!-- Debug Info -->
+                <div class="mt-3 p-2 bg-light rounded" *ngIf="loan">
+                  <small class="text-muted">
+                    Debug: Loan ID {{ loan.loanId }}, Applicant ID {{ loan.applicantId }}
+                    <br>
+                    Fraud Check Triggered: {{ fraudCheckTriggered }}
+                    <br>
+                    Fraud Check Loading: {{ fraudCheckLoading }}
+                  </small>
+                </div>
+                
+                <!-- Quick Test Button -->
+                <button class="btn btn-sm btn-warning mt-2" (click)="createMockFraudData()">
+                  <i class="fas fa-flask me-1"></i>Create Mock Data (Test)
+                </button>
               </div>
 
-              <div *ngIf="fraudCheckResult">
-                <!-- Risk Level Alert -->
-                <div class="alert mb-4" 
-                     [class.alert-success]="fraudCheckResult.riskLevel === 'LOW'"
-                     [class.alert-warning]="fraudCheckResult.riskLevel === 'MEDIUM'"
-                     [class.alert-danger]="fraudCheckResult.riskLevel === 'HIGH'">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <h5 class="mb-1">
-                        <i class="fas fa-shield-alt me-2"></i>
-                        Risk Level: {{ fraudCheckResult.riskLevel }}
-                      </h5>
-                      <p class="mb-0">Risk Score: {{ fraudCheckResult.riskScore }}%</p>
-                    </div>
-                    <div class="text-end">
-                      <small class="d-block">Checked At:</small>
-                      <small>{{ formatDate(fraudCheckResult.checkedAt) }}</small>
-                    </div>
+              <!-- Overall Loan Risk Assessment -->
+              <div class="alert mb-4" 
+                   [class.alert-success]="getCurrentRiskLevel() === 'LOW'"
+                   [class.alert-warning]="getCurrentRiskLevel() === 'MEDIUM'"
+                   [class.alert-danger]="getCurrentRiskLevel() === 'HIGH'">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="mb-1">
+                      <i class="fas fa-chart-line me-2"></i>
+                      Overall Risk Level: {{ getCurrentRiskLevel() }}
+                    </h5>
+                    <p class="mb-0">Loan Risk Score: {{ getCurrentRiskScore() }}%</p>
+                  </div>
+                  <div class="text-end">
+                    <small class="d-block">{{ fraudCheckResult ? 'Fraud Check Completed:' : 'Last Updated:' }}</small>
+                    <small>{{ getCurrentCheckDate() }}</small>
                   </div>
                 </div>
+              </div>
+
+
+              <div *ngIf="fraudCheckResult">
 
                 <!-- Fraud Tags -->
                 <div *ngIf="fraudCheckResult.fraudTags && fraudCheckResult.fraudTags.length > 0" class="mb-4">
@@ -763,29 +864,95 @@
                   <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Risk Score Calculation</h6>
                   <div class="card border-0" style="background-color: var(--bg-secondary);">
                     <div class="card-body">
-                      <div class="row g-3 mb-3">
-                        <div class="col-6">
-                          <div class="text-center">
-                            <small class="text-muted d-block">Total Points Deducted</small>
-                            <h4 class="mb-0 text-danger">{{ getTotalPointsDeducted() }}</h4>
+                      
+                      <!-- Always show loan-based calculation -->
+                      <div *ngIf="loan">
+                        <div class="alert alert-info mb-3">
+                          <i class="fas fa-info-circle me-2"></i>
+                          <strong>Loan Risk Assessment</strong>
+                          <p class="mb-0 mt-2">This risk score is based on comprehensive loan screening including financial analysis, credit history, and eligibility criteria.</p>
+                        </div>
+                        
+                        <!-- Loan Risk Components -->
+                        <div class="row g-3 mb-3">
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Credit Score Impact</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanCreditScoreImpact() <= 20"
+                                  [class.text-warning]="getLoanCreditScoreImpact() > 20 && getLoanCreditScoreImpact() <= 40"
+                                  [class.text-danger]="getLoanCreditScoreImpact() > 40">
+                                {{ getLoanCreditScoreImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Income Analysis</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanIncomeImpact() <= 15"
+                                  [class.text-warning]="getLoanIncomeImpact() > 15 && getLoanIncomeImpact() <= 30"
+                                  [class.text-danger]="getLoanIncomeImpact() > 30">
+                                {{ getLoanIncomeImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Debt-to-Income</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanDTIImpact() <= 10"
+                                  [class.text-warning]="getLoanDTIImpact() > 10 && getLoanDTIImpact() <= 20"
+                                  [class.text-danger]="getLoanDTIImpact() > 20">
+                                {{ getLoanDTIImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Other Factors</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanOtherFactors() <= 10"
+                                  [class.text-warning]="getLoanOtherFactors() > 10 && getLoanOtherFactors() <= 20"
+                                  [class.text-danger]="getLoanOtherFactors() > 20">
+                                {{ getLoanOtherFactors() }}
+                              </h4>
+                            </div>
                           </div>
                         </div>
-                        <div class="col-6">
-                          <div class="text-center">
-                            <small class="text-muted d-block">Rules Violated</small>
-                            <h4 class="mb-0 text-warning">
-                              {{ fraudCheckResult.flaggedRules ? fraudCheckResult.flaggedRules.length : 0 }}
-                            </h4>
+
+                        <!-- Final Score Breakdown -->
+                        <div class="row g-3 mb-3">
+                          <div class="col-6">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Total Risk Points</small>
+                              <h4 class="mb-0 text-primary">{{ getLoanTotalRiskPoints() }}</h4>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Final Risk Score</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="loan.riskLevel === 'LOW'"
+                                  [class.text-warning]="loan.riskLevel === 'MEDIUM'"
+                                  [class.text-danger]="loan.riskLevel === 'HIGH'">
+                                {{ loan.riskScore }}%
+                              </h4>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div class="alert alert-light mb-0">
-                        <small>
-                          <strong>Formula:</strong> Risk Score = (Total Points Deducted / Maximum Possible Points) × 100
-                          <br>
-                          <strong>Result:</strong> {{ fraudCheckResult.riskScore }}% = 
-                          ({{ getTotalPointsDeducted() }} points / {{ getMaxPossiblePoints() }} max points) × 100
-                        </small>
+
+                        <!-- Formula Explanation -->
+                        <div class="alert alert-light mb-0">
+                          <small>
+                            <strong>Formula:</strong> Risk Score = Credit Impact + Income Analysis + DTI Impact + Other Factors
+                            <br>
+                            <strong>Calculation:</strong> 
+                            {{ loan.riskScore }}% = {{ getLoanCreditScoreImpact() }} + {{ getLoanIncomeImpact() }} + {{ getLoanDTIImpact() }} + {{ getLoanOtherFactors() }}
+                            <br>
+                            <strong>Risk Level:</strong> {{ loan.riskLevel }} ({{ getRiskLevelDescription() }})
+                          </small>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -920,20 +1087,6 @@
                   </div>
                 </div>
 
-                <!-- No Issues Found -->
-                <div *ngIf="!fraudCheckResult.flaggedRules || fraudCheckResult.flaggedRules.length === 0" class="text-center py-4">
-                  <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                  <h6 class="text-success">No Fraud Indicators Found</h6>
-                  <p class="text-muted small">All fraud detection rules passed successfully</p>
-                </div>
-
-                <!-- API Remarks -->
-                <div *ngIf="fraudCheckResult.apiRemarks" class="mt-4">
-                  <div class="alert alert-info">
-                    <strong><i class="fas fa-comment-alt me-2"></i>System Remarks:</strong>
-                    <p class="mb-0 mt-2">{{ fraudCheckResult.apiRemarks }}</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

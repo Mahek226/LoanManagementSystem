@@ -1,18 +1,35 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LoanOfficerService, LoanDocument } from '@core/services/loan-officer.service';
-import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
+import { LoanOfficerService } from '../../../core/services/loan-officer.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
 
 interface ExtractedData {
+  [key: string]: any;
+}
+
+interface LoanDocument {
+  documentId: number;
+  documentType: string;
+  documentName: string;
+  originalFilename?: string;
+  documentUrl?: string;
+  cloudinaryUrl?: string;
+  verificationStatus: string;
+  uploadedAt: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  remarks?: string;
   [key: string]: any;
 }
 
 @Component({
   selector: 'app-verify-documents',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DocumentViewerComponent],
   templateUrl: './verify-documents.component.html',
   styleUrl: './verify-documents.component.css'
 })
@@ -28,7 +45,6 @@ export class VerifyDocumentsComponent implements OnInit {
   
   documents: LoanDocument[] = [];
   selectedDocument: LoanDocument | null = null;
-  extractedData: ExtractedData | null = null;
   
   // Track extraction status per document
   extractionCache: Map<number, ExtractedData> = new Map();
@@ -37,11 +53,15 @@ export class VerifyDocumentsComponent implements OnInit {
   // Modal states
   showDocumentModal = false;
   showVerifyModal = false;
-  
-  // Verification form
-  verificationStatus: 'VERIFIED' | 'REJECTED' = 'VERIFIED';
+  verificationStatus = '';
   verificationRemarks = '';
-
+  
+  // Extraction state
+  extractedData: any = null;
+  
+  // Document viewer state
+  activeTab = 'parse';
+  
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -110,27 +130,58 @@ export class VerifyDocumentsComponent implements OnInit {
     this.error = '';
     this.extractedData = null;
     
-    // Call extraction API
-    this.loanOfficerService.extractDocuments(this.assignmentId).subscribe({
-      next: (response) => {
-        this.extractedData = response.extracted || response;
+    // Check if we have the document file
+    if (!document['fileUrl'] && !document['cloudinaryUrl'] && !document['documentUrl']) {
+      this.error = 'Document file not available for extraction.';
+      this.extracting = false;
+      setTimeout(() => this.error = '', 5000);
+      return;
+    }
+
+    // For now, we need to get the file from the document URL
+    // This is a simplified approach - you might need to adjust based on your document storage
+    const documentUrl = document['fileUrl'] || document['cloudinaryUrl'] || document['documentUrl'];
+    
+    // Convert URL to File object (this is a workaround - ideally you'd have direct file access)
+    fetch(documentUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], document.documentName || 'document.jpg', { type: blob.type });
         
-        // Cache the extracted data (only if not null)
-        if (this.extractedData) {
-          this.extractionCache.set(document.documentId, this.extractedData);
-          this.extractedDocumentIds.add(document.documentId);
-        }
-        
+        // Call FastAPI extraction service
+        this.loanOfficerService.extractSingleDocument(
+          document['applicantId'] || 1, // Use actual applicant ID
+          document.documentType,
+          file
+        ).subscribe({
+          next: (response) => {
+            console.log('FastAPI Response:', response);
+            this.extractedData = response;
+            
+            // Cache the extracted data (only if not null)
+            if (this.extractedData) {
+              this.extractionCache.set(document.documentId, this.extractedData);
+              this.extractedDocumentIds.add(document.documentId);
+            }
+            
+            this.extracting = false;
+            this.successMessage = 'Document data extracted successfully using AI!';
+            setTimeout(() => this.successMessage = '', 3000);
+          },
+          error: (err) => {
+            console.error('Error extracting document with FastAPI:', err);
+            this.extracting = false;
+            this.error = 'Failed to extract document data. Please try again.';
+            setTimeout(() => this.error = '', 5000);
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching document file:', err);
         this.extracting = false;
-        this.successMessage = 'Document data extracted successfully!';
-        setTimeout(() => this.successMessage = '', 3000);
-      },
-      error: (err) => {
-        console.error('Error extracting document:', err);
-        this.error = 'Failed to extract document data. Please try again.';
-        this.extracting = false;
-      }
-    });
+        this.error = 'Failed to load document file for extraction.';
+        setTimeout(() => this.error = '', 5000);
+      });
   }
 
   openVerifyModal(document: LoanDocument, status: 'VERIFIED' | 'REJECTED'): void {
@@ -281,5 +332,65 @@ export class VerifyDocumentsComponent implements OnInit {
    */
   objectKeys(obj: any): string[] {
     return obj ? Object.keys(obj) : [];
+  }
+
+  /**
+   * Get personal information fields from extracted data
+   */
+  getPersonalInfo(data: any): {key: string, value: any}[] {
+    if (!data) return [];
+    
+    const personalFields = ['name', 'firstName', 'lastName', 'fullName', 'fatherName', 'motherName', 
+                           'dob', 'dateOfBirth', 'gender', 'age', 'phone', 'mobile', 'email'];
+    
+    return Object.keys(data)
+      .filter(key => personalFields.some(field => key.toLowerCase().includes(field.toLowerCase())))
+      .map(key => ({ key, value: data[key] }));
+  }
+
+  /**
+   * Get document information fields from extracted data
+   */
+  getDocumentInfo(data: any): {key: string, value: any}[] {
+    if (!data) return [];
+    
+    const documentFields = ['documentNumber', 'documentId', 'id', 'number', 'issueDate', 'expiryDate', 
+                           'issuedBy', 'authority', 'validUpto', 'qrCode', 'serialNumber'];
+    
+    return Object.keys(data)
+      .filter(key => documentFields.some(field => key.toLowerCase().includes(field.toLowerCase())))
+      .map(key => ({ key, value: data[key] }));
+  }
+
+  /**
+   * Get address information fields from extracted data
+   */
+  getAddressInfo(data: any): {key: string, value: any}[] {
+    if (!data) return [];
+    
+    const addressFields = ['address', 'street', 'city', 'state', 'pincode', 'pin', 'district', 
+                          'block', 'village', 'tehsil', 'country', 'location'];
+    
+    return Object.keys(data)
+      .filter(key => addressFields.some(field => key.toLowerCase().includes(field.toLowerCase())))
+      .map(key => ({ key, value: data[key] }));
+  }
+
+  /**
+   * Get other information fields from extracted data
+   */
+  getOtherInfo(data: any): {key: string, value: any}[] {
+    if (!data) return [];
+    
+    const excludeFields = ['name', 'firstName', 'lastName', 'fullName', 'fatherName', 'motherName', 
+                          'dob', 'dateOfBirth', 'gender', 'age', 'phone', 'mobile', 'email',
+                          'documentNumber', 'documentId', 'id', 'number', 'issueDate', 'expiryDate', 
+                          'issuedBy', 'authority', 'validUpto', 'qrCode', 'serialNumber',
+                          'address', 'street', 'city', 'state', 'pincode', 'pin', 'district', 
+                          'block', 'village', 'tehsil', 'country', 'location'];
+    
+    return Object.keys(data)
+      .filter(key => !excludeFields.some(field => key.toLowerCase().includes(field.toLowerCase())))
+      .map(key => ({ key, value: data[key] }));
   }
 }

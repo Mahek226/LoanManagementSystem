@@ -315,6 +315,33 @@ export interface LoanCollateral {
   verificationStatus?: string;
 }
 
+// Document Resubmission Request from Compliance Officer
+export interface ComplianceDocumentResubmissionRequest {
+  resubmissionId: number;
+  assignmentId: number;
+  loanId: number;
+  applicantId: number;
+  applicantName: string;
+  loanType: string;
+  loanAmount: number;
+  requestedDocuments: string; // JSON string of document types
+  reason: string;
+  additionalComments?: string;
+  priorityLevel: number;
+  requestedAt: string;
+  requestedBy: string;
+  complianceOfficerId: number;
+  status: string; // REQUESTED, FORWARDED_TO_APPLICANT, REJECTED_BY_LOAN_OFFICER
+}
+
+// Request to process compliance document resubmission
+export interface ProcessDocumentResubmissionRequest {
+  resubmissionId: number;
+  action: 'APPROVE' | 'REJECT';
+  remarks?: string;
+  rejectionReason?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -339,9 +366,20 @@ export class LoanOfficerService {
     return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/screen-loan/${assignmentId}`, request);
   }
 
-  // Extract documents for a loan
+  // Extract documents for a loan (OLD - Spring Boot endpoint)
   extractDocuments(assignmentId: number): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/assignment/${assignmentId}/extract-documents`, {});
+  }
+
+  // Extract single document using FastAPI service
+  extractSingleDocument(applicantId: number, documentType: string, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('applicant_id', applicantId.toString());
+    formData.append('document_type', documentType);
+    formData.append('file', file);
+
+    // Call FastAPI extraction service (adjust port as needed)
+    return this.http.post<any>('http://localhost:8000/extract', formData);
   }
 
   // Escalate to compliance
@@ -399,6 +437,18 @@ export class LoanOfficerService {
   // Get enhanced loan details with scoring breakdown
   getEnhancedLoanDetails(assignmentId: number): Observable<EnhancedLoanScreeningResponse> {
     return this.http.get<EnhancedLoanScreeningResponse>(`${environment.apiUrl}/enhanced-screening/loan/${assignmentId}`);
+  }
+
+  // ==================== Document Resubmission Requests from Compliance Officer ====================
+
+  // Get document resubmission requests from compliance officers
+  getDocumentResubmissionRequests(officerId: number): Observable<ComplianceDocumentResubmissionRequest[]> {
+    return this.http.get<ComplianceDocumentResubmissionRequest[]>(`${this.apiUrl}/${officerId}/document-resubmission-requests`);
+  }
+
+  // Process document resubmission request (approve/reject)
+  processDocumentResubmissionRequest(officerId: number, request: ProcessDocumentResubmissionRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${officerId}/process-document-resubmission-request`, request);
   }
 
   // Calculate comprehensive dashboard statistics

@@ -1,10 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ComplianceOfficerService } from '../../../core/services/compliance-officer.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
 import { 
-  ComplianceOfficerService, 
   ComplianceEscalation, 
   ExternalFraudData,
   ComplianceVerdict,
@@ -16,7 +18,7 @@ import {
 @Component({
   selector: 'app-comprehensive-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DocumentViewerComponent],
   templateUrl: './comprehensive-review.component.html',
   styleUrls: ['./comprehensive-review.component.css']
 })
@@ -110,9 +112,15 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading escalation:', error);
-        // Create mock escalation data based on assignment ID for testing
-        this.createMockEscalationData();
-        console.warn('Using mock escalation data for assignment ID:', this.assignmentId);
+        // Try to load enhanced screening data first, which might have the correct info
+        this.loadEnhancedScreeningData();
+        // If that fails too, then use mock data
+        setTimeout(() => {
+          if (!this.enhancedScreeningData) {
+            this.createMockEscalationData();
+            console.warn('Using mock escalation data for assignment ID:', this.assignmentId);
+          }
+        }, 1000);
       }
     });
     
@@ -150,9 +158,22 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   loadEnhancedScreeningData(): void {
     if (!this.assignmentId) return;
     
+    console.log('Loading enhanced screening data for assignment ID:', this.assignmentId);
     const screeningSub = this.complianceService.getEnhancedLoanDetails(this.assignmentId).subscribe({
       next: (data) => {
+        console.log('Received enhanced screening data:', data);
         this.enhancedScreeningData = data;
+        
+        // Update escalation data with enhanced screening info if available
+        if (data && this.escalation) {
+          this.escalation.applicantName = data.applicantName;
+          this.escalation.loanAmount = data.loanAmount;
+          this.escalation.riskScore = Math.round(data.normalizedRiskScore.finalScore);
+          this.escalation.riskLevel = data.normalizedRiskScore.riskLevel as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+        } else if (data && !this.escalation) {
+          // Create escalation from enhanced screening data if escalation API failed
+          this.createEscalationFromEnhancedData(data);
+        }
       },
       error: (error) => {
         console.error('Error loading enhanced screening data:', error);
@@ -446,6 +467,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   getRiskLevelColor(riskLevel: string): string {
     switch (riskLevel?.toUpperCase()) {
       case 'LOW': return 'success';
+      case 'CLEAN': return 'success';
       case 'MEDIUM': return 'warning';
       case 'HIGH': return 'danger';
       case 'CRITICAL': return 'dark';
@@ -619,6 +641,36 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
       this.loadEnhancedScreeningData();
     }
     
+    this.loading = false;
+  }
+  
+  /**
+   * Create escalation data from enhanced screening response
+   */
+  private createEscalationFromEnhancedData(data: EnhancedLoanScreeningResponse): void {
+    this.escalation = {
+      assignmentId: data.assignmentId,
+      loanId: data.loanId,
+      applicantId: data.applicantId,
+      applicantName: data.applicantName,
+      loanType: data.loanType,
+      loanAmount: data.loanAmount,
+      riskScore: Math.round(data.normalizedRiskScore.finalScore),
+      riskLevel: data.normalizedRiskScore.riskLevel as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+      status: data.status,
+      assignedAt: data.assignedAt,
+      officerId: data.officerId,
+      officerName: data.officerName,
+      officerType: data.officerType,
+      remarks: data.remarks,
+      escalationReason: `Risk score: ${data.normalizedRiskScore.finalScore}% - ${data.normalizedRiskScore.scoreInterpretation}`,
+      fraudIndicators: data.ruleViolations.map(v => v.ruleName).slice(0, 3) // Take first 3 violations as indicators
+    };
+    
+    // Load other data after creating escalation
+    this.loadExternalFraudData(this.escalation.applicantId);
+    this.loadLoanDocuments(this.escalation.loanId);
+    this.loadScreeningResults(this.escalation.loanId);
     this.loading = false;
   }
 }
