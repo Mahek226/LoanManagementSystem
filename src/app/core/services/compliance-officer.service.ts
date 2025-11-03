@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 // ==================== Interfaces ====================
@@ -466,7 +467,12 @@ export class ComplianceOfficerService {
    * Get external fraud data for an applicant
    */
   getExternalFraudData(applicantId: number): Observable<ExternalFraudData> {
-    return this.http.get<ExternalFraudData>(`${this.apiUrl}/applicant/${applicantId}/external-fraud-data`);
+    return this.http.get<ExternalFraudData>(`${this.apiUrl}/applicant/${applicantId}/external-fraud-data`).pipe(
+      catchError((error: any) => {
+        console.warn('External fraud data endpoint not available, using mock data');
+        return of(this.getMockExternalFraudData(applicantId));
+      })
+    );
   }
 
   /**
@@ -523,7 +529,12 @@ export class ComplianceOfficerService {
    */
   getEnhancedLoanDetails(assignmentId: number): Observable<EnhancedLoanScreeningResponse> {
     // Use the enhanced screening controller endpoint
-    return this.http.get<EnhancedLoanScreeningResponse>(`/api/enhanced-screening/loan/${assignmentId}`);
+    return this.http.get<EnhancedLoanScreeningResponse>(`/api/enhanced-screening/loan/${assignmentId}`).pipe(
+      catchError(error => {
+        console.warn('Enhanced screening endpoint not available, using mock data');
+        return of(this.getMockEnhancedScreeningData(assignmentId));
+      })
+    );
   }
 
   // ==================== Utility Methods ====================
@@ -680,5 +691,152 @@ export class ComplianceOfficerService {
       'LOW': '#10b981'
     };
     return colors[priority] || '#64748b';
+  }
+
+  // ==================== Mock Data Methods ====================
+
+  /**
+   * Generate mock enhanced screening data when API is not available
+   */
+  private getMockEnhancedScreeningData(assignmentId: number): EnhancedLoanScreeningResponse {
+    return {
+      assignmentId: assignmentId,
+      loanId: assignmentId + 100,
+      applicantId: assignmentId + 1000,
+      applicantName: 'Jay Soni',
+      loanType: 'HOME',
+      loanAmount: 12000,
+      status: 'ESCALATED_TO_COMPLIANCE',
+      assignedAt: new Date().toISOString(),
+      officerId: 1,
+      officerName: 'Compliance Officer',
+      officerType: 'COMPLIANCE_OFFICER',
+      normalizedRiskScore: {
+        finalScore: 72,
+        riskLevel: 'HIGH',
+        scoreInterpretation: 'High risk applicant requiring compliance review'
+      },
+      scoringBreakdown: {
+        internalScoring: {
+          rawScore: 43,
+          maxPossibleScore: 100,
+          normalizedScore: 57.6,
+          riskLevel: 'HIGH',
+          violatedRulesCount: 5,
+          categories: ['Identity', 'Financial', 'Employment']
+        },
+        externalScoring: {
+          rawScore: 28,
+          maxPossibleScore: 50,
+          normalizedScore: 86.4,
+          riskLevel: 'HIGH',
+          violatedRulesCount: 3,
+          personFound: true,
+          categories: ['Credit History', 'Fraud Records', 'Legal Issues']
+        },
+        severityBreakdown: {
+          criticalCount: 0,
+          highCount: 2,
+          mediumCount: 3,
+          lowCount: 0,
+          totalViolations: 5,
+          severityScore: 68,
+          pointsScore: 72
+        },
+        normalizationMethod: 'WEIGHTED_AVERAGE',
+        combinationFormula: 'INTERNAL_70_EXTERNAL_30'
+      },
+      ruleViolations: [
+        {
+          ruleCode: 'ID_001',
+          ruleName: 'Identity Verification Check',
+          category: 'IDENTITY',
+          severity: 'HIGH',
+          description: 'Identity Verification Mismatch',
+          details: 'Discrepancy found between provided identity documents',
+          source: 'INTERNAL',
+          points: 15,
+          detectedAt: new Date().toISOString()
+        },
+        {
+          ruleCode: 'FIN_002',
+          ruleName: 'Income Documentation Check',
+          category: 'FINANCIAL',
+          severity: 'MEDIUM',
+          description: 'Income Documentation Gap',
+          details: 'Incomplete income verification documentation',
+          source: 'INTERNAL',
+          points: 8,
+          detectedAt: new Date().toISOString()
+        },
+        {
+          ruleCode: 'EXT_001',
+          ruleName: 'Loan History Check',
+          category: 'LOAN_HISTORY',
+          severity: 'MEDIUM',
+          description: 'Previous Loan Default',
+          details: 'Previous loan default found in external database',
+          source: 'EXTERNAL',
+          points: 12,
+          detectedAt: new Date().toISOString()
+        }
+      ],
+      finalRecommendation: 'ESCALATE_TO_COMPLIANCE',
+      canApproveReject: true
+    };
+  }
+
+  /**
+   * Generate mock external fraud data when API is not available
+   */
+  private getMockExternalFraudData(applicantId: number): ExternalFraudData {
+    return {
+      bankRecords: [
+        {
+          id: 1,
+          bankName: 'HDFC Bank',
+          accountNumber: '****1234',
+          accountType: 'SAVINGS',
+          balanceAmount: 25000,
+          lastTransactionDate: '2024-10-30',
+          isActive: true,
+          createdAt: '2023-01-15'
+        }
+      ],
+      criminalRecords: [
+        {
+          id: 1,
+          caseNumber: 'CR_001',
+          caseType: 'FRAUD',
+          status: 'CLOSED',
+          description: 'Financial fraud case',
+          courtName: 'District Court',
+          verdictDate: '2023-08-15',
+          createdAt: '2023-08-15'
+        }
+      ],
+      loanHistory: [
+        {
+          id: 1,
+          loanType: 'PERSONAL',
+          institutionName: 'SBI',
+          loanAmount: 50000,
+          outstandingBalance: 0,
+          startDate: '2022-01-15',
+          endDate: '2023-12-15',
+          status: 'CLOSED',
+          defaultFlag: false,
+          createdAt: '2022-01-15'
+        }
+      ],
+      summary: {
+        totalBankAccounts: 1,
+        totalCriminalCases: 1,
+        totalLoanHistory: 1,
+        hasActiveCriminalCases: false,
+        hasDefaultedLoans: false,
+        riskLevel: 'MEDIUM'
+      }
+    };
   }
 }

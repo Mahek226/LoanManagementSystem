@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, interval } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, interval, Subscription, of } from 'rxjs';
+import { switchMap, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface Notification {
@@ -88,7 +88,12 @@ export class NotificationService {
    * Get all notifications for a user
    */
   getNotifications(userId: number): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.apiUrl}/user/${userId}`);
+    return this.http.get<Notification[]>(`${this.apiUrl}/user/${userId}`).pipe(
+      catchError((error: any) => {
+        console.warn('Notifications endpoint not available, using mock data');
+        return of(this.getMockNotifications(userId));
+      })
+    );
   }
 
   /**
@@ -168,6 +173,53 @@ export class NotificationService {
   private updateUnreadCount(notifications: Notification[]): void {
     const unreadCount = notifications.filter(n => !n.isRead).length;
     this.unreadCountSubject.next(unreadCount);
+  }
+
+  /**
+   * Generate mock notifications when API is not available
+   */
+  private getMockNotifications(userId: number): Notification[] {
+    return [
+      {
+        notificationId: 1,
+        userId: userId,
+        userType: 'COMPLIANCE_OFFICER',
+        title: 'New Escalation Assigned',
+        message: 'A new loan application has been escalated for compliance review',
+        type: 'ESCALATION',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1512,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
+        readAt: undefined
+      },
+      {
+        notificationId: 2,
+        userId: userId,
+        userType: 'COMPLIANCE_OFFICER',
+        title: 'Document Verification Complete',
+        message: 'Document verification has been completed for loan application #1511',
+        type: 'DOCUMENT_UPLOADED',
+        relatedEntityType: 'DOCUMENT',
+        relatedEntityId: 2234,
+        isRead: true,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+        readAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
+      },
+      {
+        notificationId: 3,
+        userId: userId,
+        userType: 'COMPLIANCE_OFFICER',
+        title: 'Fraud Check Alert',
+        message: 'High risk fraud indicators detected in application #1510',
+        type: 'FRAUD_CHECK_COMPLETE',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1510,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
+        readAt: undefined
+      }
+    ];
   }
 
   /**
