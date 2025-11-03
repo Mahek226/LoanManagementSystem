@@ -142,7 +142,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         OfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + assignmentId));
         
-        ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        // Use the loan from the assignment directly instead of fetching by applicant ID
+        ApplicantLoanDetails loan = assignment.getLoan();
         
         // Find any available compliance officer (compliance officers handle all loan types)
         List<ComplianceOfficer> availableOfficers = complianceOfficerRepository.findAllComplianceOfficersOrderByWorkload();
@@ -157,6 +158,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         ComplianceOfficerApplicationAssignment complianceAssignment = new ComplianceOfficerApplicationAssignment();
         complianceAssignment.setComplianceOfficer(complianceOfficer);
         complianceAssignment.setApplicant(assignment.getApplicant());
+        complianceAssignment.setLoan(loan); // Assign the loan ID
         complianceAssignment.setStatus("PENDING");
         complianceAssignment.setPriority("HIGH"); // Escalated cases are high priority
         complianceAssignment.setRemarks("Escalated from loan officer: " + (remarks != null ? remarks : "High risk score"));
@@ -291,7 +293,23 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     }
     
     private LoanScreeningResponse mapToScreeningResponse(OfficerApplicationAssignment assignment) {
-        ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        ApplicantLoanDetails loan = null;
+        
+        try {
+            loan = assignment.getLoan();
+            // Try to access a property to trigger proxy initialization and catch EntityNotFoundException
+            if (loan != null) {
+                loan.getLoanId(); // This will trigger the exception if loan_id = 0
+            }
+        } catch (Exception e) {
+            // If there's any exception (including EntityNotFoundException), use fallback
+            loan = null;
+        }
+        
+        // Fallback to fetching loan by applicant if assignment loan is null or invalid
+        if (loan == null) {
+            loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        }
         
         LoanScreeningResponse response = new LoanScreeningResponse();
         response.setAssignmentId(assignment.getAssignmentId());
@@ -315,7 +333,23 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     }
     
     private LoanScreeningResponse mapComplianceToScreeningResponse(ComplianceOfficerApplicationAssignment assignment) {
-        ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        ApplicantLoanDetails loan = null;
+        
+        try {
+            loan = assignment.getLoan();
+            // Try to access a property to trigger proxy initialization and catch EntityNotFoundException
+            if (loan != null) {
+                loan.getLoanId(); // This will trigger the exception if loan_id = 0
+            }
+        } catch (Exception e) {
+            // If there's any exception (including EntityNotFoundException), use fallback
+            loan = null;
+        }
+        
+        // Fallback to fetching loan by applicant if assignment loan is null or invalid
+        if (loan == null) {
+            loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        }
         
         LoanScreeningResponse response = new LoanScreeningResponse();
         response.setAssignmentId(assignment.getAssignmentId());

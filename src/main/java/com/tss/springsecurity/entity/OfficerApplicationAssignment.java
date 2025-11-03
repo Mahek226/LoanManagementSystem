@@ -27,6 +27,10 @@ public class OfficerApplicationAssignment {
     @JoinColumn(name = "applicant_id", nullable = false)
     private Applicant applicant;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loan_id", nullable = true, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private ApplicantLoanDetails loan;
+    
     @Column(name = "status", length = 50)
     private String status; // PENDING, IN_PROGRESS, COMPLETED, REJECTED
     

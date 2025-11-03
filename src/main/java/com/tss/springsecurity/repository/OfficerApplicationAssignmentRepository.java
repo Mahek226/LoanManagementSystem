@@ -25,4 +25,12 @@ public interface OfficerApplicationAssignmentRepository extends JpaRepository<Of
     
     @Query("SELECT a FROM OfficerApplicationAssignment a WHERE a.officer.loanType = :loanType AND a.status IN ('PENDING', 'IN_PROGRESS') GROUP BY a.officer ORDER BY COUNT(a.officer) ASC")
     List<OfficerApplicationAssignment> findOfficersWithLeastWorkloadByLoanType(@Param("loanType") String loanType);
+    
+    // New methods using loan_id relationship
+    List<OfficerApplicationAssignment> findByLoan_LoanId(Long loanId);
+    
+    Optional<OfficerApplicationAssignment> findByLoan_LoanIdAndStatus(Long loanId, String status);
+    
+    @Query("SELECT a FROM OfficerApplicationAssignment a WHERE a.loan.loanId = :loanId ORDER BY a.assignedAt DESC")
+    List<OfficerApplicationAssignment> findByLoanIdOrderByAssignedAtDesc(@Param("loanId") Long loanId);
 }

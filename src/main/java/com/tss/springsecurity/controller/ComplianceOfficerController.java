@@ -42,7 +42,7 @@ public class ComplianceOfficerController {
     @GetMapping("/assignment/{assignmentId}/details")
     public ResponseEntity<?> getComplianceAssignmentDetails(@PathVariable Long assignmentId) {
         try {
-            LoanScreeningResponse response = screeningService.getLoanDetailsForScreening(assignmentId);
+            LoanScreeningResponse response = complianceOfficerService.getLoanScreeningDetails(assignmentId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -348,6 +348,50 @@ public class ComplianceOfficerController {
         try {
             List<FraudHistoryResponse> history = complianceOfficerService.getFraudHistory(applicantId);
             return ResponseEntity.ok(history);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get external fraud data for an applicant
+     */
+    @GetMapping("/applicant/{applicantId}/external-fraud-data")
+    public ResponseEntity<?> getExternalFraudData(@PathVariable Long applicantId) {
+        try {
+            Map<String, Object> externalData = complianceOfficerService.getExternalFraudData(applicantId);
+            return ResponseEntity.ok(externalData);
+        } catch (Exception e) {
+//            log.error("Error fetching external fraud data for applicant ID: {}", applicantId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch external fraud data: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get external person details by person ID from external database
+     */
+    @GetMapping("/external-person/{personId}")
+    public ResponseEntity<?> getExternalPersonDetails(@PathVariable Long personId) {
+        try {
+            Map<String, Object> personDetails = complianceOfficerService.getExternalPersonDetails(personId);
+            return ResponseEntity.ok(personDetails);
+        } catch (Exception e) {
+//            log.error("Error fetching external person details for person ID: {}", personId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch external person details: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get enhanced screening details for compliance assignment
+     */
+    @GetMapping("/assignment/{assignmentId}/enhanced-screening")
+    public ResponseEntity<?> getEnhancedScreeningDetails(@PathVariable Long assignmentId) {
+        try {
+            Map<String, Object> enhancedDetails = complianceOfficerService.getEnhancedScreeningDetails(assignmentId);
+            return ResponseEntity.ok(enhancedDetails);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(e.getMessage()));
