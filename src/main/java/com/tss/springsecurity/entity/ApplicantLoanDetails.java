@@ -221,6 +221,9 @@ public class ApplicantLoanDetails {
     @Column(name = "rejected_by", length = 200)
     private String rejectedBy;
     
+    @Column(name = "reviewed_by", length = 200)
+    private String reviewedBy;
+    
     @Column(name = "rejection_date")
     private LocalDateTime rejectionDate;
     

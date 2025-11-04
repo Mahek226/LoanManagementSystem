@@ -182,12 +182,36 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     public List<LoanScreeningResponse> getComplianceEscalations() {
         log.info("Getting compliance escalations");
         
+        // Get all compliance assignments (both pending and completed) ordered by assigned date
         List<ComplianceOfficerApplicationAssignment> assignments = complianceAssignmentRepository
-                .findByStatus("PENDING");
+                .findAllByOrderByAssignedAtDesc();
         
-        return assignments.stream()
-                .map(this::mapComplianceToScreeningResponse)
+        log.info("Found {} compliance assignments in database", assignments.size());
+        
+        // Debug: Log each assignment
+        for (ComplianceOfficerApplicationAssignment assignment : assignments) {
+            log.info("Assignment ID: {}, Status: {}, Officer ID: {}, Applicant ID: {}", 
+                    assignment.getAssignmentId(), 
+                    assignment.getStatus(),
+                    assignment.getComplianceOfficer() != null ? assignment.getComplianceOfficer().getOfficerId() : "null",
+                    assignment.getApplicant() != null ? assignment.getApplicant().getApplicantId() : "null");
+        }
+        
+        List<LoanScreeningResponse> responses = assignments.stream()
+                .map(assignment -> {
+                    try {
+                        return this.mapComplianceToScreeningResponse(assignment);
+                    } catch (Exception e) {
+                        log.error("Error mapping assignment {} to response: {}", assignment.getAssignmentId(), e.getMessage(), e);
+                        return null;
+                    }
+                })
+                .filter(response -> response != null)
                 .collect(Collectors.toList());
+        
+        log.info("Successfully mapped {} out of {} assignments to responses", responses.size(), assignments.size());
+        
+        return responses;
     }
     
     @Override
@@ -366,6 +390,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     }
     
     private LoanScreeningResponse mapComplianceToScreeningResponse(ComplianceOfficerApplicationAssignment assignment) {
+        log.debug("Mapping compliance assignment {} to screening response", assignment.getAssignmentId());
+        
         ApplicantLoanDetails loan = null;
         
         try {
@@ -375,13 +401,21 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
                 loan.getLoanId(); // This will trigger the exception if loan_id = 0
             }
         } catch (Exception e) {
+            log.warn("Error accessing loan from assignment {}: {}", assignment.getAssignmentId(), e.getMessage());
             // If there's any exception (including EntityNotFoundException), use fallback
             loan = null;
         }
         
         // Fallback to fetching loan by applicant if assignment loan is null or invalid
         if (loan == null) {
-            loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+            try {
+                loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+                log.debug("Used fallback to get loan {} for applicant {}", loan.getLoanId(), assignment.getApplicant().getApplicantId());
+            } catch (Exception e) {
+                log.error("Failed to get loan for applicant {} in assignment {}: {}", 
+                         assignment.getApplicant().getApplicantId(), assignment.getAssignmentId(), e.getMessage());
+                throw new RuntimeException("Cannot map assignment without valid loan data", e);
+            }
         }
         
         LoanScreeningResponse response = new LoanScreeningResponse();
@@ -398,10 +432,19 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         response.setRemarks(assignment.getRemarks());
         response.setAssignedAt(assignment.getAssignedAt());
         response.setProcessedAt(assignment.getCompletedAt());
-        response.setOfficerId(assignment.getComplianceOfficer().getOfficerId());
-        response.setOfficerName(assignment.getComplianceOfficer().getFirstName() + " " + assignment.getComplianceOfficer().getLastName());
+        
+        // Handle compliance officer details safely
+        if (assignment.getComplianceOfficer() != null) {
+            response.setOfficerId(assignment.getComplianceOfficer().getOfficerId());
+            response.setOfficerName(assignment.getComplianceOfficer().getFirstName() + " " + assignment.getComplianceOfficer().getLastName());
+        } else {
+            log.warn("Compliance officer is null for assignment {}", assignment.getAssignmentId());
+            response.setOfficerId(0L);
+            response.setOfficerName("Unknown Compliance Officer");
+        }
         response.setOfficerType("COMPLIANCE_OFFICER");
         
+        log.debug("Successfully mapped compliance assignment {} to response", assignment.getAssignmentId());
         return response;
     }
     

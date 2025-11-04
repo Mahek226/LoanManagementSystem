@@ -30,4 +30,7 @@ public interface ComplianceOfficerApplicationAssignmentRepository extends JpaRep
     
     @Query("SELECT c FROM ComplianceOfficerApplicationAssignment c WHERE c.loan.loanId = :loanId ORDER BY c.assignedAt DESC")
     List<ComplianceOfficerApplicationAssignment> findByLoanIdOrderByAssignedAtDesc(@Param("loanId") Long loanId);
+    
+    // Get all assignments ordered by assigned date (most recent first)
+    List<ComplianceOfficerApplicationAssignment> findAllByOrderByAssignedAtDesc();
 }

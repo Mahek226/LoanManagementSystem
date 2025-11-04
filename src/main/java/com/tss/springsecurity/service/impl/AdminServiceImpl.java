@@ -146,7 +146,7 @@ public class AdminServiceImpl implements AdminService {
         Arrays.fill(monthCounts, 0);
         
         // Get actual counts from database
-        List<Object[]> results = applicantRepository.countApplicantsByMonth();
+        List<Object[]> results = applicantRepository.getMonthlyApplicationCounts();
         
         // Fill in the actual counts
         for (Object[] result : results) {
