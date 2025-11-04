@@ -1723,17 +1723,86 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     @Override
     @Transactional
     public Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request) {
-        log.info("Requesting document resubmission for document ID: {} on loan ID: {}", 
-                request.getDocumentId(), request.getLoanId());
+        log.info("Requesting document resubmission for document ID: {} on loan ID: {} by compliance officer ID: {}", 
+                request.getDocumentId(), request.getLoanId(), request.getComplianceOfficerId());
         
+        // Validate document exists
         UploadedDocument document = uploadedDocumentRepository.findById(request.getDocumentId())
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found with ID: " + request.getDocumentId()));
+        
+        log.info("Found document: {} for applicant ID: {}", document.getDocumentType(), document.getApplicant().getApplicantId());
+        
+        // Get applicant and compliance officer
+        Applicant applicant = document.getApplicant();
+        ComplianceOfficer complianceOfficer = complianceOfficerRepository.findById(request.getComplianceOfficerId())
+                .orElseThrow(() -> new RuntimeException("Compliance officer not found with ID: " + request.getComplianceOfficerId()));
+        
+        log.info("Found compliance officer: {} {}", complianceOfficer.getFirstName(), complianceOfficer.getLastName());
+        
+        // Try to get assignment for this loan and compliance officer
+        List<ComplianceOfficerApplicationAssignment> assignments = assignmentRepository.findByLoan_LoanId(request.getLoanId());
+        log.info("Found {} assignments for loan ID: {}", assignments.size(), request.getLoanId());
+        
+        ComplianceOfficerApplicationAssignment assignment = null;
+        
+        if (!assignments.isEmpty()) {
+            // Try to find assignment for the specific compliance officer
+            assignment = assignments.stream()
+                    .filter(a -> a.getComplianceOfficer().getOfficerId().equals(request.getComplianceOfficerId()))
+                    .findFirst()
+                    .orElse(assignments.get(0)); // Fallback to first assignment
+            log.info("Using assignment ID: {} for compliance officer: {}", assignment.getAssignmentId(), assignment.getComplianceOfficer().getOfficerId());
+        } else {
+            // Create a temporary assignment for document resubmission if none exists
+            log.warn("No existing assignment found for loan ID: {}. Creating temporary assignment for document resubmission.", request.getLoanId());
+            
+            // Get the loan to create assignment
+            ApplicantLoanDetails loan = loanDetailsRepository.findById(request.getLoanId())
+                    .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + request.getLoanId()));
+            
+            assignment = new ComplianceOfficerApplicationAssignment();
+            assignment.setLoan(loan);
+            assignment.setApplicant(applicant);
+            assignment.setComplianceOfficer(complianceOfficer);
+            assignment.setStatus("DOCUMENT_REVIEW");
+            assignment.setAssignedAt(LocalDateTime.now());
+            assignment.setRemarks("Created for document resubmission request");
+            
+            assignment = assignmentRepository.save(assignment);
+            log.info("Created new assignment ID: {} for document resubmission", assignment.getAssignmentId());
+        }
         
         // Mark document for resubmission
         document.setResubmissionRequested(true);
         document.setResubmissionReason(request.getResubmissionReason());
         document.setResubmissionInstructions(request.getSpecificInstructions());
         uploadedDocumentRepository.save(document);
+        
+        // Create DocumentResubmission record for loan officer to see
+        DocumentResubmission docResubmission = new DocumentResubmission();
+        docResubmission.setAssignment(assignment);
+        docResubmission.setApplicant(applicant);
+        docResubmission.setRequestedByOfficer(complianceOfficer);
+        
+        // Create JSON array of requested document types
+        List<String> documentTypes = Arrays.asList(document.getDocumentType());
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            docResubmission.setRequestedDocuments(objectMapper.writeValueAsString(documentTypes));
+        } catch (JsonProcessingException e) {
+            log.error("Error converting document types to JSON", e);
+            docResubmission.setRequestedDocuments("[\"" + document.getDocumentType() + "\"]");
+        }
+        
+        docResubmission.setReason(request.getResubmissionReason());
+        docResubmission.setAdditionalComments(request.getSpecificInstructions());
+        docResubmission.setPriorityLevel(3); // Medium priority
+        docResubmission.setStatus("REQUESTED");
+        
+        documentResubmissionRepository.save(docResubmission);
+        
+        log.info("Created DocumentResubmission record with ID: {} for loan officer to review", 
+                docResubmission.getResubmissionId());
         
         // Log the request
         logActivity(request.getComplianceOfficerId(), "DOCUMENT_RESUBMISSION_REQUESTED",
@@ -1748,6 +1817,7 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         response.put("documentId", document.getDocumentId());
         response.put("documentType", document.getDocumentType());
         response.put("resubmissionReason", request.getResubmissionReason());
+        response.put("resubmissionId", docResubmission.getResubmissionId());
         response.put("timestamp", LocalDateTime.now());
         
         return response;

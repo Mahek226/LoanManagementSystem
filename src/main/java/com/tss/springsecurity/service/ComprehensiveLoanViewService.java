@@ -134,16 +134,17 @@ public class ComprehensiveLoanViewService {
         dto.setCanApproveReject(loan.getRiskScore() != null && loan.getRiskScore() < 70);
         
         // Map assignment information
-        assignmentRepository.findByLoan_LoanId(loanId)
-                .ifPresent(assignment -> {
-                    dto.setAssignmentId(assignment.getAssignmentId());
-                    if (assignment.getOfficer() != null) {
-                        dto.setAssignedOfficerName(assignment.getOfficer().getFirstName() + " " + assignment.getOfficer().getLastName());
-                        dto.setAssignedOfficerType("LOAN_OFFICER");
-                    }
-                    dto.setAssignedAt(assignment.getAssignedAt());
-                    dto.setOfficerRemarks(assignment.getRemarks());
-                });
+        List<OfficerApplicationAssignment> assignments = assignmentRepository.findByLoan_LoanId(loanId);
+        if (!assignments.isEmpty()) {
+            OfficerApplicationAssignment assignment = assignments.get(0); // Get the first (most recent) assignment
+            dto.setAssignmentId(assignment.getAssignmentId());
+            if (assignment.getOfficer() != null) {
+                dto.setAssignedOfficerName(assignment.getOfficer().getFirstName() + " " + assignment.getOfficer().getLastName());
+                dto.setAssignedOfficerType("LOAN_OFFICER");
+            }
+            dto.setAssignedAt(assignment.getAssignedAt());
+            dto.setOfficerRemarks(assignment.getRemarks());
+        }
         
         // Map verification status from documents
         List<UploadedDocument> documents = documentRepository.findByApplicant_ApplicantId(applicant.getApplicantId());

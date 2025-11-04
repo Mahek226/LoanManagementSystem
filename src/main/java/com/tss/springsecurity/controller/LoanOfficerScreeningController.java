@@ -732,55 +732,108 @@ public class LoanOfficerScreeningController {
             List<java.util.Map<String, Object>> requests = new java.util.ArrayList<>();
             
             for (com.tss.springsecurity.entity.DocumentResubmission docRequest : docRequests) {
-                log.info("Processing document request ID: {} for applicant ID: {}", 
+                log.info("=== Processing document request ID: {} for applicant ID: {} ===", 
                     docRequest.getResubmissionId(), docRequest.getApplicant().getApplicantId());
+                log.info("Requested by compliance officer: {} (ID: {})", 
+                    docRequest.getRequestedByOfficer().getFirstName() + " " + docRequest.getRequestedByOfficer().getLastName(),
+                    docRequest.getRequestedByOfficer().getOfficerId());
                 
-                // Find the loan officer assignment for this applicant - try multiple statuses
-                List<String> assignmentStatuses = java.util.Arrays.asList("PENDING", "IN_PROGRESS", "ASSIGNED");
-                java.util.Optional<com.tss.springsecurity.entity.OfficerApplicationAssignment> loanOfficerAssignment = 
-                    assignmentRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId())
-                    .stream()
-                    .filter(a -> assignmentStatuses.contains(a.getStatus()))
-                    .findFirst();
+                // Find the original loan officer who was assigned to this loan before escalation
+                // Look for the loan officer assignment for this specific loan (not just applicant)
+                com.tss.springsecurity.entity.ApplicantLoanDetails foundLoan = null;
+                if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
+                    foundLoan = docRequest.getAssignment().getLoan();
+                    log.info("Found loan from compliance assignment: Loan ID {} for applicant {}", 
+                        foundLoan.getLoanId(), foundLoan.getApplicant().getFirstName() + " " + foundLoan.getApplicant().getLastName());
+                } else {
+                    log.warn("No loan found in compliance assignment for resubmission ID: {}", docRequest.getResubmissionId());
+                }
                 
-                if (loanOfficerAssignment.isPresent()) {
-                    com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = loanOfficerAssignment.get();
-                    log.info("Found loan officer assignment ID: {} with officer ID: {} for applicant ID: {}", 
-                        assignment.getAssignmentId(), assignment.getOfficer().getOfficerId(), 
-                        docRequest.getApplicant().getApplicantId());
+                com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = null;
+                boolean shouldIncludeRequest = false;
+                final com.tss.springsecurity.entity.ApplicantLoanDetails finalLoan = foundLoan;
+                
+                if (finalLoan != null) {
+                    // Try to find any loan officer assignment for this applicant (not necessarily the same loan)
+                    // Since compliance and loan officer assignments are separate, we need a more flexible approach
+                    java.util.List<com.tss.springsecurity.entity.OfficerApplicationAssignment> loanOfficerAssignments = 
+                        assignmentRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId());
                     
-                    // Only include requests where this loan officer is assigned
-                    if (assignment.getOfficer().getOfficerId().equals(officerId)) {
+                    log.info("Found {} loan officer assignments for applicant ID: {}", loanOfficerAssignments.size(), docRequest.getApplicant().getApplicantId());
+                    
+                    // Log all assignments for debugging
+                    for (int i = 0; i < loanOfficerAssignments.size(); i++) {
+                        com.tss.springsecurity.entity.OfficerApplicationAssignment a = loanOfficerAssignments.get(i);
+                        log.info("Assignment {}: ID={}, Officer ID={}, Status={}, Officer Name={}, Loan ID={}", 
+                            i+1, a.getAssignmentId(), a.getOfficer().getOfficerId(), a.getStatus(),
+                            a.getOfficer().getFirstName() + " " + a.getOfficer().getLastName(),
+                            a.getLoan() != null ? a.getLoan().getLoanId() : "null");
+                    }
+                    
+                    if (!loanOfficerAssignments.isEmpty()) {
+                        // Find assignment for this specific loan, or any assignment for this applicant
+                        assignment = loanOfficerAssignments.stream()
+                            .filter(a -> a.getLoan() != null && a.getLoan().getLoanId().equals(finalLoan.getLoanId()))
+                            .findFirst()
+                            .orElse(loanOfficerAssignments.stream()
+                                .filter(a -> a.getOfficer().getOfficerId().equals(officerId))
+                                .findFirst()
+                                .orElse(loanOfficerAssignments.get(0)));
+                        
+                        log.info("Selected assignment ID: {} with officer ID: {} for processing", 
+                            assignment.getAssignmentId(), assignment.getOfficer().getOfficerId());
+                        
+                        // Show to any loan officer who has worked with this applicant
+                        shouldIncludeRequest = loanOfficerAssignments.stream()
+                            .anyMatch(a -> a.getOfficer().getOfficerId().equals(officerId));
+                        
+                        if (shouldIncludeRequest) {
+                            log.info("Including request for loan officer ID: {} (has assignment for this applicant)", officerId);
+                        } else {
+                            log.info("Skipping request - loan officer {} has no assignments for applicant {}", 
+                                officerId, docRequest.getApplicant().getApplicantId());
+                        }
+                    } else {
+                        log.warn("No loan officer assignments found for applicant ID: {}", docRequest.getApplicant().getApplicantId());
+                        // For testing purposes, show to all loan officers if no specific assignment exists
+                        shouldIncludeRequest = true;
+                        log.info("No specific assignment found - showing to all loan officers for testing");
+                    }
+                } else {
+                    log.warn("Could not find loan information for document resubmission ID: {}", docRequest.getResubmissionId());
+                    // For testing - show to all loan officers if we can't find loan info
+                    shouldIncludeRequest = true;
+                    log.info("No loan info found - showing to all loan officers for testing");
+                }
+                
+                if (shouldIncludeRequest) {
                         log.info("Including request for officer ID: {}", officerId);
                         
-                        // Get loan information from the compliance assignment (which should have the loan)
-                        com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
-                        if (assignment.getLoan() != null) {
-                            loan = assignment.getLoan();
-                        } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
-                            loan = docRequest.getAssignment().getLoan();
-                        } else {
-                            // Try to find loan by applicant ID
-                            java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
-                                loanRepository.findByApplicant_ApplicantId(assignment.getApplicant().getApplicantId());
-                            if (!loans.isEmpty()) {
-                                loan = loans.get(0); // Get the first loan for this applicant
-                            }
-                        }
+                        // Determine which loan to use
+                        com.tss.springsecurity.entity.ApplicantLoanDetails loanToUse = finalLoan;
                         
-                        if (loan == null) {
-                            log.warn("Could not find loan for assignment ID: {}, skipping this request", assignment.getAssignmentId());
-                            continue;
+                        // If loan is still null, try to find it by applicant ID as fallback
+                        if (loanToUse == null) {
+                            log.warn("Loan is null, trying to find loan by applicant ID: {}", docRequest.getApplicant().getApplicantId());
+                            java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
+                                loanRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId());
+                            if (!loans.isEmpty()) {
+                                loanToUse = loans.get(0); // Get the first loan for this applicant
+                                log.info("Found fallback loan ID: {} for applicant", loanToUse.getLoanId());
+                            } else {
+                                log.warn("Could not find any loan for applicant ID: {}, skipping this request", docRequest.getApplicant().getApplicantId());
+                                continue;
+                            }
                         }
                         
                         java.util.Map<String, Object> request = new java.util.HashMap<>();
                         request.put("resubmissionId", docRequest.getResubmissionId());
-                        request.put("assignmentId", assignment.getAssignmentId());
-                        request.put("loanId", loan.getLoanId());
-                        request.put("applicantId", assignment.getApplicant().getApplicantId());
-                        request.put("applicantName", assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName());
-                        request.put("loanType", loan.getLoanType());
-                        request.put("loanAmount", loan.getLoanAmount());
+                        request.put("assignmentId", assignment != null ? assignment.getAssignmentId() : null);
+                        request.put("loanId", loanToUse.getLoanId());
+                        request.put("applicantId", docRequest.getApplicant().getApplicantId());
+                        request.put("applicantName", docRequest.getApplicant().getFirstName() + " " + docRequest.getApplicant().getLastName());
+                        request.put("loanType", loanToUse.getLoanType());
+                        request.put("loanAmount", loanToUse.getLoanAmount());
                         request.put("requestedDocuments", docRequest.getRequestedDocuments());
                         request.put("reason", docRequest.getReason());
                         request.put("additionalComments", docRequest.getAdditionalComments());
@@ -791,13 +844,6 @@ public class LoanOfficerScreeningController {
                         request.put("complianceOfficerId", docRequest.getRequestedByOfficer().getOfficerId());
                         request.put("status", docRequest.getStatus());
                         requests.add(request);
-                    } else {
-                        log.info("Skipping request - different officer ID: {} vs {}", 
-                            assignment.getOfficer().getOfficerId(), officerId);
-                    }
-                } else {
-                    log.warn("No loan officer assignment found for applicant ID: {}", 
-                        docRequest.getApplicant().getApplicantId());
                 }
             }
             

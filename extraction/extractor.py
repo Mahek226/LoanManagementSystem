@@ -144,3 +144,28 @@ def extract_by_type(doc, doc_type):
 
     # fallback: return raw text
     return {"raw_text": _first_text(doc)}
+
+
+def compute_confidence(field_name, field_value):
+    """
+    Compute confidence score heuristically.
+    You can later replace this with ML model or LandingAI output.
+    """
+    if not field_value:
+        return 0.0
+
+    # Strong confidence for well-formed PAN, Aadhaar, dates, etc.
+    patterns = {
+        "PAN": (r"^[A-Z]{5}[0-9]{4}[A-Z]$", 0.95),
+        "AADHAAR": (r"^\d{4}\s\d{4}\s\d{4}$", 0.9),
+        "ACCOUNT": (r"^\d{9,18}$", 0.9),
+        "NAME": (r"^[A-Za-z\s]+$", 0.85),
+        "DATE": (r"\d{2}[/-]\d{2}[/-]\d{4}", 0.8)
+    }
+
+    for key, (pattern, conf) in patterns.items():
+        if key in field_name.upper() and re.match(pattern, str(field_value).strip()):
+            return conf
+
+    # default medium confidence
+    return 0.7
