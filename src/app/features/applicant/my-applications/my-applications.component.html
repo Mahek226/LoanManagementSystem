@@ -12,6 +12,11 @@
         <p class="mb-0" style="color: var(--text-secondary);">View and track all your loan applications</p>
       </div>
       <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" (click)="loadApplications()" [disabled]="loading">
+          <i class="fas fa-sync-alt me-1" [class.fa-spin]="loading"></i>
+          <span *ngIf="!loading">Refresh</span>
+          <span *ngIf="loading">Refreshing...</span>
+        </button>
         <button class="btn btn-outline-primary btn-sm" (click)="exportToCsv()">
           <i class="fas fa-download me-1"></i>Export CSV
         </button>
@@ -20,6 +25,11 @@
         </button>
       </div>
     </div>
+
+  <!-- Success State -->
+  <div *ngIf="successMessage" class="alert alert-success-custom">
+    <i class="fas fa-check-circle"></i> {{ successMessage }}
+  </div>
 
   <!-- Error State -->
   <div *ngIf="error && !loading" class="alert alert-error-custom">
@@ -87,8 +97,8 @@
               <h5 class="mb-1" style="color: var(--text-primary);">{{ app.loanType }}</h5>
               <span style="color: var(--text-muted); font-size: 0.875rem;">Loan ID: #{{ app.loanId }}</span>
             </div>
-            <span class="badge bg-{{ getStatusColor(app.loanStatus) }}">
-              {{ app.loanStatus }}
+            <span class="badge bg-{{ getActualStatusColor(app) }}">
+              {{ getActualStatusText(app) }}
             </span>
           </div>
 
@@ -123,27 +133,41 @@
               </div>
               <div class="col-6">
                 <div class="d-flex gap-2 align-items-start">
-                  <i class="fas fa-shield-alt text-primary fs-5 mt-1"></i>
+                  <i class="fas fa-info-circle text-primary fs-5 mt-1"></i>
                   <div>
-                    <small class="text-muted d-block">Risk Status</small>
-                    <span class="badge bg-{{ getFraudStatusColor(app.fraudStatus) }} d-block mt-1">
-                      {{ app.fraudStatus }}
+                    <small class="text-muted d-block">Application Status</small>
+                    <span class="badge bg-{{ getActualStatusColor(app) }} d-block mt-1">
+                      {{ getActualStatusText(app) }}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Progress Bar -->
+            <!-- Enhanced Progress Bar -->
             <div class="mt-3 p-3 rounded" style="background-color: var(--bg-tertiary);">
               <div class="d-flex justify-content-between mb-2">
-                <small class="text-muted">Application Progress</small>
-                <small class="text-muted">{{ getProgressPercentage(app.loanStatus) }}%</small>
+                <small class="text-muted">
+                  <i class="fas fa-tasks me-1"></i>Application Progress
+                </small>
+                <small class="fw-semibold" [ngClass]="getProgressPercentageForApp(app) === 100 ? 'text-success' : 'text-primary'">
+                  {{ getProgressPercentageForApp(app) }}%
+                </small>
               </div>
-              <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-primary" role="progressbar" 
-                     [style.width.%]="getProgressPercentage(app.loanStatus)">
+              <div class="progress" style="height: 10px; border-radius: 6px;">
+                <div class="progress-bar progress-bar-striped" 
+                     [ngClass]="getProgressPercentageForApp(app) === 100 ? 'bg-success' : 'bg-primary'"
+                     role="progressbar" 
+                     [style.width.%]="getProgressPercentageForApp(app)">
                 </div>
+              </div>
+              <div class="d-flex justify-content-between mt-2">
+                <small class="text-muted">{{ getCurrentStageTextForApp(app) }}</small>
+                <button class="btn btn-link btn-sm p-0 text-decoration-none" (click)="viewTimeline(app)">
+                  <small class="text-primary">
+                    <i class="fas fa-route me-1"></i>View Timeline
+                  </small>
+                </button>
               </div>
             </div>
 
@@ -170,15 +194,22 @@
           </div>
 
           <div class="card-footer d-flex gap-2" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
-            <button class="btn btn-primary flex-fill" (click)="viewDetails(app.loanId)">
-              <i class="fas fa-eye me-1"></i>View Details
+            <button class="btn btn-primary" (click)="viewDetails(app.loanId)">
+              <i class="fas fa-eye me-1"></i>Details
             </button>
-            <button class="btn btn-outline-secondary flex-fill" (click)="downloadPDF(app)" [disabled]="loading">
-              <i class="fas fa-file-pdf me-1"></i>
-              <span *ngIf="!loading">Download PDF</span>
-              <span *ngIf="loading">
-                <span class="spinner-border spinner-border-sm me-1"></span>Downloading...
-              </span>
+            <button class="btn btn-outline-primary" (click)="viewTimeline(app)">
+              <i class="fas fa-route me-1"></i>Timeline
+            </button>
+            <button *ngIf="getActualStatus(app) === 'APPROVED' || getActualStatus(app) === 'DISBURSED'" 
+                    class="btn btn-success" (click)="generateLoanAgreementPDF(app)">
+              <i class="fas fa-file-contract me-1"></i>Agreement
+            </button>
+            <button *ngIf="getActualStatus(app) === 'REJECTED'" 
+                    class="btn btn-danger" (click)="generateRejectionLetterPDF(app)">
+              <i class="fas fa-file-times me-1"></i>Rejection Letter
+            </button>
+            <button class="btn btn-outline-secondary" (click)="downloadPDF(app)" [disabled]="loading">
+              <i class="fas fa-file-pdf me-1"></i>PDF
             </button>
           </div>
         </div>
@@ -220,14 +251,19 @@
                   <p class="mb-1 text-muted">
                     <i class="fas fa-hashtag me-1"></i>Loan ID: <strong>{{ selectedLoan.loanId }}</strong>
                   </p>
-                  <p class="mb-0 text-muted">
+                  <p class="mb-1 text-muted">
                     <i class="fas fa-calendar me-1"></i>Applied on: {{ formatDate(selectedLoan.submittedAt || selectedLoan.applicationDate) }}
                   </p>
+                  <p class="mb-0 text-muted" *ngIf="selectedLoan.lastUpdated">
+                    <i class="fas fa-clock me-1"></i>Last Updated: {{ formatDate(selectedLoan.lastUpdated) }}
+                  </p>
                 </div>
-                <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                  <span class="badge bg-{{ getStatusColor(selectedLoan.loanStatus) }} fs-6 px-3 py-2">
-                    {{ selectedLoan.loanStatus }}
-                  </span>
+                <div class="col-md-4 text-md-end">
+                  <div class="mb-2">
+                    <span class="badge bg-{{ getStatusColor(selectedLoan.loanStatus) }} fs-6 px-3 py-2">
+                      {{ selectedLoan.loanStatus }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -298,6 +334,7 @@
             </div>
           </div>
 
+
           <!-- Applicant Information -->
           <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan.applicantFirstName">
             <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
@@ -305,17 +342,59 @@
             </div>
             <div class="card-body">
               <div class="row g-3">
-                <div class="col-md-6">
+                <!-- Personal Details -->
+                <div class="col-12">
+                  <h6 class="text-primary mb-3"><i class="fas fa-id-badge me-2"></i>Personal Details</h6>
+                </div>
+                <div class="col-md-4">
                   <small class="text-muted d-block">Full Name</small>
                   <strong>{{ selectedLoan.applicantFirstName }} {{ selectedLoan.applicantMiddleName || '' }} {{ selectedLoan.applicantLastName || '' }}</strong>
                 </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantDateOfBirth">
+                  <small class="text-muted d-block">Date of Birth</small>
+                  <strong>{{ formatDate(selectedLoan.applicantDateOfBirth) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantGender">
+                  <small class="text-muted d-block">Gender</small>
+                  <strong>{{ selectedLoan.applicantGender }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantMaritalStatus">
+                  <small class="text-muted d-block">Marital Status</small>
+                  <strong>{{ selectedLoan.applicantMaritalStatus }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantNationality">
+                  <small class="text-muted d-block">Nationality</small>
+                  <strong>{{ selectedLoan.applicantNationality }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantReligion">
+                  <small class="text-muted d-block">Religion</small>
+                  <strong>{{ selectedLoan.applicantReligion }}</strong>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="col-12 mt-4">
+                  <h6 class="text-primary mb-3"><i class="fas fa-phone me-2"></i>Contact Information</h6>
+                </div>
                 <div class="col-md-6" *ngIf="selectedLoan.applicantEmail">
-                  <small class="text-muted d-block">Email</small>
+                  <small class="text-muted d-block">Email Address</small>
                   <strong>{{ selectedLoan.applicantEmail }}</strong>
                 </div>
                 <div class="col-md-6" *ngIf="selectedLoan.applicantMobile">
                   <small class="text-muted d-block">Mobile Number</small>
                   <strong>{{ selectedLoan.applicantMobile }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantAlternateMobile">
+                  <small class="text-muted d-block">Alternate Mobile</small>
+                  <strong>{{ selectedLoan.applicantAlternateMobile }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantLandline">
+                  <small class="text-muted d-block">Landline Number</small>
+                  <strong>{{ selectedLoan.applicantLandline }}</strong>
+                </div>
+
+                <!-- Identity Documents -->
+                <div class="col-12 mt-4">
+                  <h6 class="text-primary mb-3"><i class="fas fa-id-card me-2"></i>Identity Information</h6>
                 </div>
                 <div class="col-md-6" *ngIf="selectedLoan.applicantPan">
                   <small class="text-muted d-block">PAN Number</small>
@@ -325,9 +404,51 @@
                   <small class="text-muted d-block">Aadhar Number</small>
                   <strong>{{ selectedLoan.applicantAadhar }}</strong>
                 </div>
-                <div class="col-md-6" *ngIf="selectedLoan.applicantDateOfBirth">
-                  <small class="text-muted d-block">Date of Birth</small>
-                  <strong>{{ formatDate(selectedLoan.applicantDateOfBirth) }}</strong>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantVoterId">
+                  <small class="text-muted d-block">Voter ID</small>
+                  <strong>{{ selectedLoan.applicantVoterId }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantPassport">
+                  <small class="text-muted d-block">Passport Number</small>
+                  <strong>{{ selectedLoan.applicantPassport }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantDrivingLicense">
+                  <small class="text-muted d-block">Driving License</small>
+                  <strong>{{ selectedLoan.applicantDrivingLicense }}</strong>
+                </div>
+
+                <!-- Family Information -->
+                <div class="col-12 mt-4" *ngIf="selectedLoan.applicantFatherName || selectedLoan.applicantMotherName || selectedLoan.applicantSpouseName">
+                  <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>Family Information</h6>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantFatherName">
+                  <small class="text-muted d-block">Father's Name</small>
+                  <strong>{{ selectedLoan.applicantFatherName }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantMotherName">
+                  <small class="text-muted d-block">Mother's Name</small>
+                  <strong>{{ selectedLoan.applicantMotherName }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantSpouseName">
+                  <small class="text-muted d-block">Spouse's Name</small>
+                  <strong>{{ selectedLoan.applicantSpouseName }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantDependents">
+                  <small class="text-muted d-block">Number of Dependents</small>
+                  <strong>{{ selectedLoan.applicantDependents }}</strong>
+                </div>
+
+                <!-- Educational Information -->
+                <div class="col-12 mt-4" *ngIf="selectedLoan.applicantEducation || selectedLoan.applicantQualification">
+                  <h6 class="text-primary mb-3"><i class="fas fa-graduation-cap me-2"></i>Educational Information</h6>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantEducation">
+                  <small class="text-muted d-block">Education Level</small>
+                  <strong>{{ selectedLoan.applicantEducation }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicantQualification">
+                  <small class="text-muted d-block">Qualification</small>
+                  <strong>{{ selectedLoan.applicantQualification }}</strong>
                 </div>
               </div>
             </div>
@@ -340,21 +461,71 @@
             </div>
             <div class="card-body">
               <div class="row g-3">
-                <div class="col-md-6">
+                <!-- Employment Information -->
+                <div class="col-12">
+                  <h6 class="text-primary mb-3"><i class="fas fa-building me-2"></i>Current Employment</h6>
+                </div>
+                <div class="col-md-4">
                   <small class="text-muted d-block">Employment Type</small>
                   <strong>{{ selectedLoan.employmentType }}</strong>
                 </div>
-                <div class="col-md-6" *ngIf="selectedLoan.employerName">
+                <div class="col-md-4" *ngIf="selectedLoan.employerName">
                   <small class="text-muted d-block">Employer Name</small>
                   <strong>{{ selectedLoan.employerName }}</strong>
                 </div>
-                <div class="col-md-6" *ngIf="selectedLoan.designation">
+                <div class="col-md-4" *ngIf="selectedLoan.designation">
                   <small class="text-muted d-block">Designation</small>
                   <strong>{{ selectedLoan.designation }}</strong>
                 </div>
-                <div class="col-md-6" *ngIf="selectedLoan.monthlyIncome">
-                  <small class="text-muted d-block">Monthly Income</small>
+                <div class="col-md-4" *ngIf="selectedLoan.department">
+                  <small class="text-muted d-block">Department</small>
+                  <strong>{{ selectedLoan.department }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.employmentStartDate">
+                  <small class="text-muted d-block">Employment Start Date</small>
+                  <strong>{{ formatDate(selectedLoan.employmentStartDate) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.workExperience">
+                  <small class="text-muted d-block">Total Work Experience</small>
+                  <strong>{{ selectedLoan.workExperience }} years</strong>
+                </div>
+
+                <!-- Income Information -->
+                <div class="col-12 mt-4">
+                  <h6 class="text-primary mb-3"><i class="fas fa-money-bill-wave me-2"></i>Income Details</h6>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.monthlyIncome">
+                  <small class="text-muted d-block">Monthly Gross Income</small>
                   <strong>{{ formatCurrency(selectedLoan.monthlyIncome) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.netMonthlyIncome">
+                  <small class="text-muted d-block">Monthly Net Income</small>
+                  <strong>{{ formatCurrency(selectedLoan.netMonthlyIncome) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.annualIncome">
+                  <small class="text-muted d-block">Annual Income</small>
+                  <strong>{{ formatCurrency(selectedLoan.annualIncome) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.otherIncome">
+                  <small class="text-muted d-block">Other Income</small>
+                  <strong>{{ formatCurrency(selectedLoan.otherIncome) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.totalMonthlyIncome">
+                  <small class="text-muted d-block">Total Monthly Income</small>
+                  <strong>{{ formatCurrency(selectedLoan.totalMonthlyIncome) }}</strong>
+                </div>
+
+                <!-- Office Address -->
+                <div class="col-12 mt-4" *ngIf="selectedLoan.officeAddress">
+                  <h6 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Office Address</h6>
+                </div>
+                <div class="col-md-8" *ngIf="selectedLoan.officeAddress">
+                  <small class="text-muted d-block">Office Address</small>
+                  <strong>{{ selectedLoan.officeAddress }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.officePhone">
+                  <small class="text-muted d-block">Office Phone</small>
+                  <strong>{{ selectedLoan.officePhone }}</strong>
                 </div>
               </div>
             </div>
@@ -371,6 +542,10 @@
                   <small class="text-muted d-block">Bank Name</small>
                   <strong>{{ selectedLoan.bankName }}</strong>
                 </div>
+                <div class="col-md-6" *ngIf="selectedLoan.branchName">
+                  <small class="text-muted d-block">Branch Name</small>
+                  <strong>{{ selectedLoan.branchName }}</strong>
+                </div>
                 <div class="col-md-6" *ngIf="selectedLoan.accountNumber">
                   <small class="text-muted d-block">Account Number</small>
                   <strong>{{ selectedLoan.accountNumber }}</strong>
@@ -383,34 +558,117 @@
                   <small class="text-muted d-block">Account Type</small>
                   <strong>{{ selectedLoan.accountType }}</strong>
                 </div>
+                <div class="col-md-6" *ngIf="selectedLoan.accountHolderName">
+                  <small class="text-muted d-block">Account Holder Name</small>
+                  <strong>{{ selectedLoan.accountHolderName }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.bankRelationshipYears">
+                  <small class="text-muted d-block">Banking Relationship</small>
+                  <strong>{{ selectedLoan.bankRelationshipYears }} years</strong>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Risk Assessment -->
-          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan.riskScore || selectedLoan.fraudScore">
+          <!-- Loan Application Specific Details -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
             <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
-              <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Risk Assessment</h6>
+              <h6 class="mb-0"><i class="fas fa-file-contract me-2"></i>Loan Application Details</h6>
             </div>
             <div class="card-body">
               <div class="row g-3">
-                <div class="col-md-4" *ngIf="selectedLoan.riskScore">
-                  <small class="text-muted d-block">Risk Score</small>
-                  <strong class="fs-5">{{ selectedLoan.riskScore }}</strong>
+                <!-- Loan Specific Information -->
+                <div class="col-12">
+                  <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Application Information</h6>
                 </div>
-                <div class="col-md-4" *ngIf="selectedLoan.fraudScore">
-                  <small class="text-muted d-block">Fraud Score</small>
-                  <strong class="fs-5">{{ selectedLoan.fraudScore }}</strong>
+                <div class="col-md-4" *ngIf="selectedLoan.loanPurpose">
+                  <small class="text-muted d-block">Loan Purpose</small>
+                  <strong>{{ selectedLoan.loanPurpose }}</strong>
                 </div>
-                <div class="col-md-4" *ngIf="selectedLoan.fraudStatus">
-                  <small class="text-muted d-block">Fraud Status</small>
-                  <span class="badge bg-{{ getFraudStatusColor(selectedLoan.fraudStatus) }} fs-6">
-                    {{ selectedLoan.fraudStatus }}
-                  </span>
+                <div class="col-md-4" *ngIf="selectedLoan.preferredEmiDate">
+                  <small class="text-muted d-block">Preferred EMI Date</small>
+                  <strong>{{ selectedLoan.preferredEmiDate }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.repaymentMode">
+                  <small class="text-muted d-block">Repayment Mode</small>
+                  <strong>{{ selectedLoan.repaymentMode }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.existingLoans">
+                  <small class="text-muted d-block">Existing Loans</small>
+                  <strong>{{ selectedLoan.existingLoans ? 'Yes' : 'No' }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.existingLoanAmount">
+                  <small class="text-muted d-block">Existing Loan Amount</small>
+                  <strong>{{ formatCurrency(selectedLoan.existingLoanAmount) }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.existingEmi">
+                  <small class="text-muted d-block">Existing EMI</small>
+                  <strong>{{ formatCurrency(selectedLoan.existingEmi) }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.creditCardLimit">
+                  <small class="text-muted d-block">Credit Card Limit</small>
+                  <strong>{{ formatCurrency(selectedLoan.creditCardLimit) }}</strong>
+                </div>
+
+                <!-- References -->
+                <div class="col-12 mt-4" *ngIf="selectedLoan.reference1Name || selectedLoan.reference2Name">
+                  <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>References</h6>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.reference1Name">
+                  <div class="reference-card p-3 border rounded">
+                    <h6 class="mb-2">Reference 1</h6>
+                    <div class="row g-2">
+                      <div class="col-12">
+                        <small class="text-muted d-block">Name</small>
+                        <strong>{{ selectedLoan.reference1Name }}</strong>
+                      </div>
+                      <div class="col-6" *ngIf="selectedLoan.reference1Phone">
+                        <small class="text-muted d-block">Phone</small>
+                        <strong>{{ selectedLoan.reference1Phone }}</strong>
+                      </div>
+                      <div class="col-6" *ngIf="selectedLoan.reference1Relation">
+                        <small class="text-muted d-block">Relation</small>
+                        <strong>{{ selectedLoan.reference1Relation }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.reference2Name">
+                  <div class="reference-card p-3 border rounded">
+                    <h6 class="mb-2">Reference 2</h6>
+                    <div class="row g-2">
+                      <div class="col-12">
+                        <small class="text-muted d-block">Name</small>
+                        <strong>{{ selectedLoan.reference2Name }}</strong>
+                      </div>
+                      <div class="col-6" *ngIf="selectedLoan.reference2Phone">
+                        <small class="text-muted d-block">Phone</small>
+                        <strong>{{ selectedLoan.reference2Phone }}</strong>
+                      </div>
+                      <div class="col-6" *ngIf="selectedLoan.reference2Relation">
+                        <small class="text-muted d-block">Relation</small>
+                        <strong>{{ selectedLoan.reference2Relation }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="col-12 mt-4" *ngIf="selectedLoan.additionalInfo || selectedLoan.specialInstructions">
+                  <h6 class="text-primary mb-3"><i class="fas fa-sticky-note me-2"></i>Additional Information</h6>
+                </div>
+                <div class="col-12" *ngIf="selectedLoan.additionalInfo">
+                  <small class="text-muted d-block">Additional Information</small>
+                  <p class="mb-2">{{ selectedLoan.additionalInfo }}</p>
+                </div>
+                <div class="col-12" *ngIf="selectedLoan.specialInstructions">
+                  <small class="text-muted d-block">Special Instructions</small>
+                  <p class="mb-0">{{ selectedLoan.specialInstructions }}</p>
                 </div>
               </div>
             </div>
           </div>
+
 
           <!-- Assignment Info -->
           <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan.assignedOfficerName">
@@ -427,9 +685,128 @@
                   <small class="text-muted d-block">Officer Email</small>
                   <strong>{{ selectedLoan.assignedOfficerEmail }}</strong>
                 </div>
+                <div class="col-md-6" *ngIf="selectedLoan.assignedAt">
+                  <small class="text-muted d-block">Assigned Date</small>
+                  <strong>{{ formatDate(selectedLoan.assignedAt) }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.officerType">
+                  <small class="text-muted d-block">Officer Type</small>
+                  <strong>{{ selectedLoan.officerType }}</strong>
+                </div>
               </div>
             </div>
           </div>
+
+          <!-- Application Processing Details -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+            <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+              <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Processing Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4" *ngIf="selectedLoan.submittedAt">
+                  <small class="text-muted d-block">Submitted Date</small>
+                  <strong>{{ formatDate(selectedLoan.submittedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.reviewedAt">
+                  <small class="text-muted d-block">Review Started</small>
+                  <strong>{{ formatDate(selectedLoan.reviewedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.approvedAt">
+                  <small class="text-muted d-block">Approved Date</small>
+                  <strong>{{ formatDate(selectedLoan.approvedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.rejectedAt">
+                  <small class="text-muted d-block">Rejected Date</small>
+                  <strong>{{ formatDate(selectedLoan.rejectedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.disbursedAt">
+                  <small class="text-muted d-block">Disbursed Date</small>
+                  <strong>{{ formatDate(selectedLoan.disbursedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.closedAt">
+                  <small class="text-muted d-block">Closed Date</small>
+                  <strong>{{ formatDate(selectedLoan.closedAt) }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.processingFee">
+                  <small class="text-muted d-block">Processing Fee</small>
+                  <strong>{{ formatCurrency(selectedLoan.processingFee) }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.applicationFee">
+                  <small class="text-muted d-block">Application Fee</small>
+                  <strong>{{ formatCurrency(selectedLoan.applicationFee) }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Information -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+            <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+              <h6 class="mb-0"><i class="fas fa-database me-2"></i>System Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Application ID</small>
+                  <strong>{{ selectedLoan.loanId }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantId">
+                  <small class="text-muted d-block">Applicant ID</small>
+                  <strong>{{ selectedLoan.applicantId }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.createdAt">
+                  <small class="text-muted d-block">Created Date</small>
+                  <strong>{{ formatDate(selectedLoan.createdAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.updatedAt">
+                  <small class="text-muted d-block">Last Modified</small>
+                  <strong>{{ formatDate(selectedLoan.updatedAt) }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.version">
+                  <small class="text-muted d-block">Version</small>
+                  <strong>{{ selectedLoan.version }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.source">
+                  <small class="text-muted d-block">Application Source</small>
+                  <strong>{{ selectedLoan.source }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Address Information -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan.applicantAddress || selectedLoan.permanentAddress">
+            <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+              <h6 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address Information</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6" *ngIf="selectedLoan.applicantAddress">
+                  <small class="text-muted d-block">Current Address</small>
+                  <strong>{{ selectedLoan.applicantAddress }}</strong>
+                </div>
+                <div class="col-md-6" *ngIf="selectedLoan.permanentAddress">
+                  <small class="text-muted d-block">Permanent Address</small>
+                  <strong>{{ selectedLoan.permanentAddress }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantCity">
+                  <small class="text-muted d-block">City</small>
+                  <strong>{{ selectedLoan.applicantCity }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantState">
+                  <small class="text-muted d-block">State</small>
+                  <strong>{{ selectedLoan.applicantState }}</strong>
+                </div>
+                <div class="col-md-4" *ngIf="selectedLoan.applicantPincode">
+                  <small class="text-muted d-block">Pincode</small>
+                  <strong>{{ selectedLoan.applicantPincode }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
 
           <!-- Remarks -->
           <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);" *ngIf="selectedLoan.remarks">
@@ -441,44 +818,6 @@
             </div>
           </div>
 
-          <!-- Timeline -->
-          <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);">
-            <div class="card-header" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
-              <h6 class="mb-0"><i class="fas fa-history me-2"></i>Application Timeline</h6>
-            </div>
-            <div class="card-body">
-              <div class="timeline">
-                <div class="timeline-item">
-                  <i class="fas fa-check-circle text-success"></i>
-                  <div>
-                    <strong>Application Submitted</strong>
-                    <small class="text-muted d-block">{{ formatDate(selectedLoan.submittedAt || selectedLoan.applicationDate) }}</small>
-                  </div>
-                </div>
-                <div class="timeline-item" *ngIf="selectedLoan.reviewedAt">
-                  <i class="fas fa-eye text-primary"></i>
-                  <div>
-                    <strong>Under Review</strong>
-                    <small class="text-muted d-block">{{ formatDate(selectedLoan.reviewedAt) }}</small>
-                  </div>
-                </div>
-                <div class="timeline-item" *ngIf="selectedLoan.approvedAt">
-                  <i class="fas fa-thumbs-up text-success"></i>
-                  <div>
-                    <strong>Approved</strong>
-                    <small class="text-muted d-block">{{ formatDate(selectedLoan.approvedAt) }}</small>
-                  </div>
-                </div>
-                <div class="timeline-item" *ngIf="selectedLoan.disbursedAt">
-                  <i class="fas fa-money-bill-wave text-success"></i>
-                  <div>
-                    <strong>Disbursed</strong>
-                    <small class="text-muted d-block">{{ formatDate(selectedLoan.disbursedAt) }}</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       
@@ -488,6 +827,146 @@
         </button>
         <button type="button" class="btn btn-primary" (click)="downloadPDF(selectedLoan)" *ngIf="selectedLoan">
           <i class="fas fa-download me-1"></i>Download PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timeline Modal -->
+<div *ngIf="showTimelineModal" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="background-color: var(--bg-primary); color: var(--text-primary);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title">
+          <i class="fas fa-route me-2 text-primary"></i>Application Progress Timeline
+        </h5>
+        <button type="button" class="btn-close" (click)="closeTimelineModal()" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body" style="padding: 2rem;">
+        <div *ngIf="selectedApplicationForTimeline" class="timeline-container">
+          <!-- Application Header -->
+          <div class="d-flex justify-content-between align-items-start mb-4 p-3 rounded" 
+               style="background-color: var(--bg-secondary); border-left: 4px solid var(--primary);">
+            <div>
+              <h6 class="mb-1" style="color: var(--text-primary);">{{ selectedApplicationForTimeline.loanType }}</h6>
+              <small class="text-muted">Loan ID: #{{ selectedApplicationForTimeline.loanId }}</small>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-{{ getStatusColor(getActualStatus(selectedApplicationForTimeline)) }} mb-1">
+                {{ getActualStatus(selectedApplicationForTimeline) }}
+              </span>
+              <div class="small text-muted">{{ formatCurrency(selectedApplicationForTimeline.loanAmount) }}</div>
+            </div>
+          </div>
+
+          <!-- Timeline Steps -->
+          <div class="timeline-wrapper">
+            <div *ngFor="let stage of getTimelineStages(selectedApplicationForTimeline); let i = index; let last = last" 
+                 class="timeline-item" [ngClass]="getTimelineStageClass(stage.status)">
+              
+              <!-- Timeline Line -->
+              <div *ngIf="!last" class="timeline-line" 
+                   [ngClass]="{'timeline-line-completed': stage.status === 'completed'}"></div>
+              
+              <!-- Timeline Icon -->
+              <div class="timeline-icon" [ngClass]="getTimelineIconClass(stage.status)">
+                <i class="fas {{ stage.icon }}"></i>
+              </div>
+              
+              <!-- Timeline Content -->
+              <div class="timeline-content">
+                <div class="timeline-header d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="timeline-title mb-1" style="color: var(--text-primary);">{{ stage.title }}</h6>
+                    <p class="timeline-description mb-2 text-muted">{{ stage.description }}</p>
+                  </div>
+                  <div *ngIf="stage.date" class="timeline-date text-muted small">
+                    {{ formatDate(stage.date) }}
+                  </div>
+                </div>
+                
+                <!-- Stage Details -->
+                <div class="timeline-details p-3 rounded" 
+                     style="background-color: var(--bg-tertiary); border-left: 3px solid var(--border-color);">
+                  <small style="color: var(--text-secondary);">{{ stage.details }}</small>
+                </div>
+                
+                <!-- Status Indicator -->
+                <div class="timeline-status mt-2">
+                  <span *ngIf="stage.status === 'completed'" class="badge bg-success">
+                    <i class="fas fa-check me-1"></i>Completed
+                  </span>
+                  <span *ngIf="stage.status === 'current'" class="badge bg-primary">
+                    <i class="fas fa-clock me-1"></i>In Progress
+                  </span>
+                  <span *ngIf="stage.status === 'pending'" class="badge bg-secondary">
+                    <i class="fas fa-hourglass-half me-1"></i>Pending
+                  </span>
+                  <span *ngIf="stage.status === 'rejected'" class="badge bg-danger">
+                    <i class="fas fa-times me-1"></i>Rejected
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Next Steps -->
+          <div *ngIf="selectedApplicationForTimeline.loanStatus !== 'APPROVED' && 
+                      selectedApplicationForTimeline.loanStatus !== 'REJECTED' && 
+                      selectedApplicationForTimeline.loanStatus !== 'DISBURSED'" 
+               class="mt-4 p-3 rounded" 
+               style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary);">
+            <h6 class="mb-2" style="color: var(--text-primary);">
+              <i class="fas fa-info-circle me-2"></i>What's Next?
+            </h6>
+            <p class="mb-0 small" style="color: var(--text-secondary);">
+              Your application is currently being processed. We'll notify you via email and SMS for any updates or if additional information is required.
+            </p>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="mt-4 p-3 rounded" style="background-color: var(--bg-tertiary);">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fas fa-phone text-primary"></i>
+                  <div>
+                    <small class="text-muted d-block">Customer Support</small>
+                    <strong style="color: var(--text-primary);">1800-123-4567</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fas fa-envelope text-primary"></i>
+                  <div>
+                    <small class="text-muted d-block">Email Support</small>
+                    <strong style="color: var(--text-primary);">support&#64;loanms.com</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeTimelineModal()">
+          Close
+        </button>
+        <button *ngIf="selectedApplicationForTimeline && (getActualStatus(selectedApplicationForTimeline) === 'APPROVED' || getActualStatus(selectedApplicationForTimeline) === 'DISBURSED')" 
+                type="button" class="btn btn-success" (click)="generateLoanAgreementPDF(selectedApplicationForTimeline!)">
+          <i class="fas fa-file-contract me-1"></i>Loan Agreement
+        </button>
+        <button *ngIf="selectedApplicationForTimeline && getActualStatus(selectedApplicationForTimeline) === 'REJECTED'" 
+                type="button" class="btn btn-danger" (click)="generateRejectionLetterPDF(selectedApplicationForTimeline!)">
+          <i class="fas fa-file-times me-1"></i>Rejection Letter
+        </button>
+        <button type="button" class="btn btn-primary" (click)="downloadPDF(selectedApplicationForTimeline!)">
+          <i class="fas fa-download me-1"></i>Download Report
         </button>
       </div>
     </div>

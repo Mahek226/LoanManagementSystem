@@ -21,6 +21,14 @@ export interface LoanScreeningResponse {
   officerId: number;
   officerName: string;
   officerType: string;
+  // Compliance verdict details (when available)
+  complianceVerdict?: string; // APPROVED, REJECTED, FLAGGED, CONDITIONAL_APPROVAL
+  complianceVerdictReason?: string;
+  complianceRemarks?: string;
+  complianceOfficerName?: string;
+  complianceVerdictTimestamp?: string;
+  nextAction?: string; // What the loan officer should do next
+  hasComplianceVerdict?: boolean; // Flag to indicate if compliance review is complete
 }
 
 export interface LoanScreeningRequest {
@@ -162,6 +170,14 @@ export interface EnhancedLoanScreeningResponse {
   ruleViolations: RuleViolation[];
   finalRecommendation: string;
   canApproveReject: boolean;
+  // Compliance verdict details (when available)
+  complianceVerdict?: string;
+  complianceVerdictReason?: string;
+  complianceRemarks?: string;
+  complianceOfficerName?: string;
+  complianceVerdictTimestamp?: string;
+  nextAction?: string;
+  hasComplianceVerdict?: boolean;
 }
 
 export interface NormalizedRiskScore {
@@ -600,6 +616,23 @@ export class LoanOfficerService {
   // Process document resubmission request (approve/reject)
   processDocumentResubmissionRequest(officerId: number, request: ProcessDocumentResubmissionRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}/${officerId}/process-document-resubmission-request`, request);
+  }
+
+  // ==================== Compliance Verdict Management ====================
+
+  // Get compliance verdict for a specific loan
+  getComplianceVerdictForLoan(loanId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/loan/${loanId}/compliance-verdict`);
+  }
+
+  // Process loan after compliance verdict
+  processLoanAfterCompliance(officerId: number, request: {
+    loanId: number;
+    assignmentId: number;
+    decision: string; // APPROVE, REJECT
+    remarks: string;
+  }): Observable<LoanScreeningResponse> {
+    return this.http.post<LoanScreeningResponse>(`${this.apiUrl}/${officerId}/process-after-compliance`, request);
   }
 
   // Calculate comprehensive dashboard statistics

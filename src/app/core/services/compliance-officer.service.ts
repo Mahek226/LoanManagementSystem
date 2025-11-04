@@ -154,12 +154,117 @@ export interface RiskFactor {
 // ==================== External Fraud Data Interfaces ====================
 
 export interface ExternalFraudData {
-  bankRecords: BankRecord[];
-  criminalRecords: CriminalRecord[];
-  loanHistory: LoanHistoryRecord[];
-  summary: FraudSummary;
+  lastName: string;
+  firstName: string;
+  gender: string;
+  dateOfBirth: string;
+  panNumber: string;
+  aadhaarNumber: string;
+  phoneNumber: string;
+  email: string;
+  personFound: boolean;
+  personId: number;
+  externalPersonId: number;
+  matchedBy: string;
+  lastChecked: string;
+  lastUpdated: string;
+  searchCriteria: SearchCriteria;
+  bankRecords: BankRecords;
+  criminalRecords: CriminalRecords;
+  loanHistory: LoanHistory;
+  governmentDocuments: GovernmentDocuments;
+  riskAssessment: RiskAssessment;
 }
 
+export interface SearchCriteria {
+  aadhaarNumber: string;
+  panNumber: string;
+}
+
+export interface BankRecords {
+  totalBalance: number;
+  totalAccounts: number;
+  activeAccounts: number;
+  accounts: BankAccount[];
+}
+
+export interface BankAccount {
+  balance: number;
+  accountType: string;
+  lastTransaction: string;
+  bankName: string;
+  isActive: boolean;
+}
+
+export interface CriminalRecords {
+  totalCases: number;
+  cases: CriminalCase[];
+}
+
+export interface CriminalCase {
+  caseNumber: string;
+  caseType: string;
+  description: string;
+  courtName: string;
+  status: string;
+  verdictDate?: string;
+}
+
+export interface LoanHistory {
+  totalLoans: number;
+  defaultedLoans: number;
+  defaultRate: number;
+  totalAmountBorrowed: number;
+  totalOutstandingBalance: number;
+  loans: LoanRecord[];
+}
+
+export interface LoanRecord {
+  loanId: number;
+  loanType: string;
+  institutionName: string;
+  loanAmount: number;
+  outstandingBalance: number;
+  startDate: string;
+  endDate?: string;
+  status: string;
+  defaultFlag: boolean;
+}
+
+export interface GovernmentDocuments {
+  verifiedDocuments: number;
+  totalDocuments: number;
+  verificationRate: number;
+  documents: GovernmentDocument[];
+}
+
+export interface GovernmentDocument {
+  documentId: number;
+  documentType: string;
+  documentNumber: string;
+  issuingAuthority: string;
+  issuedDate: string;
+  expiryDate?: string;
+  verificationStatus: string;
+}
+
+export interface RiskAssessment {
+  riskLevel: string;
+  overallRiskScore: number;
+  recommendation: string;
+  assessmentDate: string;
+  riskFactors: string[];
+  riskBreakdown: RiskBreakdown;
+}
+
+export interface RiskBreakdown {
+  documentRisk: string;
+  criminalRisk: string;
+  financialRisk: string;
+  bankingRisk: string;
+}
+
+// Legacy interfaces for backward compatibility
 export interface BankRecord {
   id: number;
   bankName: string;
@@ -303,11 +408,20 @@ export interface RuleViolation {
 export interface ComplianceVerdict {
   assignmentId: number;
   complianceOfficerId: number;
-  recommendation: 'APPROVE' | 'REJECT' | 'REQUEST_DOCUMENTS' | 'FURTHER_REVIEW';
-  riskAssessment: string;
-  fraudFindings: string[];
-  complianceNotes: string;
-  recommendedAction: string;
+  verdict: 'RECOMMEND_APPROVE' | 'RECOMMEND_REJECT' | 'REQUEST_MORE_INFO';
+  verdictReason: string;
+  detailedRemarks?: string;
+  rejectionReasons?: string[];
+  documentsToResubmit?: DocumentResubmissionInfo[];
+  additionalChecksRequired?: string[];
+  targetLoanOfficerId?: number;
+}
+
+export interface DocumentResubmissionInfo {
+  documentId: number;
+  documentType: string;
+  resubmissionReason: string;
+  specificInstructions?: string;
 }
 
 // ==================== Service ====================
@@ -528,8 +642,8 @@ export class ComplianceOfficerService {
    * Get enhanced loan screening details
    */
   getEnhancedLoanDetails(assignmentId: number): Observable<EnhancedLoanScreeningResponse> {
-    // Use the enhanced screening controller endpoint
-    return this.http.get<EnhancedLoanScreeningResponse>(`/api/enhanced-screening/loan/${assignmentId}`).pipe(
+    // Use the compliance-specific enhanced screening endpoint
+    return this.http.get<EnhancedLoanScreeningResponse>(`${this.apiUrl}/assignment/${assignmentId}/enhanced-screening`).pipe(
       catchError(error => {
         console.warn('Enhanced screening endpoint not available, using mock data');
         return of(this.getMockEnhancedScreeningData(assignmentId));
@@ -791,51 +905,143 @@ export class ComplianceOfficerService {
    */
   private getMockExternalFraudData(applicantId: number): ExternalFraudData {
     return {
-      bankRecords: [
-        {
-          id: 1,
-          bankName: 'HDFC Bank',
-          accountNumber: '****1234',
-          accountType: 'SAVINGS',
-          balanceAmount: 25000,
-          lastTransactionDate: '2024-10-30',
-          isActive: true,
-          createdAt: '2023-01-15'
+      lastName: 'Kumar',
+      firstName: 'Rajesh',
+      gender: 'MALE',
+      dateOfBirth: '1982-11-08',
+      panNumber: 'ABC****',
+      aadhaarNumber: '****9012',
+      phoneNumber: '9876543212',
+      email: 'rajesh.kumar@email.com',
+      personFound: true,
+      personId: 3,
+      externalPersonId: 3,
+      matchedBy: 'PAN',
+      lastChecked: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+      searchCriteria: {
+        aadhaarNumber: '****9012',
+        panNumber: 'ABC****'
+      },
+      bankRecords: {
+        totalBalance: 19600.0,
+        totalAccounts: 10,
+        activeAccounts: 2,
+        accounts: [
+          {
+            balance: 5000.00,
+            accountType: 'SAVINGS',
+            lastTransaction: '2024-08-15',
+            bankName: 'HDFC Bank',
+            isActive: true
+          },
+          {
+            balance: 2000.00,
+            accountType: 'CURRENT',
+            lastTransaction: '2024-07-20',
+            bankName: 'ICICI Bank',
+            isActive: false
+          }
+        ]
+      },
+      criminalRecords: {
+        totalCases: 2,
+        cases: [
+          {
+            caseNumber: 'CR/2019/1234',
+            caseType: 'FINANCIAL_FRAUD',
+            description: 'Cheque bounce case under Section 138 NI Act',
+            courtName: 'Metropolitan Magistrate Court',
+            status: 'CONVICTED',
+            verdictDate: '2020-03-15'
+          },
+          {
+            caseNumber: 'CR/2021/5678',
+            caseType: 'FORGERY',
+            description: 'Document forgery case under IPC Section 420',
+            courtName: 'Sessions Court',
+            status: 'OPEN'
+          }
+        ]
+      },
+      loanHistory: {
+        totalLoans: 4,
+        defaultedLoans: 3,
+        defaultRate: 75.0,
+        totalAmountBorrowed: 2700000.0,
+        totalOutstandingBalance: 2230000.0,
+        loans: [
+          {
+            loanId: 5,
+            loanType: 'PERSONAL',
+            institutionName: 'HDFC Bank',
+            loanAmount: 400000.00,
+            outstandingBalance: 400000.00,
+            startDate: '2020-05-10',
+            status: 'DEFAULTED',
+            defaultFlag: true
+          },
+          {
+            loanId: 6,
+            loanType: 'BUSINESS',
+            institutionName: 'ICICI Bank',
+            loanAmount: 1500000.00,
+            outstandingBalance: 1200000.00,
+            startDate: '2019-02-28',
+            status: 'DEFAULTED',
+            defaultFlag: true
+          }
+        ]
+      },
+      governmentDocuments: {
+        verifiedDocuments: 2,
+        totalDocuments: 3,
+        verificationRate: 66.66666666666666,
+        documents: [
+          {
+            documentId: 6,
+            documentType: 'PAN',
+            documentNumber: 'KLMNO9012P',
+            issuingAuthority: 'INCOME TAX DEPARTMENT',
+            issuedDate: '2008-03-10',
+            verificationStatus: 'VERIFIED'
+          },
+          {
+            documentId: 7,
+            documentType: 'AADHAAR',
+            documentNumber: '345678901234',
+            issuingAuthority: 'UIDAI',
+            issuedDate: '2011-07-25',
+            verificationStatus: 'VERIFIED'
+          },
+          {
+            documentId: 8,
+            documentType: 'DRIVING_LICENSE',
+            documentNumber: 'DL1234567890',
+            issuingAuthority: 'RTO',
+            issuedDate: '2015-01-20',
+            expiryDate: '2025-01-19',
+            verificationStatus: 'EXPIRED'
+          }
+        ]
+      },
+      riskAssessment: {
+        riskLevel: 'CRITICAL',
+        overallRiskScore: 72,
+        recommendation: 'REJECT',
+        assessmentDate: new Date().toISOString(),
+        riskFactors: [
+          'Criminal records found: 2 cases',
+          'Loan defaults found: 3 loans',
+          'Inactive bank accounts: 8',
+          'Unverified documents: 1'
+        ],
+        riskBreakdown: {
+          documentRisk: 'MEDIUM',
+          criminalRisk: 'HIGH',
+          financialRisk: 'HIGH',
+          bankingRisk: 'MEDIUM'
         }
-      ],
-      criminalRecords: [
-        {
-          id: 1,
-          caseNumber: 'CR_001',
-          caseType: 'FRAUD',
-          status: 'CLOSED',
-          description: 'Financial fraud case',
-          courtName: 'District Court',
-          verdictDate: '2023-08-15',
-          createdAt: '2023-08-15'
-        }
-      ],
-      loanHistory: [
-        {
-          id: 1,
-          loanType: 'PERSONAL',
-          institutionName: 'SBI',
-          loanAmount: 50000,
-          outstandingBalance: 0,
-          startDate: '2022-01-15',
-          endDate: '2023-12-15',
-          status: 'CLOSED',
-          defaultFlag: false,
-          createdAt: '2022-01-15'
-        }
-      ],
-      summary: {
-        totalBankAccounts: 1,
-        totalCriminalCases: 1,
-        totalLoanHistory: 1,
-        hasActiveCriminalCases: false,
-        hasDefaultedLoans: false,
-        riskLevel: 'MEDIUM'
       }
     };
   }

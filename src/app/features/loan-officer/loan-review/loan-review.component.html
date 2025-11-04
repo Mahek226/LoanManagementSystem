@@ -1144,6 +1144,60 @@
           </div>
         </div>
 
+        <!-- Compliance Verdict Section (for escalated loans) -->
+        <div class="col-12" *ngIf="loan.status === 'ESCALATED_TO_COMPLIANCE' || loan.status === 'COMPLIANCE_VERDICT_AVAILABLE'">
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Compliance Officer Review</h5>
+            </div>
+            <div class="card-body">
+              <div *ngIf="loan.hasComplianceVerdict; else noVerdict">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="text-muted small">Compliance Verdict</label>
+                    <h6>
+                      <span class="badge" 
+                            [class.bg-success]="loan.complianceVerdict === 'APPROVED'"
+                            [class.bg-danger]="loan.complianceVerdict === 'REJECTED'"
+                            [class.bg-warning]="loan.complianceVerdict === 'FLAGGED'"
+                            [class.bg-info]="loan.complianceVerdict === 'CONDITIONAL_APPROVAL'">
+                        {{ loan.complianceVerdict }}
+                      </span>
+                    </h6>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Compliance Officer</label>
+                    <h6>{{ loan.complianceOfficerName }}</h6>
+                  </div>
+                  <div class="col-md-6" *ngIf="loan.complianceVerdictTimestamp">
+                    <label class="text-muted small">Review Date</label>
+                    <h6>{{ formatDate(loan.complianceVerdictTimestamp) }}</h6>
+                  </div>
+                  <div class="col-md-6" *ngIf="loan.nextAction">
+                    <label class="text-muted small">Next Action</label>
+                    <h6 class="text-primary">{{ loan.nextAction }}</h6>
+                  </div>
+                  <div class="col-12" *ngIf="loan.complianceVerdictReason">
+                    <label class="text-muted small">Verdict Reason</label>
+                    <p class="mb-2">{{ loan.complianceVerdictReason }}</p>
+                  </div>
+                  <div class="col-12" *ngIf="loan.complianceRemarks">
+                    <label class="text-muted small">Compliance Remarks</label>
+                    <p class="mb-0">{{ loan.complianceRemarks }}</p>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noVerdict>
+                <div class="alert alert-warning mb-0">
+                  <i class="fas fa-clock me-2"></i>
+                  <strong>Awaiting Compliance Review</strong>
+                  <p class="mb-0 mt-2">This loan has been escalated to a compliance officer. Please wait for their review before proceeding.</p>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="col-lg-6">
           <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">

@@ -580,3 +580,78 @@
   color: #ef4444 !important;
   font-weight: 600;
 }
+
+/* Draft Status Bar */
+.draft-status-bar {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: slideIn 0.3s ease-out;
+}
+
+.draft-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.draft-status-bar .btn {
+  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.draft-status-bar .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.draft-status-bar .btn-outline-info:hover {
+  background-color: #06b6d4;
+  border-color: #06b6d4;
+  color: white;
+}
+
+.draft-status-bar .btn-outline-secondary:hover {
+  background-color: #64748b;
+  border-color: #64748b;
+  color: white;
+}
+
+/* Draft status animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive draft bar */
+@media (max-width: 768px) {
+  .draft-status-bar .d-flex {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .draft-actions {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .draft-actions .btn {
+    flex: 1;
+  }
+}

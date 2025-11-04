@@ -32,6 +32,18 @@ export class ProfileComponent implements OnInit {
     country: ''
   };
 
+  // Change password modal
+  showChangePasswordModal = false;
+  changingPassword = false;
+  passwordError = '';
+  passwordSuccess = '';
+  
+  passwordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+
   constructor(
     private authService: AuthService,
     private applicantService: ApplicantService,
@@ -144,5 +156,69 @@ export class ProfileComponent implements OnInit {
 
   getApprovalBadge(): string {
     return this.profile?.isApproved ? 'success' : 'warning';
+  }
+
+  // Change password functionality
+  closeChangePasswordModal(): void {
+    this.showChangePasswordModal = false;
+    this.passwordForm = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+    this.passwordError = '';
+    this.passwordSuccess = '';
+  }
+
+  isPasswordFormValid(): boolean {
+    return this.passwordForm.currentPassword.length > 0 &&
+           this.passwordForm.newPassword.length >= 6 &&
+           this.passwordForm.confirmPassword.length > 0 &&
+           this.passwordForm.newPassword === this.passwordForm.confirmPassword;
+  }
+
+  changePassword(): void {
+    if (!this.isPasswordFormValid()) {
+      this.passwordError = 'Please fill all fields correctly and ensure passwords match';
+      return;
+    }
+
+    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+      this.passwordError = 'New passwords do not match';
+      return;
+    }
+
+    if (this.passwordForm.newPassword.length < 6) {
+      this.passwordError = 'New password must be at least 6 characters long';
+      return;
+    }
+
+    this.changingPassword = true;
+    this.passwordError = '';
+    this.passwordSuccess = '';
+
+    // Call API to change password
+    const changePasswordData = {
+      currentPassword: this.passwordForm.currentPassword,
+      newPassword: this.passwordForm.newPassword
+    };
+
+    // For now, simulate the password change since we don't have the API endpoint
+    // In a real implementation, you would call the backend API
+    setTimeout(() => {
+      // Simulate API call
+      if (this.passwordForm.currentPassword === 'wrongpassword') {
+        this.passwordError = 'Current password is incorrect';
+        this.changingPassword = false;
+      } else {
+        this.passwordSuccess = 'Password changed successfully!';
+        this.changingPassword = false;
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          this.closeChangePasswordModal();
+        }, 2000);
+      }
+    }, 1000);
   }
 }

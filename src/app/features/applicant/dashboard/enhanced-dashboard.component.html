@@ -190,17 +190,6 @@
         </div>
       </div>
       
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="stat-card stat-card-info">
-          <div class="stat-icon">
-            <i class="fas fa-bell"></i>
-          </div>
-          <div class="stat-content">
-            <h3>{{ unreadCount }}</h3>
-            <p>Notifications</p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Main Content Row -->
@@ -305,59 +294,149 @@
         </div>
       </div>
 
-      <!-- Notifications & Action Items -->
+      <!-- Loan Insights & Analytics -->
       <div class="col-lg-4 mb-4">
-        <div class="card notifications-card">
-          <div class="card-header d-flex justify-content-between align-items-center">
+        <!-- Loan Summary Card -->
+        <div class="card mb-4">
+          <div class="card-header">
             <h5 class="mb-0">
-              <i class="fas fa-bell me-2"></i>Notifications
-              <span class="badge bg-danger ms-2" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+              <i class="fas fa-chart-pie me-2"></i>Loan Summary
             </h5>
           </div>
-          <div class="card-body p-0">
-            <div *ngIf="loading.notifications" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+          <div class="card-body">
+            <div class="loan-summary-item mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <small class="text-muted">Total Applied Amount</small>
+                  <h6 class="mb-0">{{ formatCurrency(getTotalAppliedAmount()) }}</h6>
+                </div>
+                <div class="summary-icon bg-primary">
+                  <i class="fas fa-rupee-sign text-white"></i>
+                </div>
               </div>
             </div>
             
-            <div *ngIf="!loading.notifications && notifications.length === 0" class="empty-state-small p-4">
-              <i class="fas fa-bell-slash"></i>
-              <p>No notifications</p>
+            <div class="loan-summary-item mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <small class="text-muted">Approved Amount</small>
+                  <h6 class="mb-0 text-success">{{ formatCurrency(getApprovedAmount()) }}</h6>
+                </div>
+                <div class="summary-icon bg-success">
+                  <i class="fas fa-check text-white"></i>
+                </div>
+              </div>
             </div>
             
-            <div class="notification-list" *ngIf="!loading.notifications && notifications.length > 0">
-              <div class="notification-item" 
-                   *ngFor="let notification of notifications"
-                   [class.unread]="!notification.isRead"
-                   (click)="markAsRead(notification)">
-                <div class="d-flex align-items-start">
-                  <div class="notification-icon">
-                    <i class="fas" [ngClass]="getNotificationIcon(notification.type)"></i>
+            <div class="loan-summary-item mb-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <small class="text-muted">Average Interest Rate</small>
+                  <h6 class="mb-0">{{ getAverageInterestRate() }}% p.a.</h6>
+                </div>
+                <div class="summary-icon bg-info">
+                  <i class="fas fa-percentage text-white"></i>
+                </div>
+              </div>
+            </div>
+            
+            <div class="loan-summary-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <small class="text-muted">Success Rate</small>
+                  <h6 class="mb-0 text-primary">{{ getSuccessRate() }}%</h6>
+                </div>
+                <div class="summary-icon bg-warning">
+                  <i class="fas fa-trophy text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loan Types Applied -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-th-large me-2"></i>Loan Types Applied
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="loan-type-list">
+              <div class="loan-type-item" *ngFor="let loanType of getLoanTypesApplied()">
+                <div class="d-flex justify-content-between align-items-center p-3">
+                  <div class="d-flex align-items-center">
+                    <div class="loan-type-icon" [ngClass]="getLoanTypeIconClass(loanType.type)">
+                      <i class="fas" [ngClass]="getLoanTypeIcon(loanType.type)"></i>
+                    </div>
+                    <div class="ms-3">
+                      <h6 class="mb-0">{{ loanType.type }}</h6>
+                      <small class="text-muted">{{ loanType.count }} application(s)</small>
+                    </div>
                   </div>
-                  <div class="notification-content flex-grow-1">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                      <h6 class="mb-0">{{ notification.title }}</h6>
-                      <span [ngClass]="getNotificationPriorityBadge(notification.priority)">
-                        {{ notification.priority }}
-                      </span>
-                    </div>
-                    <p class="mb-2">{{ notification.message }}</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                      <small class="text-muted">{{ getTimeAgo(notification.timestamp) }}</small>
-                      <button class="btn btn-sm btn-link p-0" 
-                              *ngIf="notification.actionUrl"
-                              (click)="handleNotificationAction(notification)">
-                        {{ notification.actionText || 'View' }} <i class="fas fa-arrow-right ms-1"></i>
-                      </button>
-                    </div>
+                  <div class="text-end">
+                    <small class="text-muted d-block">Total Amount</small>
+                    <strong>{{ formatCurrency(loanType.totalAmount) }}</strong>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Recent Activity -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-clock me-2"></i>Recent Activity
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="activity-timeline">
+              <div class="activity-item" *ngFor="let activity of getRecentActivity()">
+                <div class="d-flex p-3">
+                  <div class="activity-icon" [ngClass]="getActivityIconClass(activity.type)">
+                    <i class="fas" [ngClass]="getActivityIcon(activity.type)"></i>
+                  </div>
+                  <div class="ms-3 flex-grow-1">
+                    <h6 class="mb-1">{{ activity.title }}</h6>
+                    <p class="mb-1 small">{{ activity.description }}</p>
+                    <small class="text-muted">
+                      <i class="fas fa-clock me-1"></i>{{ getTimeAgo(activity.timestamp) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="fas fa-bolt me-2"></i>Quick Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary btn-sm" (click)="navigateToLoanTypes()">
+                <i class="fas fa-plus me-2"></i>Apply for New Loan
+              </button>
+              <button class="btn btn-outline-primary btn-sm" (click)="navigateToApplications()">
+                <i class="fas fa-list me-2"></i>View All Applications
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="navigateToProfile()">
+                <i class="fas fa-user me-2"></i>Update Profile
+              </button>
+              <button class="btn btn-outline-info btn-sm" (click)="downloadApplicationReport()">
+                <i class="fas fa-download me-2"></i>Download Report
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
     </div>
   </div>
 </div>

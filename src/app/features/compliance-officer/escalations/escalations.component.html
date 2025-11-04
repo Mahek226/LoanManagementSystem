@@ -67,6 +67,29 @@
           </select>
         </div>
 
+        <!-- Loan Type Filter -->
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="selectedLoanType" (ngModelChange)="onFilterChange()">
+            <option value="all">All Loan Types</option>
+            <option *ngFor="let loanType of getUniqueLoanTypes()" [value]="loanType">
+              {{ loanType }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Second Row of Filters -->
+      <div class="row g-3 mt-2">
+        <!-- Fraud Flag Filter -->
+        <div class="col-md-3">
+          <select class="form-select" [(ngModel)]="selectedFraudFlag" (ngModelChange)="onFilterChange()">
+            <option value="all">All Fraud Flags</option>
+            <option *ngFor="let flag of getUniqueFraudFlags()" [value]="flag">
+              {{ flag }}
+            </option>
+          </select>
+        </div>
+
         <!-- Sort By -->
         <div class="col-md-2">
           <div class="input-group">
@@ -100,8 +123,14 @@
         <span class="badge bg-secondary" *ngIf="selectedStatus !== 'all'">
           Status: {{ selectedStatus }}
         </span>
+        <span class="badge bg-secondary" *ngIf="selectedLoanType !== 'all'">
+          Loan Type: {{ selectedLoanType }}
+        </span>
+        <span class="badge bg-secondary" *ngIf="selectedFraudFlag !== 'all'">
+          Fraud Flag: {{ selectedFraudFlag }}
+        </span>
         <button class="btn btn-sm btn-link text-danger" 
-                *ngIf="searchQuery || selectedPriority !== 'all' || selectedRiskLevel !== 'all' || selectedStatus !== 'all'"
+                *ngIf="searchQuery || selectedPriority !== 'all' || selectedRiskLevel !== 'all' || selectedStatus !== 'all' || selectedLoanType !== 'all' || selectedFraudFlag !== 'all'"
                 (click)="clearFilters()">
           Clear All
         </button>
@@ -212,6 +241,22 @@
             </div>
           </div>
 
+          <!-- Fraud Flags -->
+          <div class="mb-3" *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0">
+            <h6 class="text-danger mb-2">
+              <i class="fas fa-flag me-1"></i>
+              Fraud Flags ({{ escalation.fraudIndicators.length }})
+            </h6>
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge bg-danger-subtle text-danger border border-danger" 
+                    *ngFor="let flag of escalation.fraudIndicators" 
+                    [title]="flag">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                {{ flag }}
+              </span>
+            </div>
+          </div>
+
           <!-- Status and Date -->
           <div class="d-flex align-items-center justify-content-between mb-3">
             <span [class]="getStatusBadgeClass(escalation.status)">
@@ -247,6 +292,7 @@
             <th>Amount</th>
             <th>Risk Level</th>
             <th>Risk Score</th>
+            <th>Fraud Flags</th>
             <th>Status</th>
             <th>Escalated At</th>
             <th>Action</th>
@@ -282,6 +328,26 @@
                        [style.width.%]="escalation.riskScore"></div>
                 </div>
               </div>
+            </td>
+            <td>
+              <div *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0; else noFlags">
+                <div class="d-flex flex-wrap gap-1" style="max-width: 200px;">
+                  <span class="badge bg-danger-subtle text-danger border border-danger small" 
+                        *ngFor="let flag of escalation.fraudIndicators.slice(0, 2)" 
+                        [title]="flag">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    {{ flag.length > 15 ? (flag | slice:0:15) + '...' : flag }}
+                  </span>
+                  <span class="badge bg-secondary small" 
+                        *ngIf="escalation.fraudIndicators.length > 2"
+                        [title]="'Total ' + escalation.fraudIndicators.length + ' flags'">
+                    +{{ escalation.fraudIndicators.length - 2 }} more
+                  </span>
+                </div>
+              </div>
+              <ng-template #noFlags>
+                <span class="text-muted small">No flags</span>
+              </ng-template>
             </td>
             <td>
               <span [class]="getStatusBadgeClass(escalation.status)">

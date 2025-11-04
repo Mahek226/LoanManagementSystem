@@ -390,7 +390,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-university fa-2x text-primary mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalBankAccounts }}</h4>
+                <h4>{{ externalFraudData.bankRecords.totalAccounts }}</h4>
                 <p class="text-muted mb-0">Bank Accounts</p>
               </div>
             </div>
@@ -399,7 +399,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalCriminalCases }}</h4>
+                <h4>{{ externalFraudData.criminalRecords.totalCases }}</h4>
                 <p class="text-muted mb-0">Criminal Cases</p>
               </div>
             </div>
@@ -408,7 +408,7 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-history fa-2x text-info mb-2"></i>
-                <h4>{{ externalFraudData.summary.totalLoanHistory }}</h4>
+                <h4>{{ externalFraudData.loanHistory.totalLoans }}</h4>
                 <p class="text-muted mb-0">Loan History</p>
               </div>
             </div>
@@ -417,8 +417,8 @@
             <div class="card text-center">
               <div class="card-body">
                 <i class="fas fa-exclamation-triangle fa-2x" 
-                   [class]="externalFraudData.summary.riskLevel === 'HIGH' ? 'text-danger' : 'text-success'"></i>
-                <h4>{{ externalFraudData.summary.riskLevel }}</h4>
+                   [class]="externalFraudData.riskAssessment.riskLevel === 'HIGH' ? 'text-danger' : 'text-success'"></i>
+                <h4>{{ externalFraudData.riskAssessment.riskLevel }}</h4>
                 <p class="text-muted mb-0">External Risk</p>
               </div>
             </div>
@@ -426,7 +426,7 @@
         </div>
 
         <!-- Bank Records -->
-        <div class="card mb-4" *ngIf="externalFraudData.bankRecords.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.bankRecords.accounts.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-university me-2"></i>Bank Records</h5>
           </div>
@@ -443,11 +443,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let bank of externalFraudData.bankRecords">
+                  <tr *ngFor="let bank of externalFraudData.bankRecords.accounts">
                     <td>{{ bank.bankName }}</td>
                     <td>{{ bank.accountType }}</td>
-                    <td>{{ formatCurrency(bank.balanceAmount) }}</td>
-                    <td>{{ formatDate(bank.lastTransactionDate) }}</td>
+                    <td>{{ formatCurrency(bank.balance) }}</td>
+                    <td>{{ formatDate(bank.lastTransaction) }}</td>
                     <td>
                       <span [class]="bank.isActive ? 'badge bg-success' : 'badge bg-secondary'">
                         {{ bank.isActive ? 'Active' : 'Inactive' }}
@@ -461,7 +461,7 @@
         </div>
 
         <!-- Criminal Records -->
-        <div class="card mb-4" *ngIf="externalFraudData.criminalRecords.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.criminalRecords.cases.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Criminal Records</h5>
           </div>
@@ -478,7 +478,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let criminal of externalFraudData.criminalRecords">
+                  <tr *ngFor="let criminal of externalFraudData.criminalRecords.cases">
                     <td>{{ criminal.caseNumber }}</td>
                     <td>{{ criminal.caseType }}</td>
                     <td>{{ criminal.courtName }}</td>
@@ -498,7 +498,7 @@
         </div>
 
         <!-- Loan History -->
-        <div class="card mb-4" *ngIf="externalFraudData.loanHistory.length > 0">
+        <div class="card mb-4" *ngIf="externalFraudData.loanHistory.loans.length > 0">
           <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-history me-2"></i>Loan History</h5>
           </div>
@@ -516,7 +516,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let loan of externalFraudData.loanHistory">
+                  <tr *ngFor="let loan of externalFraudData.loanHistory.loans">
                     <td>{{ loan.institutionName }}</td>
                     <td>{{ loan.loanType }}</td>
                     <td>{{ formatCurrency(loan.loanAmount) }}</td>
@@ -722,30 +722,146 @@
 
     <!-- Fraud Flags Tab -->
     <div *ngIf="activeTab === 'flags'" class="tab-pane fade show active">
-      <div *ngIf="fraudFlags.length === 0" class="text-center py-4">
-        <i class="fas fa-flag fa-3x text-muted mb-3"></i>
-        <p class="text-muted">No fraud flags detected.</p>
+      <!-- Header Section -->
+      <div class="fraud-flags-header mb-4">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h4 class="mb-1">
+              <i class="fas fa-flag text-danger me-2"></i>
+              Fraud Rule Violations
+            </h4>
+            <p class="text-muted mb-0">{{ fraudFlags.length }} rule(s) violated during screening process</p>
+          </div>
+          <div class="col-md-4 text-end">
+            <div class="fraud-summary-stats">
+              <div class="d-flex justify-content-end gap-3">
+                <div class="text-center">
+                  <div class="h5 mb-0 text-danger">{{ getCriticalFlagsCount() }}</div>
+                  <small class="text-muted">Critical</small>
+                </div>
+                <div class="text-center">
+                  <div class="h5 mb-0 text-warning">{{ getHighFlagsCount() }}</div>
+                  <small class="text-muted">High</small>
+                </div>
+                <div class="text-center">
+                  <div class="h5 mb-0 text-info">{{ getMediumFlagsCount() }}</div>
+                  <small class="text-muted">Medium</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div *ngIf="fraudFlags.length > 0">
-        <div class="row">
-          <div class="col-md-6" *ngFor="let flag of fraudFlags">
-            <div class="card mb-3">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div>
-                    <h6 class="card-title">{{ flag.category }}</h6>
-                    <p class="card-text text-muted">{{ flag.description }}</p>
+      <!-- No Flags State -->
+      <div *ngIf="fraudFlags.length === 0" class="text-center py-5">
+        <div class="fraud-no-flags">
+          <i class="fas fa-shield-check fa-4x text-success mb-3"></i>
+          <h5 class="text-success mb-2">No Fraud Flags Detected</h5>
+          <p class="text-muted">This application passed all fraud screening rules successfully.</p>
+        </div>
+      </div>
+
+      <!-- Fraud Flags Display -->
+      <div *ngIf="fraudFlags.length > 0" class="fraud-flags-container">
+        <div class="row g-3">
+          <div class="col-12" *ngFor="let flag of fraudFlags; let i = index">
+            <!-- Flag Item -->
+            <div class="fraud-flag-item" 
+                 [class.critical]="flag.severity === 'CRITICAL'"
+                 [class.high]="flag.severity === 'HIGH'"
+                 [class.medium]="flag.severity === 'MEDIUM'"
+                 [class.low]="flag.severity === 'LOW'">
+              
+              <!-- Flag Pole -->
+              <div class="flag-pole"></div>
+              
+              <!-- Flag Content -->
+              <div class="flag-content">
+                <div class="flag-header">
+                  <div class="flag-number">{{ i + 1 }}</div>
+                  <div class="flag-title-section">
+                    <h6 class="flag-title mb-1">{{ flag.ruleName || flag.category }}</h6>
+                    <div class="flag-meta">
+                      <span class="flag-code">{{ flag.ruleCode || 'RULE_' + (i + 1) }}</span>
+                      <span class="flag-separator">•</span>
+                      <span class="flag-source">{{ flag.source || 'INTERNAL' }}</span>
+                      <span class="flag-separator">•</span>
+                      <span class="flag-points">{{ flag.points || flag.weight }} pts</span>
+                    </div>
                   </div>
-                  <div>
-                    <span [class]="'badge bg-' + (flag.severity === 'CRITICAL' ? 'danger' : 
-                                                  flag.severity === 'HIGH' ? 'warning' : 
-                                                  flag.severity === 'MEDIUM' ? 'info' : 'secondary')">
+                  <div class="flag-severity">
+                    <span class="severity-badge" 
+                          [class.critical]="flag.severity === 'CRITICAL'"
+                          [class.high]="flag.severity === 'HIGH'"
+                          [class.medium]="flag.severity === 'MEDIUM'"
+                          [class.low]="flag.severity === 'LOW'">
+                      <i class="fas fa-exclamation-triangle me-1"></i>
                       {{ flag.severity }}
                     </span>
-                    <div class="mt-1">
-                      <small class="text-muted">Weight: {{ flag.weight }}</small>
+                  </div>
+                </div>
+                
+                <div class="flag-body">
+                  <p class="flag-description mb-2">{{ flag.description || flag.details }}</p>
+                  
+                  <!-- Additional Details -->
+                  <div class="flag-details" *ngIf="flag.details && flag.details !== flag.description">
+                    <div class="details-toggle" (click)="toggleFlagDetails(i)">
+                      <i class="fas" [class.fa-chevron-down]="!flag.showDetails" [class.fa-chevron-up]="flag.showDetails"></i>
+                      <span class="ms-1">{{ flag.showDetails ? 'Hide' : 'Show' }} Details</span>
                     </div>
+                    <div class="details-content" *ngIf="flag.showDetails">
+                      <div class="mt-2 p-3 rounded" style="background-color: rgba(var(--bs-danger-rgb), 0.1);">
+                        <small class="text-muted d-block mb-1">Technical Details:</small>
+                        <p class="mb-0 small">{{ flag.details }}</p>
+                        <div class="mt-2" *ngIf="flag.detectedAt">
+                          <small class="text-muted">Detected: {{ formatDate(flag.detectedAt) }}</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Risk Impact -->
+                  <div class="flag-impact mt-2">
+                    <div class="impact-bar">
+                      <div class="impact-label">Risk Impact</div>
+                      <div class="impact-progress">
+                        <div class="progress" style="height: 6px;">
+                          <div class="progress-bar" 
+                               [class.bg-danger]="flag.severity === 'CRITICAL'"
+                               [class.bg-warning]="flag.severity === 'HIGH'"
+                               [class.bg-info]="flag.severity === 'MEDIUM'"
+                               [class.bg-secondary]="flag.severity === 'LOW'"
+                               [style.width.%]="getFlagImpactPercentage(flag)"
+                               role="progressbar"></div>
+                        </div>
+                        <small class="impact-value">{{ flag.points || flag.weight }}/100</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Summary Footer -->
+        <div class="fraud-flags-summary mt-4">
+          <div class="card border-danger">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-md-6">
+                  <h6 class="text-danger mb-1">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Total Risk Score Impact
+                  </h6>
+                  <p class="text-muted mb-0">Combined impact of all violated rules on risk assessment</p>
+                </div>
+                <div class="col-md-6 text-end">
+                  <div class="total-impact">
+                    <div class="h3 text-danger mb-0">{{ getTotalFlagPoints() }} pts</div>
+                    <small class="text-muted">Added to base risk score</small>
                   </div>
                 </div>
               </div>
@@ -776,10 +892,9 @@
                 <label class="form-label">Recommendation *</label>
                 <select class="form-select" formControlName="recommendation">
                   <option value="">Select recommendation</option>
-                  <option value="APPROVE">Approve</option>
-                  <option value="REJECT">Reject</option>
-                  <option value="REQUEST_DOCUMENTS">Request Documents</option>
-                  <option value="FURTHER_REVIEW">Further Review Required</option>
+                  <option value="RECOMMEND_APPROVE">Recommend Approve</option>
+                  <option value="RECOMMEND_REJECT">Recommend Reject</option>
+                  <option value="REQUEST_MORE_INFO">Request More Information</option>
                 </select>
               </div>
             </div>

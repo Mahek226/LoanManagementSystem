@@ -26,6 +26,7 @@ export class EscalationsComponent implements OnInit {
   selectedRiskLevel: string = 'all';
   selectedStatus: string = 'all';
   selectedLoanType: string = 'all';
+  selectedFraudFlag: string = 'all';
 
   // Sort
   sortBy: string = 'assignedAt';
@@ -63,7 +64,8 @@ export class EscalationsComponent implements OnInit {
         e.applicantName.toLowerCase().includes(query) ||
         e.loanType.toLowerCase().includes(query) ||
         e.applicantId.toString().includes(query) ||
-        e.loanId.toString().includes(query)
+        e.loanId.toString().includes(query) ||
+        (e.fraudIndicators && e.fraudIndicators.some(flag => flag.toLowerCase().includes(query)))
       );
     }
 
@@ -87,6 +89,13 @@ export class EscalationsComponent implements OnInit {
     // Loan type filter
     if (this.selectedLoanType !== 'all') {
       filtered = filtered.filter(e => e.loanType === this.selectedLoanType);
+    }
+
+    // Fraud flag filter
+    if (this.selectedFraudFlag !== 'all') {
+      filtered = filtered.filter(e => 
+        e.fraudIndicators && e.fraudIndicators.includes(this.selectedFraudFlag)
+      );
     }
 
     // Sort
@@ -154,6 +163,7 @@ export class EscalationsComponent implements OnInit {
     this.selectedRiskLevel = 'all';
     this.selectedStatus = 'all';
     this.selectedLoanType = 'all';
+    this.selectedFraudFlag = 'all';
     this.sortBy = 'assignedAt';
     this.sortOrder = 'desc';
     this.applyFilters();
@@ -189,5 +199,20 @@ export class EscalationsComponent implements OnInit {
 
   getUniqueLoanTypes(): string[] {
     return [...new Set(this.escalations.map(e => e.loanType))];
+  }
+
+  getUniqueFraudFlags(): string[] {
+    const allFlags = this.escalations
+      .filter(e => e.fraudIndicators && e.fraudIndicators.length > 0)
+      .flatMap(e => e.fraudIndicators!);
+    return [...new Set(allFlags)].sort();
+  }
+
+  getTotalFraudFlags(escalation: ComplianceEscalation): number {
+    return escalation.fraudIndicators ? escalation.fraudIndicators.length : 0;
+  }
+
+  hasFraudFlags(escalation: ComplianceEscalation): boolean {
+    return !!(escalation.fraudIndicators && escalation.fraudIndicators.length > 0);
   }
 }

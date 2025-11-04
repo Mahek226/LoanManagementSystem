@@ -13,7 +13,8 @@ import {
   AMLScreeningRequest,
   AMLScreeningResponse,
   RiskCorrelationAnalysis,
-  ComplianceAuditLog
+  ComplianceAuditLog,
+  ExternalFraudData
 } from '../../../core/services/compliance-officer.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -74,6 +75,11 @@ export class ReviewEscalationComponent implements OnInit {
   auditLogs: ComplianceAuditLog[] = [];
   auditLogsLoading = false;
 
+  // External Fraud Data
+  externalFraudData: ExternalFraudData | null = null;
+  externalFraudLoading = false;
+  showExternalFraudModal = false;
+
   // Active tab for review sections
   activeReviewTab: string = 'overview';
 
@@ -129,6 +135,7 @@ export class ReviewEscalationComponent implements OnInit {
         // Load additional data
         this.loadFraudHistory();
         this.loadDocuments();
+        this.loadExternalFraudData();
       },
       error: (error) => {
         console.error('Error loading escalation details:', error);
@@ -576,5 +583,63 @@ export class ReviewEscalationComponent implements OnInit {
 
   switchReviewTab(tab: string): void {
     this.activeReviewTab = tab;
+  }
+
+  // ==================== External Fraud Data ====================
+
+  loadExternalFraudData(): void {
+    if (!this.escalation) return;
+    
+    this.externalFraudLoading = true;
+    this.complianceService.getExternalFraudData(this.escalation.applicantId).subscribe({
+      next: (data) => {
+        this.externalFraudData = data;
+        this.externalFraudLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading external fraud data:', err);
+        this.externalFraudLoading = false;
+      }
+    });
+  }
+
+  openExternalFraudModal(): void {
+    this.showExternalFraudModal = true;
+    if (!this.externalFraudData) {
+      this.loadExternalFraudData();
+    }
+  }
+
+  closeExternalFraudModal(): void {
+    this.showExternalFraudModal = false;
+  }
+
+  getVerificationStatusClass(status: string): string {
+    const classes: any = {
+      'VERIFIED': 'badge bg-success',
+      'EXPIRED': 'badge bg-warning',
+      'PENDING': 'badge bg-secondary',
+      'REJECTED': 'badge bg-danger'
+    };
+    return classes[status] || 'badge bg-secondary';
+  }
+
+  getCriminalStatusClass(status: string): string {
+    const classes: any = {
+      'CONVICTED': 'badge bg-danger',
+      'OPEN': 'badge bg-warning',
+      'CLOSED': 'badge bg-info',
+      'ACQUITTED': 'badge bg-success'
+    };
+    return classes[status] || 'badge bg-secondary';
+  }
+
+  getLoanStatusClass(status: string): string {
+    const classes: any = {
+      'ACTIVE': 'badge bg-info',
+      'CLOSED': 'badge bg-success',
+      'DEFAULTED': 'badge bg-danger'
+    };
+    return classes[status] || 'badge bg-secondary';
   }
 }

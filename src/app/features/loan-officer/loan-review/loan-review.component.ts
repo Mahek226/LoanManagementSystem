@@ -37,6 +37,7 @@ export class LoanReviewComponent implements OnInit {
   enhancedLoan: EnhancedLoanScreeningResponse | null = null;
   documents: LoanDocument[] = [];
   fraudCheckResult: FraudCheckResult | null = null;
+  complianceVerdict: any = null;
 
   // Action form
   selectedAction: string = '';
@@ -126,6 +127,35 @@ export class LoanReviewComponent implements OnInit {
     });
   }
 
+  loadComplianceVerdict(): void {
+    if (!this.loan) return;
+    
+    this.loanOfficerService.getComplianceVerdictForLoan(this.loan.loanId).subscribe({
+      next: (verdict: any) => {
+        console.log('Compliance verdict loaded:', verdict);
+        this.complianceVerdict = verdict;
+        // Update loan object with compliance verdict details
+        if (this.loan) {
+          this.loan.complianceVerdict = verdict.verdict;
+          this.loan.complianceVerdictReason = verdict.verdictReason;
+          this.loan.complianceRemarks = verdict.detailedRemarks;
+          this.loan.complianceOfficerName = verdict.complianceOfficerName;
+          this.loan.complianceVerdictTimestamp = verdict.verdictTimestamp;
+          this.loan.nextAction = verdict.nextAction;
+          this.loan.hasComplianceVerdict = true;
+        }
+      },
+      error: (err: any) => {
+        console.error('Error loading compliance verdict:', err);
+        console.log('No compliance verdict available yet');
+        this.complianceVerdict = null;
+        if (this.loan) {
+          this.loan.hasComplianceVerdict = false;
+        }
+      }
+    });
+  }
+
   loadLoanDetails(): void {
     this.loading = true;
     this.error = '';
@@ -151,13 +181,25 @@ export class LoanReviewComponent implements OnInit {
           processedAt: enhancedData.processedAt,
           officerId: enhancedData.officerId,
           officerName: enhancedData.officerName,
-          officerType: enhancedData.officerType
+          officerType: enhancedData.officerType,
+          // Add compliance verdict fields
+          complianceVerdict: enhancedData.complianceVerdict,
+          complianceVerdictReason: enhancedData.complianceVerdictReason,
+          complianceRemarks: enhancedData.complianceRemarks,
+          complianceOfficerName: enhancedData.complianceOfficerName,
+          complianceVerdictTimestamp: enhancedData.complianceVerdictTimestamp,
+          nextAction: enhancedData.nextAction,
+          hasComplianceVerdict: enhancedData.hasComplianceVerdict
         };
         this.loading = false;
         console.log('Enhanced loan details loaded:', this.enhancedLoan);
         // Load documents and fraud check results
         this.loadDocuments();
         this.loadFraudCheckResults();
+        // Load compliance verdict if loan is escalated
+        if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+          this.loadComplianceVerdict();
+        }
       },
       error: (err) => {
         console.error('Error loading enhanced loan details:', err);
@@ -168,6 +210,10 @@ export class LoanReviewComponent implements OnInit {
             this.loading = false;
             this.loadDocuments();
             this.loadFraudCheckResults();
+            // Load compliance verdict if loan is escalated
+            if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+              this.loadComplianceVerdict();
+            }
           },
           error: (err2) => {
             console.error('Error loading loan details:', err2);
@@ -224,6 +270,53 @@ export class LoanReviewComponent implements OnInit {
       ? `${this.remarks}${this.rejectionReason ? ' - ' + this.rejectionReason : ''}`
       : this.remarks || 'All verification checks passed';
 
+    // Check if this is an escalated loan with compliance verdict
+    if (this.loan?.status === 'ESCALATED_TO_COMPLIANCE' && this.loan.hasComplianceVerdict) {
+      // Use the new processLoanAfterCompliance method
+      const request = {
+        loanId: this.loan.loanId,
+        assignmentId: this.assignmentId,
+        decision: this.selectedAction,
+        remarks: finalRemarks
+      };
+
+      console.log('Processing loan after compliance verdict:', {
+        officerId: this.officerId,
+        request: request
+      });
+
+      this.loanOfficerService.processLoanAfterCompliance(this.officerId, request).subscribe({
+        next: (response) => {
+          console.log('Loan processing after compliance response:', response);
+          this.processing = false;
+          const actionText = this.selectedAction === 'APPROVE' ? 'approved' : 'rejected';
+          this.success = `Loan ${actionText} successfully after compliance review!`;
+          this.closeActionModal();
+          
+          // Navigate back after 2 seconds
+          setTimeout(() => {
+            this.router.navigate(['/loan-officer/assigned-loans']);
+          }, 2000);
+        },
+        error: (err) => {
+          console.error('Error processing loan after compliance:', err);
+          let errorMessage = 'Failed to process loan after compliance review. Please try again.';
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (typeof err.error === 'string') {
+            errorMessage = err.error;
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+          
+          this.error = errorMessage;
+          this.processing = false;
+        }
+      });
+      return;
+    }
+
+    // Regular loan processing (not escalated or no compliance verdict yet)
     // Compute a robust risk score: prefer enhanced normalized score, then basic loan riskScore, default to 65.
     const computedRisk = Math.round(
       (this.enhancedLoan?.normalizedRiskScore?.finalScore as number | undefined) ??
@@ -598,6 +691,13 @@ export class LoanReviewComponent implements OnInit {
 
   isApproveDisabled(): boolean {
     if (!this.loan) return true;
+    
+    // For escalated loans, check if compliance verdict is available
+    if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+      return !this.loan.hasComplianceVerdict;
+    }
+    
+    // For regular loans, use existing logic
     if (!this.loan.canApproveReject) return true;
     const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
     return !validStatuses.includes(this.loan.status);
@@ -605,6 +705,13 @@ export class LoanReviewComponent implements OnInit {
 
   isRejectDisabled(): boolean {
     if (!this.loan) return true;
+    
+    // For escalated loans, check if compliance verdict is available
+    if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+      return !this.loan.hasComplianceVerdict;
+    }
+    
+    // For regular loans, use existing logic
     if (!this.loan.canApproveReject) return true;
     const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
     return !validStatuses.includes(this.loan.status);

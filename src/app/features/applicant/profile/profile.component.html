@@ -52,7 +52,7 @@
               <i class="fas fa-user"></i>
             </div>
             <h4 class="fw-bold mb-1" style="color: var(--text-primary);">{{ profile.firstName }} {{ profile.lastName }}</h4>
-            <p class="text-muted mb-3">{{ '@' + profile.username }}</p>
+            <p class="text-muted mb-3" *ngIf="profile.username">{{ '@' + profile.username }}</p>
             
             <!-- Status Badges -->
             <div class="d-flex flex-column gap-2 align-items-center">
@@ -272,19 +272,8 @@
                   <h6 class="mb-1">Password</h6>
                   <p class="text-muted mb-0">Last changed: Never</p>
                 </div>
-                <button class="btn btn-outline-secondary">
+                <button class="btn btn-primary" (click)="showChangePasswordModal = true">
                   <i class="fas fa-key me-1"></i>Change Password
-                </button>
-              </div>
-            </div>
-            <div class="security-item mt-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 class="mb-1">Two-Factor Authentication</h6>
-                  <p class="text-muted mb-0">Add extra security to your account</p>
-                </div>
-                <button class="btn btn-outline-secondary">
-                  <i class="fas fa-lock me-1"></i>Enable 2FA
                 </button>
               </div>
             </div>
@@ -294,4 +283,62 @@
     </div>
   </div>
 </div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" [class.show]="showChangePasswordModal" [style.display]="showChangePasswordModal ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" *ngIf="showChangePasswordModal">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-key me-2"></i>Change Password
+        </h5>
+        <button type="button" class="btn-close" (click)="closeChangePasswordModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="changePassword()">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">Current Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.currentPassword" 
+                   name="currentPassword" required
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.newPassword" 
+                   name="newPassword" required minlength="6"
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <small class="text-muted">Password must be at least 6 characters long</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.confirmPassword" 
+                   name="confirmPassword" required
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+          </div>
+          
+          <div *ngIf="passwordError" class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-1"></i>{{ passwordError }}
+          </div>
+          
+          <div *ngIf="passwordSuccess" class="alert alert-success">
+            <i class="fas fa-check-circle me-1"></i>{{ passwordSuccess }}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeChangePasswordModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="changePassword()" 
+                [disabled]="changingPassword || !isPasswordFormValid()">
+          <span *ngIf="changingPassword" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!changingPassword" class="fas fa-save me-1"></i>
+          {{ changingPassword ? 'Changing...' : 'Change Password' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showChangePasswordModal" (click)="closeChangePasswordModal()"></div>
 
