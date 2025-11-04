@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { environment } from '@environments/environment';
 
 export interface LoanScreeningResponse {
@@ -415,13 +416,163 @@ export class LoanOfficerService {
     return this.http.get<ComprehensiveLoanView>(`${this.apiUrl}/loan/${loanId}/comprehensive-view`);
   }
 
-  // Profile Management
+  // Profile Management - Fixed for circular reference issues
   getOfficerProfile(officerId: number): Observable<any> {
-    return this.http.get(`${this.profileUrl}/loan-officer/${officerId}`);
+    console.log('Making profile request to:', `${this.profileUrl}/loan-officer/${officerId}`);
+    
+    return this.http.get(`${this.profileUrl}/loan-officer/${officerId}`, {
+      responseType: 'text'
+    }).pipe(
+      map((response: string) => {
+        console.log('Raw profile response received (length):', response?.length);
+        console.log('Response preview (first 200 chars):', response?.substring(0, 200));
+        console.log('Response preview (last 200 chars):', response?.substring(response.length - 200));
+        
+        try {
+          // Check if response is empty or null
+          if (!response || response.trim() === '') {
+            throw new Error('Empty response from server');
+          }
+          
+          console.log('Attempting to extract profile data using regex patterns...');
+          
+          // Extract profile data using regex patterns to avoid JSON parsing issues
+          const profileData: any = {};
+          
+          // Extract officerId
+          const officerIdMatch = response.match(/"officerId"\s*:\s*(\d+)/);
+          if (officerIdMatch) {
+            profileData.officerId = parseInt(officerIdMatch[1]);
+          }
+          
+          // Extract username
+          const usernameMatch = response.match(/"username"\s*:\s*"([^"]+)"/);
+          if (usernameMatch) {
+            profileData.username = usernameMatch[1];
+          }
+          
+          // Extract email
+          const emailMatch = response.match(/"email"\s*:\s*"([^"]+)"/);
+          if (emailMatch) {
+            profileData.email = emailMatch[1];
+          }
+          
+          // Extract firstName
+          const firstNameMatch = response.match(/"firstName"\s*:\s*"([^"]*)"/);
+          if (firstNameMatch) {
+            profileData.firstName = firstNameMatch[1] || null;
+          }
+          
+          // Extract lastName
+          const lastNameMatch = response.match(/"lastName"\s*:\s*"([^"]*)"/);
+          if (lastNameMatch) {
+            profileData.lastName = lastNameMatch[1] || null;
+          }
+          
+          // Extract loanType
+          const loanTypeMatch = response.match(/"loanType"\s*:\s*"([^"]*)"/);
+          if (loanTypeMatch) {
+            profileData.loanType = loanTypeMatch[1] || null;
+          }
+          
+          // Extract createdAt
+          const createdAtMatch = response.match(/"createdAt"\s*:\s*"([^"]*)"/);
+          if (createdAtMatch) {
+            profileData.createdAt = createdAtMatch[1] || null;
+          }
+          
+          // Extract updatedAt
+          const updatedAtMatch = response.match(/"updatedAt"\s*:\s*"([^"]*)"/);
+          if (updatedAtMatch) {
+            profileData.updatedAt = updatedAtMatch[1] || null;
+          }
+          
+          // Validate that we got the essential fields
+          if (!profileData.officerId || !profileData.username || !profileData.email) {
+            console.error('Missing essential profile fields:', profileData);
+            throw new Error('Could not extract essential profile data from response');
+          }
+          
+          console.log('Successfully extracted profile data using regex:', profileData);
+          return profileData;
+          
+        } catch (parseError: any) {
+          console.error('JSON Parse Error:', parseError);
+          console.log('Failed to parse response length:', response?.length);
+          
+          // Try to identify the issue
+          if (response?.includes('<!DOCTYPE html>')) {
+            throw new Error('Server returned HTML instead of JSON. Check if the endpoint exists.');
+          } else if (response?.includes('error') || response?.includes('exception')) {
+            throw new Error('Server returned an error response');
+          } else {
+            throw new Error(`Circular reference detected in JSON response. Backend needs @JsonIgnore on relationships.`);
+          }
+        }
+      }),
+      catchError((error: any) => {
+        console.error('Profile API error:', error);
+        
+        if (error.status === 0) {
+          return throwError(() => new Error('Cannot connect to server. Please check if the backend is running.'));
+        } else if (error.status === 404) {
+          return throwError(() => new Error('Loan officer profile endpoint not found.'));
+        } else if (error.status === 403) {
+          return throwError(() => new Error('Access denied. Please check your permissions.'));
+        } else if (error.status === 401) {
+          return throwError(() => new Error('Authentication required. Please login again.'));
+        } else if (error.status === 500) {
+          return throwError(() => new Error('Server error. Please try again later.'));
+        } else {
+          return throwError(() => new Error(error.message || 'Failed to load profile'));
+        }
+      })
+    );
+  }
+
+  // Alternative profile method with standard JSON parsing
+  getOfficerProfileAlternative(officerId: number): Observable<any> {
+    console.log('Trying alternative profile request to:', `${this.profileUrl}/loan-officer/${officerId}`);
+    
+    return this.http.get<any>(`${this.profileUrl}/loan-officer/${officerId}`).pipe(
+      map((data: any) => {
+        console.log('Alternative method - received data:', data);
+        
+        // Extract only needed fields to avoid circular references
+        const profileData = {
+          officerId: data.officerId,
+          username: data.username,
+          email: data.email,
+          firstName: data.firstName || null,
+          lastName: data.lastName || null,
+          loanType: data.loanType || null,
+          createdAt: data.createdAt || null,
+          updatedAt: data.updatedAt || null
+        };
+        
+        console.log('Alternative method - extracted profile:', profileData);
+        return profileData;
+      }),
+      catchError((error: any) => {
+        console.error('Alternative profile method error:', error);
+        return throwError(() => new Error(`Alternative method failed: ${error.message || 'Unknown error'}`));
+      })
+    );
   }
 
   updateOfficerProfile(officerId: number, profileData: any): Observable<any> {
     return this.http.put(`${this.profileUrl}/loan-officer/${officerId}`, profileData);
+  }
+
+  // Change password
+  changePassword(officerId: number, passwordData: { currentPassword: string, newPassword: string }): Observable<any> {
+    console.log('Making password change request for officer:', officerId);
+    return this.http.post(`${this.profileUrl}/change-password/LOAN_OFFICER/${officerId}`, passwordData).pipe(
+      catchError((error: any) => {
+        console.error('Password change API error:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
   // Trigger fraud screening

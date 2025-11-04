@@ -188,23 +188,58 @@
           </h5>
         </div>
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded" style="background-color: var(--bg-secondary);">
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-secondary);">
             <div>
               <h6 class="mb-1">Password</h6>
-              <p class="text-muted mb-0 small">Last changed: Never</p>
+              <p class="text-muted mb-0 small">Keep your account secure with a strong password</p>
             </div>
-            <button class="btn btn-outline-secondary">
+            <button class="btn btn-outline-primary" (click)="togglePasswordChangeMode()">
               <i class="fas fa-key me-1"></i>Change Password
             </button>
           </div>
-          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-secondary);">
-            <div>
-              <h6 class="mb-1">Two-Factor Authentication</h6>
-              <p class="text-muted mb-0 small">Add extra security to your account</p>
-            </div>
-            <button class="btn btn-outline-secondary">
-              <i class="fas fa-lock me-1"></i>Enable 2FA
-            </button>
+          
+          <!-- Password Change Form -->
+          <div *ngIf="passwordChangeMode" class="mt-3 p-3 rounded" style="background-color: var(--bg-secondary);">
+            <form (ngSubmit)="changePassword()" #passwordForm="ngForm">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                    <i class="fas fa-lock me-2 text-primary"></i>Current Password
+                  </label>
+                  <input type="password" class="form-control" [(ngModel)]="passwordChangeForm.currentPassword"
+                         style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" 
+                         name="currentPassword" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                    <i class="fas fa-key me-2 text-primary"></i>New Password
+                  </label>
+                  <input type="password" class="form-control" [(ngModel)]="passwordChangeForm.newPassword"
+                         style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" 
+                         name="newPassword" required minlength="6">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                    <i class="fas fa-key me-2 text-primary"></i>Confirm New Password
+                  </label>
+                  <input type="password" class="form-control" [(ngModel)]="passwordChangeForm.confirmPassword"
+                         style="background-color: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);" 
+                         name="confirmPassword" required>
+                </div>
+                <div class="col-12">
+                  <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success" [disabled]="!passwordForm.valid || passwordChanging">
+                      <i class="fas fa-save me-1"></i>
+                      <span *ngIf="!passwordChanging">Update Password</span>
+                      <span *ngIf="passwordChanging">Updating...</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary" (click)="cancelPasswordChange()">
+                      <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
