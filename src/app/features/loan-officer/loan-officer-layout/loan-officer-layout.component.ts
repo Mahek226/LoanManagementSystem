@@ -37,6 +37,8 @@ export class LoanOfficerLayoutComponent implements OnInit {
       this.activeTab = 'dashboard';
     } else if (route.includes('assigned-loans')) {
       this.activeTab = 'assigned-loans';
+    } else if (route.includes('document-requests')) {
+      this.activeTab = 'document-requests';
     } else if (route.includes('profile')) {
       this.activeTab = 'profile';
     }
@@ -50,6 +52,9 @@ export class LoanOfficerLayoutComponent implements OnInit {
         break;
       case 'assigned-loans':
         this.router.navigate(['/loan-officer/assigned-loans']);
+        break;
+      case 'document-requests':
+        this.router.navigate(['/loan-officer/document-requests']);
         break;
       case 'profile':
         this.router.navigate(['/loan-officer/profile']);

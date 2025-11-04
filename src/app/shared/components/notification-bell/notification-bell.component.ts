@@ -19,6 +19,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   loading = false;
   
   private subscriptions: Subscription[] = [];
+  private documentClickListener = this.onDocumentClick.bind(this);
 
   constructor(
     private notificationService: NotificationService,
@@ -48,19 +49,32 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
       // Start polling for notifications
       this.notificationService.startPolling(userId);
     }
+
+    // Add document click listener to close dropdown
+    document.addEventListener('click', this.documentClickListener);
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.notificationService.stopPolling();
+    document.removeEventListener('click', this.documentClickListener);
   }
 
-  toggleDropdown(): void {
+  toggleDropdown(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
     this.showDropdown = !this.showDropdown;
   }
 
   closeDropdown(): void {
     this.showDropdown = false;
+  }
+
+  onDocumentClick(event: Event): void {
+    if (this.showDropdown) {
+      this.closeDropdown();
+    }
   }
 
   markAsRead(notification: Notification, event: Event): void {

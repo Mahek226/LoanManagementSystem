@@ -176,10 +176,16 @@
                           title="Verify Documents">
                     <i class="fas fa-file-check me-1"></i>Docs
                   </button>
-                  <button class="btn btn-sm btn-primary" 
+                  <button class="btn btn-sm" 
+                          [class.btn-primary]="!isLoanScreened(loan)"
+                          [class.btn-info]="isLoanScreened(loan)"
                           (click)="startScreening(loan.assignmentId)"
-                          title="Start Screening Process">
-                    <i class="fas fa-search me-1"></i>Screen
+                          [title]="isLoanScreened(loan) ? 'View Screening Results' : 'Start Screening Process'">
+                    <i class="fas" 
+                       [class.fa-search]="!isLoanScreened(loan)"
+                       [class.fa-eye]="isLoanScreened(loan)"
+                       class="me-1"></i>
+                    {{ isLoanScreened(loan) ? 'Results' : 'Screen' }}
                   </button>
                 </div>
               </td>
@@ -262,9 +268,15 @@
               </button>
             </div>
             <div class="col-4">
-              <button class="btn btn-primary w-100" (click)="startScreening(loan.assignmentId)" title="Start Screening">
-                <i class="fas fa-search d-block mb-1"></i>
-                <small>Screen</small>
+              <button class="btn w-100" 
+                      [class.btn-primary]="!isLoanScreened(loan)"
+                      [class.btn-info]="isLoanScreened(loan)"
+                      (click)="startScreening(loan.assignmentId)" 
+                      [title]="isLoanScreened(loan) ? 'View Results' : 'Start Screening'">
+                <i class="fas d-block mb-1" 
+                   [class.fa-search]="!isLoanScreened(loan)"
+                   [class.fa-eye]="isLoanScreened(loan)"></i>
+                <small>{{ isLoanScreened(loan) ? 'Results' : 'Screen' }}</small>
               </button>
             </div>
           </div>
@@ -680,8 +692,15 @@
         <button type="button" class="btn btn-warning" (click)="verifyDocuments(selectedLoan.assignmentId, selectedLoan.loanId); closeLoanDetailsModal()">
           <i class="fas fa-file-check me-2"></i>Verify Documents
         </button>
-        <button type="button" class="btn btn-primary" (click)="startScreening(selectedLoan.assignmentId); closeLoanDetailsModal()">
-          <i class="fas fa-search me-2"></i>Start Screening
+        <button type="button" 
+                class="btn" 
+                [class.btn-primary]="!isLoanScreened(selectedLoan)"
+                [class.btn-info]="isLoanScreened(selectedLoan)"
+                (click)="startScreening(selectedLoan.assignmentId); closeLoanDetailsModal()">
+          <i class="fas me-2" 
+             [class.fa-search]="!isLoanScreened(selectedLoan)"
+             [class.fa-eye]="isLoanScreened(selectedLoan)"></i>
+          {{ isLoanScreened(selectedLoan) ? 'View Results' : 'Start Screening' }}
         </button>
       </div>
     </div>

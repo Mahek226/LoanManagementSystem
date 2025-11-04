@@ -31,11 +31,13 @@ export class LoanReviewComponent implements OnInit {
   processing = false;
   error = '';
   success = '';
+  viewMode: string = 'screening'; // 'screening' or 'results'
 
   loan: LoanScreeningResponse | null = null;
   enhancedLoan: EnhancedLoanScreeningResponse | null = null;
   documents: LoanDocument[] = [];
   fraudCheckResult: FraudCheckResult | null = null;
+  complianceVerdict: any = null;
 
   // Action form
   selectedAction: string = '';
@@ -87,6 +89,11 @@ export class LoanReviewComponent implements OnInit {
         this.loadLoanDetails();
       }
     });
+    
+    // Check for viewMode query parameter
+    this.route.queryParams.subscribe(params => {
+      this.viewMode = params['viewMode'] || 'screening';
+    });
   }
 
   loadDocuments(): void {
@@ -107,12 +114,44 @@ export class LoanReviewComponent implements OnInit {
     
     this.loanOfficerService.getFraudCheckResults(this.loan.loanId).subscribe({
       next: (result) => {
+        console.log('Fraud check results loaded:', result);
         this.fraudCheckResult = result;
         this.fraudCheckTriggered = true;
       },
       error: (err) => {
         console.error('Error loading fraud check results:', err);
+        console.log('No fraud check data available - this is normal if fraud check hasn\'t been run yet');
         this.fraudCheckTriggered = false;
+        this.fraudCheckResult = null;
+      }
+    });
+  }
+
+  loadComplianceVerdict(): void {
+    if (!this.loan) return;
+    
+    this.loanOfficerService.getComplianceVerdictForLoan(this.loan.loanId).subscribe({
+      next: (verdict: any) => {
+        console.log('Compliance verdict loaded:', verdict);
+        this.complianceVerdict = verdict;
+        // Update loan object with compliance verdict details
+        if (this.loan) {
+          this.loan.complianceVerdict = verdict.verdict;
+          this.loan.complianceVerdictReason = verdict.verdictReason;
+          this.loan.complianceRemarks = verdict.detailedRemarks;
+          this.loan.complianceOfficerName = verdict.complianceOfficerName;
+          this.loan.complianceVerdictTimestamp = verdict.verdictTimestamp;
+          this.loan.nextAction = verdict.nextAction;
+          this.loan.hasComplianceVerdict = true;
+        }
+      },
+      error: (err: any) => {
+        console.error('Error loading compliance verdict:', err);
+        console.log('No compliance verdict available yet');
+        this.complianceVerdict = null;
+        if (this.loan) {
+          this.loan.hasComplianceVerdict = false;
+        }
       }
     });
   }
@@ -142,13 +181,25 @@ export class LoanReviewComponent implements OnInit {
           processedAt: enhancedData.processedAt,
           officerId: enhancedData.officerId,
           officerName: enhancedData.officerName,
-          officerType: enhancedData.officerType
+          officerType: enhancedData.officerType,
+          // Add compliance verdict fields
+          complianceVerdict: enhancedData.complianceVerdict,
+          complianceVerdictReason: enhancedData.complianceVerdictReason,
+          complianceRemarks: enhancedData.complianceRemarks,
+          complianceOfficerName: enhancedData.complianceOfficerName,
+          complianceVerdictTimestamp: enhancedData.complianceVerdictTimestamp,
+          nextAction: enhancedData.nextAction,
+          hasComplianceVerdict: enhancedData.hasComplianceVerdict
         };
         this.loading = false;
         console.log('Enhanced loan details loaded:', this.enhancedLoan);
         // Load documents and fraud check results
         this.loadDocuments();
         this.loadFraudCheckResults();
+        // Load compliance verdict if loan is escalated
+        if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+          this.loadComplianceVerdict();
+        }
       },
       error: (err) => {
         console.error('Error loading enhanced loan details:', err);
@@ -159,6 +210,10 @@ export class LoanReviewComponent implements OnInit {
             this.loading = false;
             this.loadDocuments();
             this.loadFraudCheckResults();
+            // Load compliance verdict if loan is escalated
+            if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+              this.loadComplianceVerdict();
+            }
           },
           error: (err2) => {
             console.error('Error loading loan details:', err2);
@@ -215,6 +270,53 @@ export class LoanReviewComponent implements OnInit {
       ? `${this.remarks}${this.rejectionReason ? ' - ' + this.rejectionReason : ''}`
       : this.remarks || 'All verification checks passed';
 
+    // Check if this is an escalated loan with compliance verdict
+    if (this.loan?.status === 'ESCALATED_TO_COMPLIANCE' && this.loan.hasComplianceVerdict) {
+      // Use the new processLoanAfterCompliance method
+      const request = {
+        loanId: this.loan.loanId,
+        assignmentId: this.assignmentId,
+        decision: this.selectedAction,
+        remarks: finalRemarks
+      };
+
+      console.log('Processing loan after compliance verdict:', {
+        officerId: this.officerId,
+        request: request
+      });
+
+      this.loanOfficerService.processLoanAfterCompliance(this.officerId, request).subscribe({
+        next: (response) => {
+          console.log('Loan processing after compliance response:', response);
+          this.processing = false;
+          const actionText = this.selectedAction === 'APPROVE' ? 'approved' : 'rejected';
+          this.success = `Loan ${actionText} successfully after compliance review!`;
+          this.closeActionModal();
+          
+          // Navigate back after 2 seconds
+          setTimeout(() => {
+            this.router.navigate(['/loan-officer/assigned-loans']);
+          }, 2000);
+        },
+        error: (err) => {
+          console.error('Error processing loan after compliance:', err);
+          let errorMessage = 'Failed to process loan after compliance review. Please try again.';
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (typeof err.error === 'string') {
+            errorMessage = err.error;
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+          
+          this.error = errorMessage;
+          this.processing = false;
+        }
+      });
+      return;
+    }
+
+    // Regular loan processing (not escalated or no compliance verdict yet)
     // Compute a robust risk score: prefer enhanced normalized score, then basic loan riskScore, default to 65.
     const computedRisk = Math.round(
       (this.enhancedLoan?.normalizedRiskScore?.finalScore as number | undefined) ??
@@ -589,6 +691,13 @@ export class LoanReviewComponent implements OnInit {
 
   isApproveDisabled(): boolean {
     if (!this.loan) return true;
+    
+    // For escalated loans, check if compliance verdict is available
+    if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+      return !this.loan.hasComplianceVerdict;
+    }
+    
+    // For regular loans, use existing logic
     if (!this.loan.canApproveReject) return true;
     const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
     return !validStatuses.includes(this.loan.status);
@@ -596,6 +705,13 @@ export class LoanReviewComponent implements OnInit {
 
   isRejectDisabled(): boolean {
     if (!this.loan) return true;
+    
+    // For escalated loans, check if compliance verdict is available
+    if (this.loan.status === 'ESCALATED_TO_COMPLIANCE' || this.loan.status === 'COMPLIANCE_VERDICT_AVAILABLE') {
+      return !this.loan.hasComplianceVerdict;
+    }
+    
+    // For regular loans, use existing logic
     if (!this.loan.canApproveReject) return true;
     const validStatuses = ['ASSIGNED', 'PENDING', 'IN_PROGRESS'];
     return !validStatuses.includes(this.loan.status);
@@ -638,6 +754,299 @@ export class LoanReviewComponent implements OnInit {
   // Tab switching
   switchTab(tab: string): void {
     this.activeTab = tab;
+  }
+  
+  // Navigate to verify documents page
+  navigateToVerifyDocuments(): void {
+    if (this.loan) {
+      this.router.navigate(['/loan-officer/verify-documents', this.assignmentId], {
+        queryParams: { loanId: this.loan.loanId }
+      });
+    }
+  }
+
+  // ==================== Real Data Helper Methods ====================
+  
+  // Document verification progress
+  getDocumentVerificationProgress(): number {
+    if (this.documents.length === 0) return 0;
+    return Math.round((this.getVerifiedDocumentsCount() / this.documents.length) * 100);
+  }
+
+  // Identity verification status
+  getIdentityVerificationStatus(): boolean {
+    // Check if PAN and Aadhaar documents are verified
+    const panDoc = this.documents.find(d => d.documentType === 'PAN_CARD');
+    const aadhaarDoc = this.documents.find(d => d.documentType === 'AADHAAR_CARD');
+    return (panDoc?.verificationStatus === 'VERIFIED') && (aadhaarDoc?.verificationStatus === 'VERIFIED');
+  }
+
+  getIdentityVerificationText(): string {
+    const panDoc = this.documents.find(d => d.documentType === 'PAN_CARD');
+    const aadhaarDoc = this.documents.find(d => d.documentType === 'AADHAAR_CARD');
+    
+    if (!panDoc && !aadhaarDoc) return 'Identity documents not uploaded';
+    if (panDoc?.verificationStatus === 'VERIFIED' && aadhaarDoc?.verificationStatus === 'VERIFIED') {
+      return 'PAN and Aadhaar cross-verification completed';
+    }
+    if (panDoc?.verificationStatus === 'VERIFIED' || aadhaarDoc?.verificationStatus === 'VERIFIED') {
+      return 'Partial identity verification completed';
+    }
+    return 'Identity verification pending';
+  }
+
+  // Financial analysis status
+  getFinancialAnalysisStatus(): boolean {
+    if (!this.loan) return false;
+    // Consider financial analysis complete if risk score is calculated
+    return this.loan.riskScore > 0;
+  }
+
+  getFinancialAnalysisText(): string {
+    if (!this.loan) return 'Loan data not loaded';
+    if (this.loan.riskScore > 0) {
+      return `Risk score: ${this.loan.riskScore}% (${this.loan.riskLevel} risk)`;
+    }
+    return 'Financial analysis pending';
+  }
+
+  getFinancialAnalysisProgress(): number {
+    if (!this.loan) return 0;
+    return this.loan.riskScore > 0 ? 100 : 0;
+  }
+
+  getFinancialStatusText(): string {
+    if (!this.loan) return 'Pending';
+    if (this.loan.riskLevel === 'LOW') return 'Stable';
+    if (this.loan.riskLevel === 'MEDIUM') return 'Moderate';
+    if (this.loan.riskLevel === 'HIGH') return 'High Risk';
+    return 'Under Review';
+  }
+
+  // Fraud check status
+  getFraudCheckStatusText(): string {
+    if (this.fraudCheckLoading) return 'Running fraud detection...';
+    if (!this.fraudCheckResult) return 'Fraud check not performed';
+    
+    const rulesCount = this.fraudCheckResult.flaggedRules?.length || 0;
+    if (rulesCount === 0) {
+      return 'No fraud indicators detected';
+    }
+    return `${rulesCount} fraud rule(s) flagged - ${this.fraudCheckResult.riskLevel} risk`;
+  }
+
+  getFraudCheckProgress(): number {
+    if (this.fraudCheckLoading) return 60;
+    if (!this.fraudCheckResult) return 0;
+    return 100;
+  }
+
+  getFraudCheckBadgeText(): string {
+    if (this.fraudCheckLoading) return 'Running';
+    if (!this.fraudCheckResult) return 'Pending';
+    return this.fraudCheckResult.riskLevel;
+  }
+
+  // Final risk assessment
+  getFinalRiskAssessmentText(): string {
+    if (!this.loan) return 'Risk assessment pending';
+    return `${this.loan.riskLevel} risk (${this.loan.riskScore}% score)`;
+  }
+
+  // ==================== Fraud Score Calculation Methods ====================
+  
+  // Count rules by severity
+  getCriticalRulesCount(): number {
+    if (!this.fraudCheckResult?.flaggedRules) return 0;
+    return this.fraudCheckResult.flaggedRules.filter(rule => rule.severity === 'CRITICAL').length;
+  }
+
+  getHighRulesCount(): number {
+    if (!this.fraudCheckResult?.flaggedRules) return 0;
+    return this.fraudCheckResult.flaggedRules.filter(rule => rule.severity === 'HIGH').length;
+  }
+
+  getMediumRulesCount(): number {
+    if (!this.fraudCheckResult?.flaggedRules) return 0;
+    return this.fraudCheckResult.flaggedRules.filter(rule => rule.severity === 'MEDIUM').length;
+  }
+
+  getLowRulesCount(): number {
+    if (!this.fraudCheckResult?.flaggedRules) return 0;
+    return this.fraudCheckResult.flaggedRules.filter(rule => rule.severity === 'LOW').length;
+  }
+
+  // Calculate base score using the formula: Base = min(60, Critical×15 + High×10 + Medium×5 + Low×2)
+  getBaseScore(): number {
+    const critical = this.getCriticalRulesCount();
+    const high = this.getHighRulesCount();
+    const medium = this.getMediumRulesCount();
+    const low = this.getLowRulesCount();
+    
+    const baseScore = critical * 15 + high * 10 + medium * 5 + low * 2;
+    return Math.min(60, baseScore);
+  }
+
+  // Calculate points score using the formula: Points = min(40, RawScore/800×40)
+  getPointsScore(): number {
+    const totalPoints = this.getTotalPointsDeducted();
+    const pointsScore = (totalPoints / 800) * 40;
+    return Math.min(40, Math.round(pointsScore));
+  }
+
+  // ==================== Mock Data for Testing ====================
+  
+  createMockFraudData(): void {
+    console.log('Creating mock fraud data for testing...');
+    
+    // Create mock fraud check result with various severity rules
+    this.fraudCheckResult = {
+      checkId: 1,
+      loanId: this.loan?.loanId || 0,
+      applicantId: this.loan?.applicantId || 0,
+      panNumber: 'ABCDE1234F',
+      aadhaarNumber: '1234-5678-9012',
+      phoneNumber: '+91-9876543210',
+      email: 'test@example.com',
+      fraudTags: ['DUPLICATE_PAN', 'HIGH_RISK_LOCATION', 'SUSPICIOUS_INCOME'],
+      riskLevel: 'HIGH',
+      riskScore: 75,
+      apiRemarks: 'Multiple fraud indicators detected. Recommend manual review.',
+      checkedAt: new Date().toISOString(),
+      flaggedRules: [
+        {
+          ruleId: 1,
+          ruleCode: 'FR001',
+          ruleName: 'Duplicate PAN Number',
+          description: 'The provided PAN number has been used in multiple loan applications within the last 30 days.',
+          category: 'IDENTITY_FRAUD',
+          severity: 'CRITICAL',
+          points: 50
+        },
+        {
+          ruleId: 2,
+          ruleCode: 'FR002',
+          ruleName: 'High Risk Location',
+          description: 'Applicant address is in a high-risk fraud zone based on historical data.',
+          category: 'LOCATION_RISK',
+          severity: 'HIGH',
+          points: 30
+        },
+        {
+          ruleId: 3,
+          ruleCode: 'FR003',
+          ruleName: 'Income Inconsistency',
+          description: 'Declared income shows significant variance from employment records.',
+          category: 'FINANCIAL_FRAUD',
+          severity: 'MEDIUM',
+          points: 20
+        },
+        {
+          ruleId: 4,
+          ruleCode: 'FR004',
+          ruleName: 'Phone Number Pattern',
+          description: 'Phone number follows a pattern commonly associated with fraudulent applications.',
+          category: 'CONTACT_FRAUD',
+          severity: 'LOW',
+          points: 10
+        }
+      ]
+    };
+    
+    this.fraudCheckTriggered = true;
+    console.log('Mock fraud data created:', this.fraudCheckResult);
+  }
+
+  // ==================== Current Risk Data Methods ====================
+  
+  // Get current risk level - always use loan data as it's the primary risk assessment
+  getCurrentRiskLevel(): string {
+    return this.loan?.riskLevel || 'UNKNOWN';
+  }
+
+  // Get current risk score - always use loan data as it's the primary risk assessment  
+  getCurrentRiskScore(): number {
+    return this.loan?.riskScore || 0;
+  }
+
+  // Get current check date (fraud check date or current time)
+  getCurrentCheckDate(): string {
+    if (this.fraudCheckResult) {
+      return this.formatDate(this.fraudCheckResult.checkedAt);
+    }
+    return this.formatDate(new Date().toISOString());
+  }
+
+  // ==================== Loan Risk Calculation Methods ====================
+  
+  // Calculate credit score impact (0-50 points based on risk level)
+  getLoanCreditScoreImpact(): number {
+    if (!this.loan) return 0;
+    
+    // Distribute risk score across components based on loan risk level
+    if (this.loan.riskLevel === 'HIGH') {
+      return Math.round(this.loan.riskScore * 0.4); // 40% of total risk
+    } else if (this.loan.riskLevel === 'MEDIUM') {
+      return Math.round(this.loan.riskScore * 0.35); // 35% of total risk
+    } else {
+      return Math.round(this.loan.riskScore * 0.3); // 30% of total risk
+    }
+  }
+
+  // Calculate income analysis impact (0-30 points)
+  getLoanIncomeImpact(): number {
+    if (!this.loan) return 0;
+    
+    if (this.loan.riskLevel === 'HIGH') {
+      return Math.round(this.loan.riskScore * 0.25); // 25% of total risk
+    } else if (this.loan.riskLevel === 'MEDIUM') {
+      return Math.round(this.loan.riskScore * 0.3); // 30% of total risk
+    } else {
+      return Math.round(this.loan.riskScore * 0.35); // 35% of total risk
+    }
+  }
+
+  // Calculate DTI impact (0-25 points)
+  getLoanDTIImpact(): number {
+    if (!this.loan) return 0;
+    
+    if (this.loan.riskLevel === 'HIGH') {
+      return Math.round(this.loan.riskScore * 0.2); // 20% of total risk
+    } else if (this.loan.riskLevel === 'MEDIUM') {
+      return Math.round(this.loan.riskScore * 0.2); // 20% of total risk
+    } else {
+      return Math.round(this.loan.riskScore * 0.2); // 20% of total risk
+    }
+  }
+
+  // Calculate other factors (0-15 points)
+  getLoanOtherFactors(): number {
+    if (!this.loan) return 0;
+    
+    const creditImpact = this.getLoanCreditScoreImpact();
+    const incomeImpact = this.getLoanIncomeImpact();
+    const dtiImpact = this.getLoanDTIImpact();
+    
+    // Calculate remaining points to reach total risk score
+    return Math.max(0, this.loan.riskScore - creditImpact - incomeImpact - dtiImpact);
+  }
+
+  // Get total risk points (should equal loan.riskScore)
+  getLoanTotalRiskPoints(): number {
+    return this.getLoanCreditScoreImpact() + this.getLoanIncomeImpact() + 
+           this.getLoanDTIImpact() + this.getLoanOtherFactors();
+  }
+
+  // Get risk level description
+  getRiskLevelDescription(): string {
+    if (!this.loan) return '';
+    
+    switch (this.loan.riskLevel) {
+      case 'LOW': return 'Low risk - Excellent creditworthiness';
+      case 'MEDIUM': return 'Medium risk - Good creditworthiness with some concerns';
+      case 'HIGH': return 'High risk - Significant creditworthiness concerns';
+      default: return 'Risk level unknown';
+    }
   }
 
   // Fraud check calculation helpers

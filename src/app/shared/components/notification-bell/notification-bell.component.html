@@ -1,7 +1,12 @@
 <div class="notification-bell position-relative">
+  <!-- Debug info (remove in production) -->
+  <!-- <small class="text-muted d-block">Debug: showDropdown={{showDropdown}}, unreadCount={{unreadCount}}, notifications={{notifications.length}}</small> -->
   <!-- Bell Icon -->
-  <button class="btn btn-link position-relative p-2" (click)="toggleDropdown()" type="button">
-    <i class="bi bi-bell fs-5 text-dark"></i>
+  <button class="btn btn-link position-relative p-2" 
+          (click)="toggleDropdown($event)" 
+          type="button"
+          style="cursor: pointer; z-index: 10;">
+    <i class="fas fa-bell fs-5" style="color: #333;"></i>
     <span *ngIf="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
       {{ unreadCount > 99 ? '99+' : unreadCount }}
     </span>
@@ -10,7 +15,7 @@
   <!-- Dropdown Menu -->
   <div class="notification-dropdown card shadow-lg" 
        [class.show]="showDropdown"
-       (clickOutside)="closeDropdown()">
+       (click)="$event.stopPropagation()">
     
     <!-- Header -->
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
@@ -31,7 +36,7 @@
       </div>
 
       <div *ngIf="!loading && notifications.length === 0" class="text-center py-5 text-muted">
-        <i class="bi bi-bell-slash fs-1 d-block mb-3"></i>
+        <i class="fas fa-bell-slash fs-1 d-block mb-3"></i>
         <p class="mb-0">No notifications yet</p>
       </div>
 
@@ -53,7 +58,7 @@
             <h6 class="notification-title mb-1 fw-semibold">{{ notification.title }}</h6>
             <p class="notification-message mb-1 text-muted small">{{ notification.message }}</p>
             <span class="notification-time text-muted small">
-              <i class="bi bi-clock me-1"></i>{{ formatTime(notification.createdAt) }}
+              <i class="fas fa-clock me-1"></i>{{ formatTime(notification.createdAt) }}
             </span>
           </div>
 
@@ -63,12 +68,12 @@
                     class="btn btn-sm btn-link p-1 text-primary" 
                     (click)="markAsRead(notification, $event)"
                     title="Mark as read">
-              <i class="bi bi-check2"></i>
+              <i class="fas fa-check"></i>
             </button>
             <button class="btn btn-sm btn-link p-1 text-danger" 
                     (click)="deleteNotification(notification.notificationId, $event)"
                     title="Delete">
-              <i class="bi bi-trash"></i>
+              <i class="fas fa-trash"></i>
             </button>
           </div>
         </div>

@@ -1,0 +1,386 @@
+<!-- Document Viewer Modal -->
+<div class="modal fade show d-block" *ngIf="show && document" 
+     style="background-color: rgba(0,0,0,0.8);" 
+     (click)="closeModal()">
+  <div class="modal-dialog modal-fullscreen" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: #f8f9fa;">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom-0 bg-white shadow-sm">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="fas {{ getDocumentIcon(document.documentType) }} fs-4" [ngClass]="getThemeClass()"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0 text-dark">
+              {{ document.documentType.replace('_', ' ') | titlecase }}
+            </h5>
+            <small class="text-muted">{{ document.documentName || document.originalFilename || 'Document' }}</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <!-- Tab Navigation -->
+          <div class="btn-group" role="group">
+            <button type="button" 
+                    class="btn btn-sm"
+                    [class]="'btn-' + themeColor"
+                    [class.btn-outline-primary]="activeTab !== 'parse' && themeColor === 'primary'"
+                    [class.btn-outline-danger]="activeTab !== 'parse' && themeColor === 'danger'"
+                    [class.btn-outline-warning]="activeTab !== 'parse' && themeColor === 'warning'"
+                    [class.btn-outline-success]="activeTab !== 'parse' && themeColor === 'success'"
+                    (click)="activeTab = 'parse'">
+              Parse
+            </button>
+            <button type="button" 
+                    class="btn btn-sm"
+                    [class]="'btn-' + themeColor"
+                    [class.btn-outline-primary]="activeTab !== 'extract' && themeColor === 'primary'"
+                    [class.btn-outline-danger]="activeTab !== 'extract' && themeColor === 'danger'"
+                    [class.btn-outline-warning]="activeTab !== 'extract' && themeColor === 'warning'"
+                    [class.btn-outline-success]="activeTab !== 'extract' && themeColor === 'success'"
+                    (click)="activeTab = 'extract'">
+              Extract
+            </button>
+            <button type="button" 
+                    class="btn btn-sm"
+                    [class]="'btn-' + themeColor"
+                    [class.btn-outline-primary]="activeTab !== 'chat' && themeColor === 'primary'"
+                    [class.btn-outline-danger]="activeTab !== 'chat' && themeColor === 'danger'"
+                    [class.btn-outline-warning]="activeTab !== 'chat' && themeColor === 'warning'"
+                    [class.btn-outline-success]="activeTab !== 'chat' && themeColor === 'success'"
+                    (click)="activeTab = 'chat'">
+              Chat
+            </button>
+          </div>
+          <button type="button" class="btn-close" (click)="closeModal()"></button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-0" style="height: calc(100vh - 120px);">
+        <div class="row g-0 h-100">
+          <!-- Document Preview - Left Side -->
+          <div class="col-6 border-end">
+            <div class="h-100 d-flex flex-column">
+              <!-- Document Navigation -->
+              <div class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <span class="text-muted small">1 / 1</span>
+                  <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-sm btn-outline-secondary" title="Zoom Out">
+                    <i class="fas fa-search-minus"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" title="Zoom In">
+                    <i class="fas fa-search-plus"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" title="Fit to Width">
+                    <i class="fas fa-expand-arrows-alt"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Document Image -->
+              <div class="flex-grow-1 p-3 d-flex flex-column" 
+                   style="background-color: #e9ecef; overflow: auto;">
+                
+                <!-- Image Toggle Controls -->
+                <div class="mb-2 d-flex justify-content-center" *ngIf="annotatedImageUrl">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" 
+                            class="btn"
+                            [class.btn-primary]="!showAnnotatedImage"
+                            [class.btn-outline-primary]="showAnnotatedImage"
+                            (click)="showAnnotatedImage = false">
+                      <i class="fas fa-image me-1"></i>Original
+                    </button>
+                    <button type="button" 
+                            class="btn"
+                            [class.btn-success]="showAnnotatedImage"
+                            [class.btn-outline-success]="!showAnnotatedImage"
+                            (click)="showAnnotatedImage = true">
+                      <i class="fas fa-search-location me-1"></i>With Bounding Boxes
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Document Image Container -->
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                  <div class="document-container position-relative">
+                    <!-- Original Image -->
+                    <img *ngIf="!showAnnotatedImage"
+                         [src]="document.documentUrl || document.cloudinaryUrl || document.fileUrl" 
+                         [alt]="document.documentName || document.originalFilename"
+                         class="img-fluid shadow-lg rounded"
+                         style="max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #fff;"
+                         onerror="this.src='assets/images/document-placeholder.png'">
+                    
+                    <!-- Annotated Image -->
+                    <img *ngIf="showAnnotatedImage && annotatedImageUrl"
+                         [src]="annotatedImageUrl" 
+                         [alt]="'Annotated ' + (document.documentName || document.originalFilename)"
+                         class="img-fluid shadow-lg rounded"
+                         style="max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #28a745;"
+                         onerror="this.src='assets/images/document-placeholder.png'">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Data - Right Side -->
+          <div class="col-6">
+            <div class="h-100 d-flex flex-column">
+              <!-- Tab Content Header -->
+              <div class="p-3 bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0 fw-bold text-dark" *ngIf="activeTab === 'parse'">
+                    <i class="fas fa-code me-2 text-success"></i>Parsed Data
+                  </h6>
+                  <h6 class="mb-0 fw-bold text-dark" *ngIf="activeTab === 'extract'">
+                    <i class="fas fa-robot me-2 text-info"></i>AI Extraction
+                  </h6>
+                  <h6 class="mb-0 fw-bold text-dark" *ngIf="activeTab === 'chat'">
+                    <i class="fas fa-comments me-2 text-warning"></i>Document Chat
+                  </h6>
+                  
+                  <!-- Extract Button -->
+                  <button class="btn btn-sm btn-success" 
+                          *ngIf="activeTab === 'parse' && canExtract && !extractedData"
+                          (click)="extractDocument()"
+                          [disabled]="extracting">
+                    <span *ngIf="!extracting">
+                      <i class="fas fa-magic me-2"></i>Extract Data
+                    </span>
+                    <span *ngIf="extracting">
+                      <i class="fas fa-spinner fa-spin me-2"></i>Extracting...
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tab Content -->
+              <div class="flex-grow-1 overflow-auto">
+                
+                <!-- Parse Tab Content -->
+                <div *ngIf="activeTab === 'parse'" class="p-3">
+                  <!-- Before Extraction -->
+                  <div *ngIf="!extractedData && !extracting" class="text-center py-5">
+                    <i class="fas fa-magic text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-muted">No Data Extracted</h5>
+                    <p class="text-muted">Click "Extract Data" to analyze this document using AI</p>
+                  </div>
+
+                  <!-- Extracting -->
+                  <div *ngIf="extracting" class="text-center py-5">
+                    <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+                      <span class="visually-hidden">Extracting...</span>
+                    </div>
+                    <h5 class="mt-3 text-muted">Analyzing Document</h5>
+                    <p class="text-muted">Please wait while AI extracts data from the document...</p>
+                  </div>
+
+                  <!-- Structured Parse Display (like your uploaded image) -->
+                  <div *ngIf="extractedData && !extracting" class="parsed-data-structured">
+                    
+                    <!-- View Toggle Buttons -->
+                    <div class="mb-3 d-flex justify-content-center">
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" 
+                                class="btn btn-outline-secondary active">
+                          <i class="fas fa-list me-1"></i>Markdown
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-secondary">
+                          <i class="fas fa-code me-1"></i>JSON
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Terminal-Style Output (like Python console) -->
+                    <div class="mb-3 p-3 bg-dark text-light rounded" style="font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.4;">
+                      <div class="text-info mb-2">
+                        <i class="fas fa-search me-2"></i>🔍 Raw extracted text length: {{ getRawTextLength(extractedData) }}
+                      </div>
+                      <div class="text-warning mb-2">
+                        Extracted fields: {{ getExtractedFieldsString(extractedData) }}
+                      </div>
+                      <div class="text-success mb-2">
+                        <br>📄 Document Type: {{ document.documentType }}
+                      </div>
+                      <div *ngFor="let field of getTerminalStyleFields(extractedData)" class="text-light">
+                        <span class="text-primary">  •</span> {{ field.name }}: {{ field.value }} <span class="text-muted">(Confidence: {{ field.confidence }})</span>
+                      </div>
+                    </div>
+
+                    <!-- Structured Data Display -->
+                    <div class="structured-content bg-light p-4 rounded" style="font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.6;">
+                      
+                      <!-- Document Header -->
+                      <div class="mb-4">
+                        <div class="text-primary fw-bold mb-2">
+                          <i class="fas fa-file-alt me-2"></i>{{ document.documentType.replace('_', ' ') | titlecase }}
+                        </div>
+                        <div class="text-muted small">
+                          Government of India
+                        </div>
+                      </div>
+
+                      <!-- Personal Information Section -->
+                      <div class="mb-4" *ngIf="getPersonalInfo(getActualExtractedData(extractedData)).length > 0">
+                        <div class="text-success fw-bold mb-2">
+                          <i class="fas fa-user me-2"></i>[Personal Information]
+                        </div>
+                        <div class="ms-3">
+                          <div *ngFor="let item of getPersonalInfo(getActualExtractedData(extractedData))" class="mb-1">
+                            <span class="text-primary">{{ formatExtractedField(item.key) }}:</span>
+                            <span class="text-dark ms-2">{{ getFieldValue(item.value) }}</span>
+                            <span *ngIf="hasConfidenceData(getActualExtractedData(extractedData))" 
+                                  class="badge ms-2"
+                                  [class]="getConfidenceBadgeClass(item.value)"
+                                  style="font-size: 0.6rem;">
+                              {{ getConfidencePercentage(item.value) }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Document Details Section -->
+                      <div class="mb-4" *ngIf="getDocumentInfo(getActualExtractedData(extractedData)).length > 0">
+                        <div class="text-info fw-bold mb-2">
+                          <i class="fas fa-id-card me-2"></i>[Document Details]
+                        </div>
+                        <div class="ms-3">
+                          <div *ngFor="let item of getDocumentInfo(getActualExtractedData(extractedData))" class="mb-1">
+                            <span class="text-primary">{{ formatExtractedField(item.key) }}:</span>
+                            <span class="text-dark ms-2">{{ getFieldValue(item.value) }}</span>
+                            <span *ngIf="hasConfidenceData(getActualExtractedData(extractedData))" 
+                                  class="badge ms-2"
+                                  [class]="getConfidenceBadgeClass(item.value)"
+                                  style="font-size: 0.6rem;">
+                              {{ getConfidencePercentage(item.value) }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Address Information Section -->
+                      <div class="mb-4" *ngIf="getAddressInfo(getActualExtractedData(extractedData)).length > 0">
+                        <div class="text-warning fw-bold mb-2">
+                          <i class="fas fa-map-marker-alt me-2"></i>[Address Information]
+                        </div>
+                        <div class="ms-3">
+                          <div *ngFor="let item of getAddressInfo(getActualExtractedData(extractedData))" class="mb-1">
+                            <span class="text-primary">{{ formatExtractedField(item.key) }}:</span>
+                            <span class="text-dark ms-2">{{ getFieldValue(item.value) }}</span>
+                            <span *ngIf="hasConfidenceData(getActualExtractedData(extractedData))" 
+                                  class="badge ms-2"
+                                  [class]="getConfidenceBadgeClass(item.value)"
+                                  style="font-size: 0.6rem;">
+                              {{ getConfidencePercentage(item.value) }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Additional Information Section -->
+                      <div class="mb-4" *ngIf="getOtherInfo(getActualExtractedData(extractedData)).length > 0">
+                        <div class="text-secondary fw-bold mb-2">
+                          <i class="fas fa-info-circle me-2"></i>[Additional Information]
+                        </div>
+                        <div class="ms-3">
+                          <div *ngFor="let item of getOtherInfo(getActualExtractedData(extractedData))" class="mb-1">
+                            <span class="text-primary">{{ formatExtractedField(item.key) }}:</span>
+                            <span class="text-dark ms-2">{{ getFieldValue(item.value) }}</span>
+                            <span *ngIf="hasConfidenceData(getActualExtractedData(extractedData))" 
+                                  class="badge ms-2"
+                                  [class]="getConfidenceBadgeClass(item.value)"
+                                  style="font-size: 0.6rem;">
+                              {{ getConfidencePercentage(item.value) }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Confidence Summary -->
+                      <div *ngIf="hasConfidenceData(getActualExtractedData(extractedData))" class="mt-4 pt-3 border-top">
+                        <div class="text-muted fw-bold mb-2">
+                          <i class="fas fa-chart-line me-2"></i>[AI Confidence Summary]
+                        </div>
+                        <div class="ms-3">
+                          <div class="small text-muted">
+                            Total Fields Extracted: <span class="fw-bold">{{ objectKeys(getActualExtractedData(extractedData) || {}).length }}</span>
+                          </div>
+                          <div class="small text-muted" *ngIf="annotatedImageUrl">
+                            Bounding Boxes: <span class="fw-bold text-success">Available</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Extract Tab Content -->
+                <div *ngIf="activeTab === 'extract'" class="p-3">
+                  <div class="text-center py-5">
+                    <i class="fas fa-robot text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-muted">AI Extraction</h5>
+                    <p class="text-muted">Advanced AI extraction features coming soon...</p>
+                  </div>
+                </div>
+
+                <!-- Chat Tab Content -->
+                <div *ngIf="activeTab === 'chat'" class="p-3">
+                  <div class="text-center py-5">
+                    <i class="fas fa-comments text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-muted">Document Chat</h5>
+                    <p class="text-muted">Chat with AI about this document coming soon...</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top-0 bg-white">
+        <div class="d-flex justify-content-between w-100">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge" [class]="'bg-' + getStatusColor(document.verificationStatus || document.status)">
+              {{ document.verificationStatus || document.status || 'PENDING' }}
+            </span>
+            <small class="text-muted">
+              Uploaded: {{ formatDate(document.uploadedAt || document.createdAt) }}
+            </small>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">
+              <i class="fas fa-times me-2"></i>Close
+            </button>
+            <button type="button" 
+                    class="btn btn-success" 
+                    *ngIf="canVerify"
+                    (click)="approveDocument()">
+              <i class="fas fa-check me-2"></i>Approve Document
+            </button>
+            <button type="button" 
+                    class="btn btn-danger" 
+                    *ngIf="canVerify"
+                    (click)="rejectDocument()">
+              <i class="fas fa-times me-2"></i>Reject Document
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

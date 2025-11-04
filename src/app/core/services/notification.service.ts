@@ -179,6 +179,112 @@ export class NotificationService {
    * Generate mock notifications when API is not available
    */
   private getMockNotifications(userId: number): Notification[] {
+    // Get user role from localStorage or determine based on current route
+    const userRole = this.getCurrentUserRole();
+    
+    if (userRole === 'LOAN_OFFICER') {
+      return this.getLoanOfficerMockNotifications(userId);
+    } else if (userRole === 'COMPLIANCE_OFFICER') {
+      return this.getComplianceOfficerMockNotifications(userId);
+    } else if (userRole === 'APPLICANT') {
+      return this.getApplicantMockNotifications(userId);
+    }
+    
+    return this.getLoanOfficerMockNotifications(userId); // Default fallback
+  }
+
+  /**
+   * Get current user role
+   */
+  private getCurrentUserRole(): string {
+    // Try to get from current URL
+    const currentUrl = window.location.pathname;
+    if (currentUrl.includes('/loan-officer')) return 'LOAN_OFFICER';
+    if (currentUrl.includes('/compliance-officer')) return 'COMPLIANCE_OFFICER';
+    if (currentUrl.includes('/applicant')) return 'APPLICANT';
+    
+    // Try to get from localStorage
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    return user.role || 'LOAN_OFFICER';
+  }
+
+  /**
+   * Generate loan officer specific notifications
+   */
+  private getLoanOfficerMockNotifications(userId: number): Notification[] {
+    return [
+      {
+        notificationId: 1,
+        userId: userId,
+        userType: 'LOAN_OFFICER',
+        title: 'New Escalation Assigned',
+        message: 'A new loan application has been escalated for compliance review',
+        type: 'ESCALATION',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 2,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
+        readAt: undefined
+      },
+      {
+        notificationId: 2,
+        userId: userId,
+        userType: 'LOAN_OFFICER',
+        title: 'Document Verification Complete',
+        message: 'Document verification has been completed for loan application #1511',
+        type: 'DOCUMENT_UPLOADED',
+        relatedEntityType: 'DOCUMENT',
+        relatedEntityId: 1511,
+        isRead: true,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+        readAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
+      },
+      {
+        notificationId: 3,
+        userId: userId,
+        userType: 'LOAN_OFFICER',
+        title: 'Fraud Check Alert',
+        message: 'High risk fraud indicators detected in application #1510',
+        type: 'FRAUD_CHECK_COMPLETE',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1510,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
+        readAt: undefined
+      },
+      {
+        notificationId: 4,
+        userId: userId,
+        userType: 'LOAN_OFFICER',
+        title: 'New Application Assigned',
+        message: 'A new loan application #1515 has been assigned to you for review',
+        type: 'NEW_APPLICATION',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1515,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6 hours ago
+        readAt: undefined
+      },
+      {
+        notificationId: 5,
+        userId: userId,
+        userType: 'LOAN_OFFICER',
+        title: 'Document Resubmission Request',
+        message: 'Applicant has resubmitted documents for loan application #1512',
+        type: 'DOCUMENT_REQUEST',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1512,
+        isRead: true,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(), // 8 hours ago
+        readAt: new Date(Date.now() - 1000 * 60 * 60 * 7).toISOString()
+      }
+    ];
+  }
+
+  /**
+   * Generate compliance officer specific notifications
+   */
+  private getComplianceOfficerMockNotifications(userId: number): Notification[] {
     return [
       {
         notificationId: 1,
@@ -223,20 +329,54 @@ export class NotificationService {
   }
 
   /**
+   * Generate applicant specific notifications
+   */
+  private getApplicantMockNotifications(userId: number): Notification[] {
+    return [
+      {
+        notificationId: 1,
+        userId: userId,
+        userType: 'APPLICANT',
+        title: 'Application Status Update',
+        message: 'Your loan application #1234 is now under review',
+        type: 'STATUS_UPDATE',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1234,
+        isRead: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+        readAt: undefined
+      },
+      {
+        notificationId: 2,
+        userId: userId,
+        userType: 'APPLICANT',
+        title: 'Document Upload Required',
+        message: 'Please upload additional documents for your loan application',
+        type: 'DOCUMENT_REQUEST',
+        relatedEntityType: 'LOAN',
+        relatedEntityId: 1234,
+        isRead: true,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+        readAt: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString()
+      }
+    ];
+  }
+
+  /**
    * Get notification icon based on type
    */
   getNotificationIcon(type: string): string {
     const icons: { [key: string]: string } = {
-      'NEW_APPLICATION': 'bi-file-earmark-plus',
-      'DOCUMENT_UPLOADED': 'bi-cloud-upload',
-      'FRAUD_CHECK_COMPLETE': 'bi-shield-check',
-      'ESCALATION': 'bi-exclamation-triangle',
-      'APPROVAL': 'bi-check-circle',
-      'REJECTION': 'bi-x-circle',
-      'DOCUMENT_REQUEST': 'bi-file-earmark-text',
-      'STATUS_UPDATE': 'bi-bell'
+      'NEW_APPLICATION': 'fas fa-file-plus',
+      'DOCUMENT_UPLOADED': 'fas fa-cloud-upload-alt',
+      'FRAUD_CHECK_COMPLETE': 'fas fa-shield-alt',
+      'ESCALATION': 'fas fa-exclamation-triangle',
+      'APPROVAL': 'fas fa-check-circle',
+      'REJECTION': 'fas fa-times-circle',
+      'DOCUMENT_REQUEST': 'fas fa-file-alt',
+      'STATUS_UPDATE': 'fas fa-bell'
     };
-    return icons[type] || 'bi-bell';
+    return icons[type] || 'fas fa-bell';
   }
 
   /**

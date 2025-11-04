@@ -408,11 +408,20 @@ export interface RuleViolation {
 export interface ComplianceVerdict {
   assignmentId: number;
   complianceOfficerId: number;
-  recommendation: 'APPROVE' | 'REJECT' | 'REQUEST_DOCUMENTS' | 'FURTHER_REVIEW';
-  riskAssessment: string;
-  fraudFindings: string[];
-  complianceNotes: string;
-  recommendedAction: string;
+  verdict: 'RECOMMEND_APPROVE' | 'RECOMMEND_REJECT' | 'REQUEST_MORE_INFO';
+  verdictReason: string;
+  detailedRemarks?: string;
+  rejectionReasons?: string[];
+  documentsToResubmit?: DocumentResubmissionInfo[];
+  additionalChecksRequired?: string[];
+  targetLoanOfficerId?: number;
+}
+
+export interface DocumentResubmissionInfo {
+  documentId: number;
+  documentType: string;
+  resubmissionReason: string;
+  specificInstructions?: string;
 }
 
 // ==================== Service ====================

@@ -135,9 +135,24 @@ export class AssignedLoansComponent implements OnInit {
     });
   }
 
-  // Start screening process
+  // Start screening process or view results if already screened
   startScreening(assignmentId: number): void {
-    this.router.navigate(['/loan-officer/review', assignmentId]);
+    const loan = this.loans.find(l => l.assignmentId === assignmentId);
+    
+    // If loan is already processed/screened, navigate to results view
+    if (loan && (loan.status === 'APPROVED' || loan.status === 'REJECTED' || loan.status === 'ESCALATED_TO_COMPLIANCE')) {
+      this.router.navigate(['/loan-officer/review', assignmentId], { 
+        queryParams: { viewMode: 'results' } 
+      });
+    } else {
+      // Otherwise, start new screening
+      this.router.navigate(['/loan-officer/review', assignmentId]);
+    }
+  }
+  
+  // Check if loan is already screened
+  isLoanScreened(loan: any): boolean {
+    return loan.status === 'APPROVED' || loan.status === 'REJECTED' || loan.status === 'ESCALATED_TO_COMPLIANCE';
   }
 
   // Legacy method - kept for compatibility
