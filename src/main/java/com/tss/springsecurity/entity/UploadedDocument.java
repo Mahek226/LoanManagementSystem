@@ -101,6 +101,6 @@ public class UploadedDocument {
     }
     
     public enum VerificationStatus {
-        PENDING, VERIFIED, REJECTED
+        PENDING, VERIFIED, REJECTED, RESUBMISSION_REQUESTED
     }
 }

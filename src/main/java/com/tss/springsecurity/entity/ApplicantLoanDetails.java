@@ -196,11 +196,36 @@ public class ApplicantLoanDetails {
     @Column(name = "risk_score")
     private Integer riskScore = 0;
     
+    @Column(name = "risk_level", length = 20)
+    private String riskLevel; // LOW, MEDIUM, HIGH, CRITICAL
+    
     @Column(name = "submitted_at", updatable = false)
     private LocalDateTime submittedAt;
     
+    @Column(name = "application_date")
+    private LocalDateTime applicationDate;
+    
+    @Column(name = "approval_date")
+    private LocalDateTime approvalDate;
+    
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+    
+    @Column(name = "monthly_emi", precision = 15, scale = 2)
+    private BigDecimal monthlyEmi;
+    
+    // Approval/Rejection tracking fields
+    @Column(name = "approved_by", length = 200)
+    private String approvedBy;
+    
+    @Column(name = "rejected_by", length = 200)
+    private String rejectedBy;
+    
+    @Column(name = "rejection_date")
+    private LocalDateTime rejectionDate;
+    
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
     
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"loan", "applicant"})

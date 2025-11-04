@@ -2,6 +2,7 @@ package com.tss.springsecurity.service.impl;
 
 import com.tss.springsecurity.dto.LoanScreeningRequest;
 import com.tss.springsecurity.dto.LoanScreeningResponse;
+import com.tss.springsecurity.dto.ComplianceVerdictResponse;
 import com.tss.springsecurity.dto.LoanScreeningDecision;
 import com.tss.springsecurity.dto.ScreeningDashboardResponse;
 import com.tss.springsecurity.entity.*;
@@ -165,10 +166,10 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         
         complianceAssignmentRepository.save(complianceAssignment);
         
-        // Update original assignment status
+        // Update original assignment status but don't set completedAt yet
         assignment.setStatus("ESCALATED_TO_COMPLIANCE");
         assignment.setRemarks("Escalated to compliance officer: " + complianceOfficer.getFirstName() + " " + complianceOfficer.getLastName());
-        assignment.setCompletedAt(LocalDateTime.now());
+        // Don't set completedAt here - keep it pending until final decision
         assignmentRepository.save(assignment);
         
         log.info("Assignment {} escalated to compliance officer {}", assignmentId, complianceOfficer.getOfficerId());
@@ -320,7 +321,9 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         response.setLoanAmount(loan.getLoanAmount());
         response.setRiskScore(loan.getRiskScore());
         response.setRiskLevel(determineRiskLevel(loan.getRiskScore()));
-        response.setCanApproveReject(loan.getRiskScore() < riskScoreThreshold);
+        
+        // Set canApproveReject based on status and compliance verdict
+        boolean canApproveReject = loan.getRiskScore() < riskScoreThreshold;
         response.setStatus(assignment.getStatus());
         response.setRemarks(assignment.getRemarks());
         response.setAssignedAt(assignment.getAssignedAt());
@@ -328,6 +331,36 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         response.setOfficerId(assignment.getOfficer().getOfficerId());
         response.setOfficerName(assignment.getOfficer().getFirstName() + " " + assignment.getOfficer().getLastName());
         response.setOfficerType("LOAN_OFFICER");
+        
+        // Handle compliance verdict for escalated loans
+        if ("ESCALATED_TO_COMPLIANCE".equals(assignment.getStatus())) {
+            try {
+                ComplianceVerdictResponse complianceVerdict = getComplianceVerdictForLoan(loan.getLoanId());
+                if (complianceVerdict != null) {
+                    // Convert compliance verdict to frontend-friendly format
+                    String frontendVerdict = convertVerdictForFrontend(complianceVerdict.getVerdict());
+                    response.setComplianceVerdict(frontendVerdict);
+                    response.setComplianceVerdictReason(complianceVerdict.getVerdictReason());
+                    response.setComplianceRemarks(complianceVerdict.getDetailedRemarks());
+                    response.setComplianceOfficerName(complianceVerdict.getComplianceOfficerName());
+                    response.setComplianceVerdictTimestamp(complianceVerdict.getVerdictTimestamp());
+                    response.setNextAction(complianceVerdict.getNextAction());
+                    response.setHasComplianceVerdict(true);
+                    canApproveReject = true;
+                    response.setStatus("COMPLIANCE_VERDICT_AVAILABLE");
+                }
+            } catch (Exception e) {
+                // No compliance verdict yet - loan is still under compliance review
+                response.setHasComplianceVerdict(false);
+                response.setNextAction("Waiting for compliance officer review");
+                canApproveReject = false;
+            }
+        } else {
+            response.setHasComplianceVerdict(false);
+        }
+        
+        // Set the final canApproveReject value
+        response.setCanApproveReject(canApproveReject);
         
         return response;
     }
@@ -386,7 +419,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         // Calculate statistics
         List<OfficerApplicationAssignment> allAssignments = assignmentRepository.findByOfficer_OfficerId(officerId);
         List<OfficerApplicationAssignment> pendingAssignments = allAssignments.stream()
-                .filter(a -> "PENDING".equals(a.getStatus()) || "IN_PROGRESS".equals(a.getStatus()))
+                .filter(a -> "PENDING".equals(a.getStatus()) || "IN_PROGRESS".equals(a.getStatus()) || 
+                           ("ESCALATED_TO_COMPLIANCE".equals(a.getStatus()) && hasComplianceVerdict(a)))
                 .toList();
         
         // Count completed today
@@ -557,5 +591,162 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
                 loan.getLoanId(), assignment.getOfficer().getOfficerId());
         
         return mapToScreeningResponse(assignment);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public com.tss.springsecurity.dto.ComplianceVerdictResponse getComplianceVerdictForLoan(Long loanId) {
+        log.info("Getting compliance verdict for loan ID: {}", loanId);
+        
+        // Find the compliance assignment for this loan
+        List<ComplianceOfficerApplicationAssignment> complianceAssignments = 
+                complianceAssignmentRepository.findByLoan_LoanId(loanId);
+        
+        if (complianceAssignments.isEmpty()) {
+            throw new RuntimeException("No compliance assignment found for loan ID: " + loanId);
+        }
+        
+        // Get the most recent completed compliance assignment
+        ComplianceOfficerApplicationAssignment latestAssignment = complianceAssignments.stream()
+                .filter(assignment -> "VERDICT_PROVIDED".equals(assignment.getStatus()) && assignment.getVerdict() != null)
+                .max((a1, a2) -> a1.getCompletedAt().compareTo(a2.getCompletedAt()))
+                .orElse(null);
+        
+        if (latestAssignment == null) {
+            throw new RuntimeException("No compliance verdict found for loan ID: " + loanId);
+        }
+        
+        // Build the response
+        return com.tss.springsecurity.dto.ComplianceVerdictResponse.builder()
+                .verdictId(latestAssignment.getAssignmentId())
+                .assignmentId(latestAssignment.getAssignmentId())
+                .loanId(loanId)
+                .applicantName(latestAssignment.getApplicant().getFirstName() + " " + latestAssignment.getApplicant().getLastName())
+                .verdict(latestAssignment.getVerdict())
+                .verdictReason(latestAssignment.getVerdictReason())
+                .detailedRemarks(latestAssignment.getRemarks())
+                .complianceOfficerName("Compliance Officer #" + latestAssignment.getComplianceOfficer().getOfficerId())
+                .verdictTimestamp(latestAssignment.getCompletedAt())
+                .nextAction(getNextActionBasedOnVerdict(latestAssignment.getVerdict()))
+                .status("COMPLETED")
+                .message("Compliance verdict available for loan officer review")
+                .build();
+    }
+    
+    @Override
+    @Transactional
+    public LoanScreeningResponse processLoanAfterCompliance(Long officerId, Long loanId, Long assignmentId, String decision, String remarks) {
+        log.info("Processing loan {} after compliance verdict by officer {}", loanId, officerId);
+        
+        // Find the original loan officer assignment
+        OfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + assignmentId));
+        
+        // Verify the officer owns this assignment
+        if (!assignment.getOfficer().getOfficerId().equals(officerId)) {
+            throw new RuntimeException("Officer is not authorized to process this assignment");
+        }
+        
+        // Check if there's a compliance verdict
+        com.tss.springsecurity.dto.ComplianceVerdictResponse complianceVerdict = getComplianceVerdictForLoan(loanId);
+        if (complianceVerdict == null) {
+            throw new RuntimeException("No compliance verdict found for this loan");
+        }
+        
+        // Get the loan details
+        ApplicantLoanDetails loan = assignment.getLoan();
+        if (loan == null) {
+            throw new RuntimeException("Loan details not found for assignment");
+        }
+        
+        // Process the final decision
+        String finalStatus;
+        String finalRemarks = "Final decision after compliance review: " + decision + ". " + 
+                             "Compliance verdict: " + complianceVerdict.getVerdict() + ". " + remarks;
+        
+        if ("APPROVE".equalsIgnoreCase(decision)) {
+            finalStatus = "APPROVED";
+            loan.setStatus("APPROVED");
+            loan.setApprovalDate(LocalDateTime.now());
+            loan.setApprovedBy("Officer #" + officerId);
+        } else if ("REJECT".equalsIgnoreCase(decision)) {
+            finalStatus = "REJECTED";
+            loan.setStatus("REJECTED");
+            loan.setRejectionDate(LocalDateTime.now());
+            loan.setRejectedBy("Officer #" + officerId);
+            loan.setRejectionReason(finalRemarks);
+        } else {
+            throw new RuntimeException("Invalid decision. Must be APPROVE or REJECT");
+        }
+        
+        // Update assignment
+        assignment.setStatus(finalStatus);
+        assignment.setRemarks(finalRemarks);
+        assignment.setCompletedAt(LocalDateTime.now());
+        assignment.setProcessedAt(LocalDateTime.now());
+        
+        // Save changes
+        assignmentRepository.save(assignment);
+        loanRepository.save(loan);
+        
+        log.info("Loan {} processed after compliance verdict by officer {}", loanId, officerId);
+        return mapToScreeningResponse(assignment);
+    }
+    
+    private boolean hasComplianceVerdict(OfficerApplicationAssignment assignment) {
+        if (!"ESCALATED_TO_COMPLIANCE".equals(assignment.getStatus())) {
+            return false;
+        }
+        
+        try {
+            ApplicantLoanDetails loan = assignment.getLoan();
+            if (loan == null) {
+                loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+            }
+            
+            List<ComplianceOfficerApplicationAssignment> complianceAssignments = 
+                    complianceAssignmentRepository.findByLoan_LoanId(loan.getLoanId());
+            
+            return complianceAssignments.stream()
+                    .anyMatch(ca -> "VERDICT_PROVIDED".equals(ca.getStatus()) && ca.getVerdict() != null);
+        } catch (Exception e) {
+            log.warn("Error checking compliance verdict for assignment {}: {}", assignment.getAssignmentId(), e.getMessage());
+            return false;
+        }
+    }
+    
+    private String getNextActionBasedOnVerdict(String verdict) {
+        switch (verdict.toUpperCase()) {
+            case "RECOMMEND_APPROVE":
+                return "Loan Officer can proceed with final approval";
+            case "RECOMMEND_REJECT":
+                return "Loan Officer should reject the application";
+            case "REQUEST_MORE_INFO":
+                return "Additional information required before decision";
+            default:
+                return "Review compliance verdict and take appropriate action";
+        }
+    }
+    
+    /**
+     * Convert backend compliance verdict values to frontend-friendly display values
+     */
+    private String convertVerdictForFrontend(String backendVerdict) {
+        if (backendVerdict == null) {
+            return null;
+        }
+        
+        switch (backendVerdict.toUpperCase()) {
+            case "RECOMMEND_APPROVE":
+                return "APPROVED";
+            case "RECOMMEND_REJECT":
+                return "REJECTED";
+            case "REQUEST_MORE_INFO":
+                return "FLAGGED";
+            case "CONDITIONAL_APPROVAL":
+                return "CONDITIONAL_APPROVAL";
+            default:
+                return backendVerdict; // Return as-is if no mapping found
+        }
     }
 }

@@ -40,6 +40,9 @@ public class OfficerApplicationAssignment {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
     
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
+    
     @Column(name = "priority", length = 20)
     private String priority; // LOW, MEDIUM, HIGH
     

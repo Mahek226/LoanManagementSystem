@@ -27,4 +27,14 @@ public interface LoanOfficerScreeningService {
     LoanScreeningResponse screenAssignedLoan(Long officerId, Long assignmentId, LoanScreeningDecision decision);
     
     List<LoanScreeningResponse> getScreeningHistory(Long officerId, int page, int size);
+    
+    /**
+     * Get compliance verdict for a specific loan
+     */
+    com.tss.springsecurity.dto.ComplianceVerdictResponse getComplianceVerdictForLoan(Long loanId);
+    
+    /**
+     * Process loan after compliance verdict
+     */
+    LoanScreeningResponse processLoanAfterCompliance(Long officerId, Long loanId, Long assignmentId, String decision, String remarks);
 }

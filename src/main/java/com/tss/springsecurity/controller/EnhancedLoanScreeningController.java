@@ -205,6 +205,15 @@ public class EnhancedLoanScreeningController {
         response.setOfficerName(basicResponse.getOfficerName());
         response.setOfficerType(basicResponse.getOfficerType());
         
+        // Copy compliance verdict information if available
+        response.setComplianceVerdict(basicResponse.getComplianceVerdict());
+        response.setComplianceVerdictReason(basicResponse.getComplianceVerdictReason());
+        response.setComplianceRemarks(basicResponse.getComplianceRemarks());
+        response.setComplianceOfficerName(basicResponse.getComplianceOfficerName());
+        response.setComplianceVerdictTimestamp(basicResponse.getComplianceVerdictTimestamp());
+        response.setNextAction(basicResponse.getNextAction());
+        response.setHasComplianceVerdict(basicResponse.getHasComplianceVerdict());
+        
         // Set enhanced scoring information
         NormalizedRiskScore normalizedScore = new NormalizedRiskScore();
         normalizedScore.setFinalScore(enhancedResult.getNormalizedScore());
@@ -215,7 +224,13 @@ public class EnhancedLoanScreeningController {
         response.setScoringBreakdown(enhancedResult.getScoringBreakdown());
         response.setRuleViolations(enhancedResult.getRuleViolations());
         response.setFinalRecommendation(enhancedResult.getFinalRecommendation());
-        response.setCanApproveReject(enhancedResult.getNormalizedScore() < riskScoreThreshold);
+        
+        // Set canApproveReject based on risk score OR compliance verdict availability
+        boolean canApproveReject = enhancedResult.getNormalizedScore() < riskScoreThreshold;
+        if (basicResponse.getHasComplianceVerdict() != null && basicResponse.getHasComplianceVerdict()) {
+            canApproveReject = true; // Enable buttons when compliance verdict is available
+        }
+        response.setCanApproveReject(canApproveReject);
         
         return response;
     }
@@ -237,6 +252,15 @@ public class EnhancedLoanScreeningController {
         response.setOfficerId(basicResponse.getOfficerId());
         response.setOfficerName(basicResponse.getOfficerName());
         response.setOfficerType(basicResponse.getOfficerType());
+        
+        // Copy compliance verdict information if available
+        response.setComplianceVerdict(basicResponse.getComplianceVerdict());
+        response.setComplianceVerdictReason(basicResponse.getComplianceVerdictReason());
+        response.setComplianceRemarks(basicResponse.getComplianceRemarks());
+        response.setComplianceOfficerName(basicResponse.getComplianceOfficerName());
+        response.setComplianceVerdictTimestamp(basicResponse.getComplianceVerdictTimestamp());
+        response.setNextAction(basicResponse.getNextAction());
+        response.setHasComplianceVerdict(basicResponse.getHasComplianceVerdict());
         
         // Set default enhanced scoring information
         NormalizedRiskScore normalizedScore = new NormalizedRiskScore();

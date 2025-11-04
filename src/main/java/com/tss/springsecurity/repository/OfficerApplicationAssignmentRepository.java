@@ -16,6 +16,8 @@ public interface OfficerApplicationAssignmentRepository extends JpaRepository<Of
     
     List<OfficerApplicationAssignment> findByApplicant_ApplicantId(Long applicantId);
     
+    Optional<OfficerApplicationAssignment> findByLoan_LoanId(Long loanId);
+    
     List<OfficerApplicationAssignment> findByStatus(String status);
     
     Optional<OfficerApplicationAssignment> findByApplicant_ApplicantIdAndStatus(Long applicantId, String status);
@@ -33,4 +35,10 @@ public interface OfficerApplicationAssignmentRepository extends JpaRepository<Of
     
     @Query("SELECT a FROM OfficerApplicationAssignment a WHERE a.loan.loanId = :loanId ORDER BY a.assignedAt DESC")
     List<OfficerApplicationAssignment> findByLoanIdOrderByAssignedAtDesc(@Param("loanId") Long loanId);
+    
+    // Additional methods for document resubmission functionality
+    List<OfficerApplicationAssignment> findByOfficer_OfficerIdAndStatusIn(Long officerId, List<String> statuses);
+    
+    // Method for finding assignments by applicant and officer
+    List<OfficerApplicationAssignment> findByApplicant_ApplicantIdAndOfficer_OfficerId(Long applicantId, Long officerId);
 }

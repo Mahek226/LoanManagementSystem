@@ -35,4 +35,8 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
     
     @Query("SELECT a FROM Applicant a LEFT JOIN FETCH a.basicDetails WHERE a.applicantId = :id")
     Optional<Applicant> findByIdWithBasicDetails(@Param("id") Long id);
+    
+    // Count applicants by month for dashboard statistics
+    @Query("SELECT COUNT(a) FROM Applicant a WHERE MONTH(a.createdAt) = :month AND YEAR(a.createdAt) = YEAR(CURRENT_DATE)")
+    Long countApplicantsByMonth(@Param("month") int month);
 }
