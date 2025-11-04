@@ -1729,50 +1729,11 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         UploadedDocument document = uploadedDocumentRepository.findById(request.getDocumentId())
                 .orElseThrow(() -> new RuntimeException("Document not found"));
         
-        // Find the compliance assignment for this loan
-        ComplianceOfficerApplicationAssignment assignment = assignmentRepository
-                .findByApplicant_ApplicantId(document.getApplicant().getApplicantId())
-                .stream()
-                .filter(a -> "PENDING".equals(a.getStatus()) || "IN_PROGRESS".equals(a.getStatus()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No active compliance assignment found for this applicant"));
-        
-        // Get the compliance officer
-        ComplianceOfficer complianceOfficer = complianceOfficerRepository.findById(request.getComplianceOfficerId())
-                .orElseThrow(() -> new RuntimeException("Compliance officer not found"));
-        
-        // Create document resubmission record in document_resubmission table
-        DocumentResubmission resubmission = new DocumentResubmission();
-        resubmission.setAssignment(assignment);
-        resubmission.setApplicant(document.getApplicant());
-        resubmission.setRequestedByOfficer(complianceOfficer);
-        
-        // Create JSON array with single document type
-        try {
-            resubmission.setRequestedDocuments(objectMapper.writeValueAsString(
-                java.util.Arrays.asList(document.getDocumentType())));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error processing document types", e);
-        }
-        
-        resubmission.setReason(request.getResubmissionReason());
-        resubmission.setAdditionalComments(request.getSpecificInstructions());
-        resubmission.setPriorityLevel(3); // Default to MEDIUM priority
-        resubmission.setStatus("REQUESTED");
-        
-        // Save the resubmission record
-        DocumentResubmission savedResubmission = documentResubmissionRepository.save(resubmission);
-        
-        // Mark document for resubmission (for backward compatibility)
+        // Mark document for resubmission
         document.setResubmissionRequested(true);
         document.setResubmissionReason(request.getResubmissionReason());
         document.setResubmissionInstructions(request.getSpecificInstructions());
         uploadedDocumentRepository.save(document);
-        
-        // Update assignment status to indicate document resubmission requested
-        assignment.setStatus("DOCUMENT_RESUBMISSION_REQUESTED");
-        assignment.setRemarks("Document resubmission requested: " + request.getResubmissionReason());
-        assignmentRepository.save(assignment);
         
         // Log the request
         logActivity(request.getComplianceOfficerId(), "DOCUMENT_RESUBMISSION_REQUESTED",
@@ -1787,7 +1748,6 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         response.put("documentId", document.getDocumentId());
         response.put("documentType", document.getDocumentType());
         response.put("resubmissionReason", request.getResubmissionReason());
-        response.put("resubmissionId", savedResubmission.getResubmissionId());
         response.put("timestamp", LocalDateTime.now());
         
         return response;
@@ -1996,145 +1956,6 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         activityLogRepository.save(log);
     }
     
-<<<<<<< HEAD
-    // ==================== External Fraud Data Implementation ====================
-    
-    @Override
-    public Map<String, Object> getExternalFraudData(Long applicantId) {
-        log.info("Getting external fraud data for applicant: {}", applicantId);
-        
-        Map<String, Object> fraudData = new HashMap<>();
-        
-        try {
-            // Get bank records
-            List<Map<String, Object>> bankRecords = getBankRecords(applicantId);
-            fraudData.put("bankRecords", bankRecords);
-            
-            // Get criminal records
-            List<Map<String, Object>> criminalRecords = getCriminalRecords(applicantId);
-            fraudData.put("criminalRecords", criminalRecords);
-            
-            // Get loan history
-            List<Map<String, Object>> loanHistory = getLoanHistory(applicantId);
-            fraudData.put("loanHistory", loanHistory);
-            
-            // Calculate summary statistics
-            Map<String, Object> summary = new HashMap<>();
-            summary.put("totalBankAccounts", bankRecords.size());
-            summary.put("totalCriminalCases", criminalRecords.size());
-            summary.put("totalLoanHistory", loanHistory.size());
-            
-            // Check for red flags
-            boolean hasActiveCriminalCases = criminalRecords.stream()
-                .anyMatch(record -> "OPEN".equals(record.get("status")) || "CONVICTED".equals(record.get("status")));
-            boolean hasDefaultedLoans = loanHistory.stream()
-                .anyMatch(loan -> Boolean.TRUE.equals(loan.get("defaultFlag")));
-            
-            summary.put("hasActiveCriminalCases", hasActiveCriminalCases);
-            summary.put("hasDefaultedLoans", hasDefaultedLoans);
-            summary.put("riskLevel", (hasActiveCriminalCases || hasDefaultedLoans) ? "HIGH" : "LOW");
-            
-            fraudData.put("summary", summary);
-            
-            log.info("Successfully retrieved external fraud data for applicant: {}", applicantId);
-            return fraudData;
-            
-        } catch (Exception e) {
-            log.error("Error retrieving external fraud data for applicant {}: {}", applicantId, e.getMessage());
-            throw new RuntimeException("Failed to retrieve external fraud data: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public List<Map<String, Object>> getBankRecords(Long applicantId) {
-        log.info("Getting bank records for applicant: {}", applicantId);
-        
-        try {
-            List<BankRecord> bankRecords = bankRecordRepository.findByPersonId(applicantId);
-            
-            return bankRecords.stream().map(record -> {
-                Map<String, Object> recordMap = new HashMap<>();
-                recordMap.put("id", record.getId());
-                recordMap.put("bankName", record.getBankName());
-                recordMap.put("accountNumber", maskAccountNumber(record.getAccountNumber()));
-                recordMap.put("accountType", record.getAccountType());
-                recordMap.put("balanceAmount", record.getBalanceAmount());
-                recordMap.put("lastTransactionDate", record.getLastTransactionDate());
-                recordMap.put("isActive", record.getIsActive());
-                recordMap.put("createdAt", record.getCreatedAt());
-                return recordMap;
-            }).collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("Error retrieving bank records for applicant {}: {}", applicantId, e.getMessage());
-            throw new RuntimeException("Failed to retrieve bank records: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public List<Map<String, Object>> getCriminalRecords(Long applicantId) {
-        log.info("Getting criminal records for applicant: {}", applicantId);
-        
-        try {
-            List<CriminalRecord> criminalRecords = criminalRecordRepository.findByPersonId(applicantId);
-            
-            return criminalRecords.stream().map(record -> {
-                Map<String, Object> recordMap = new HashMap<>();
-                recordMap.put("id", record.getId());
-                recordMap.put("caseNumber", record.getCaseNumber());
-                recordMap.put("caseType", record.getCaseType());
-                recordMap.put("description", record.getDescription());
-                recordMap.put("courtName", record.getCourtName());
-                recordMap.put("status", record.getStatus());
-                recordMap.put("verdictDate", record.getVerdictDate());
-                recordMap.put("createdAt", record.getCreatedAt());
-                return recordMap;
-            }).collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("Error retrieving criminal records for applicant {}: {}", applicantId, e.getMessage());
-            throw new RuntimeException("Failed to retrieve criminal records: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public List<Map<String, Object>> getLoanHistory(Long applicantId) {
-        log.info("Getting loan history for applicant: {}", applicantId);
-        
-        try {
-            List<HistoricalAndCurrentLoan> loanHistory = historicalAndCurrentLoanRepository.findByPersonId(applicantId);
-            
-            return loanHistory.stream().map(loan -> {
-                Map<String, Object> loanMap = new HashMap<>();
-                loanMap.put("id", loan.getId());
-                loanMap.put("loanType", loan.getLoanType());
-                loanMap.put("institutionName", loan.getInstitutionName());
-                loanMap.put("loanAmount", loan.getLoanAmount());
-                loanMap.put("outstandingBalance", loan.getOutstandingBalance());
-                loanMap.put("startDate", loan.getStartDate());
-                loanMap.put("endDate", loan.getEndDate());
-                loanMap.put("status", loan.getStatus());
-                loanMap.put("defaultFlag", loan.getDefaultFlag());
-                loanMap.put("createdAt", loan.getCreatedAt());
-                return loanMap;
-            }).collect(Collectors.toList());
-            
-        } catch (Exception e) {
-            log.error("Error retrieving loan history for applicant {}: {}", applicantId, e.getMessage());
-            throw new RuntimeException("Failed to retrieve loan history: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Mask account number for security (show only last 4 digits)
-     */
-    private String maskAccountNumber(String accountNumber) {
-        if (accountNumber == null || accountNumber.length() <= 4) {
-            return accountNumber;
-        }
-        return "****" + accountNumber.substring(accountNumber.length() - 4);
-    }
-=======
     private String extractPanNumber(Applicant applicant) {
         log.debug("Extracting PAN for applicant ID: {} from basic details", applicant.getApplicantId());
         
@@ -2174,5 +1995,5 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
 		// TODO Auto-generated method stub
 		return null;
 	}
->>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
 }
+

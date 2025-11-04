@@ -40,8 +40,6 @@ public class LoanOfficerScreeningController {
     }
     
     /**
-<<<<<<< HEAD
-=======
      * Get loans that have been escalated to compliance and now have verdicts available
      * These loans need final action from the loan officer
      */
@@ -64,7 +62,6 @@ public class LoanOfficerScreeningController {
     }
     
     /**
->>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
      * Get comprehensive dashboard with all KPIs, metrics, and visualizations
      * Supports filtering by time period
      */
@@ -635,8 +632,6 @@ public class LoanOfficerScreeningController {
         }
     }
     
-<<<<<<< HEAD
-=======
     /**
      * Get compliance verdict for a specific loan
      * This allows loan officers to see compliance decisions and take appropriate action
@@ -718,7 +713,6 @@ public class LoanOfficerScreeningController {
         }
     }
     
->>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
     // ==================== Document Resubmission Requests from Compliance Officer ====================
     
     /**
@@ -759,19 +753,12 @@ public class LoanOfficerScreeningController {
                     if (assignment.getOfficer().getOfficerId().equals(officerId)) {
                         log.info("Including request for officer ID: {}", officerId);
                         
-<<<<<<< HEAD
-                        // Get loan information from the loan officer assignment
-                        com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
-                        if (assignment.getLoan() != null) {
-                            loan = assignment.getLoan();
-=======
                         // Get loan information from the compliance assignment (which should have the loan)
                         com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
                         if (assignment.getLoan() != null) {
                             loan = assignment.getLoan();
                         } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
                             loan = docRequest.getAssignment().getLoan();
->>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
                         } else {
                             // Try to find loan by applicant ID
                             java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
