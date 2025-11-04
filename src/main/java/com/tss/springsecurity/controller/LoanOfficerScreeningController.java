@@ -650,12 +650,10 @@ public class LoanOfficerScreeningController {
                     if (assignment.getOfficer().getOfficerId().equals(officerId)) {
                         log.info("Including request for officer ID: {}", officerId);
                         
-                        // Get loan information from the compliance assignment (which should have the loan)
+                        // Get loan information from the loan officer assignment
                         com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
                         if (assignment.getLoan() != null) {
                             loan = assignment.getLoan();
-                        } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
-                            loan = docRequest.getAssignment().getLoan();
                         } else {
                             // Try to find loan by applicant ID
                             java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
