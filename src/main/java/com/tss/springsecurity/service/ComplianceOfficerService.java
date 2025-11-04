@@ -118,6 +118,16 @@ public interface ComplianceOfficerService {
     List<FraudHistoryResponse> getFraudHistory(Long applicantId);
     
     /**
+     * Get external fraud data for an applicant
+     */
+    Map<String, Object> getExternalFraudData(Long applicantId);
+    
+    /**
+     * Get enhanced screening details for compliance assignment
+     */
+    Map<String, Object> getEnhancedScreeningDetails(Long assignmentId);
+    
+    /**
      * Request additional documents
      */
     Map<String, Object> requestAdditionalDocuments(Long officerId, AdditionalDocumentRequest request);
@@ -146,25 +156,8 @@ public interface ComplianceOfficerService {
      */
     Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request);
     
-    // ==================== External Fraud Data ====================
-    
     /**
-     * Get external fraud data for an applicant from external_lms database
+     * Get external person details by person ID from external database
      */
-    Map<String, Object> getExternalFraudData(Long applicantId);
-    
-    /**
-     * Get bank records for an applicant from external database
-     */
-    List<Map<String, Object>> getBankRecords(Long applicantId);
-    
-    /**
-     * Get criminal records for an applicant from external database
-     */
-    List<Map<String, Object>> getCriminalRecords(Long applicantId);
-    
-    /**
-     * Get historical and current loans for an applicant from external database
-     */
-    List<Map<String, Object>> getLoanHistory(Long applicantId);
+    Map<String, Object> getExternalPersonDetails(Long personId);
 }

@@ -3,6 +3,7 @@ package com.tss.springsecurity.repository;
 import com.tss.springsecurity.entity.Applicant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,10 +29,14 @@ public interface ApplicantRepository extends JpaRepository<Applicant, Long> {
            "WHERE YEAR(a.createdAt) = YEAR(CURRENT_DATE) " +
            "GROUP BY MONTH(a.createdAt) " +
            "ORDER BY MONTH(a.createdAt)")
-    List<Object[]> countApplicantsByMonth();
-	List<Applicant> findByApprovalStatus(String status);
-	
-	// For KYC duplicate detection - PAN is in related PanDetails entity
-	@Query("SELECT DISTINCT a FROM Applicant a JOIN a.panDetails p WHERE p.panNumber = ?1")
-	List<Applicant> findByPanNumber(String panNumber);
+    List<Object[]> getMonthlyApplicationCounts();
+    
+    List<Applicant> findByApprovalStatus(String status);
+    
+    @Query("SELECT a FROM Applicant a LEFT JOIN FETCH a.basicDetails WHERE a.applicantId = :id")
+    Optional<Applicant> findByIdWithBasicDetails(@Param("id") Long id);
+    
+    // Count applicants by month for dashboard statistics
+    @Query("SELECT COUNT(a) FROM Applicant a WHERE MONTH(a.createdAt) = :month AND YEAR(a.createdAt) = YEAR(CURRENT_DATE)")
+    Long countApplicantsByMonth(@Param("month") int month);
 }

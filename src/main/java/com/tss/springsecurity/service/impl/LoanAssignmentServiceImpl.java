@@ -71,6 +71,7 @@ public class LoanAssignmentServiceImpl implements LoanAssignmentService {
         OfficerApplicationAssignment assignment = new OfficerApplicationAssignment();
         assignment.setOfficer(assignedOfficer);
         assignment.setApplicant(loan.getApplicant());
+        assignment.setLoan(loan); // Assign the loan ID
         assignment.setStatus("PENDING");
         assignment.setPriority(request.getPriority());
         assignment.setRemarks(request.getRemarks());

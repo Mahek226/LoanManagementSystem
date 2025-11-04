@@ -40,6 +40,31 @@ public class LoanOfficerScreeningController {
     }
     
     /**
+<<<<<<< HEAD
+=======
+     * Get loans that have been escalated to compliance and now have verdicts available
+     * These loans need final action from the loan officer
+     */
+    @GetMapping("/{officerId}/loans-with-compliance-verdicts")
+    public ResponseEntity<List<LoanScreeningResponse>> getLoansWithComplianceVerdicts(@PathVariable Long officerId) {
+        try {
+            List<LoanScreeningResponse> loans = screeningService.getAssignedLoansForOfficer(officerId);
+            
+            // Filter to only show loans that are escalated and have compliance verdicts
+            List<LoanScreeningResponse> loansWithVerdicts = loans.stream()
+                    .filter(loan -> "ESCALATED_TO_COMPLIANCE".equals(loan.getStatus()) && 
+                                   Boolean.TRUE.equals(loan.getHasComplianceVerdict()))
+                    .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(loansWithVerdicts);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new java.util.ArrayList<>());
+        }
+    }
+    
+    /**
+>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
      * Get comprehensive dashboard with all KPIs, metrics, and visualizations
      * Supports filtering by time period
      */
@@ -610,6 +635,90 @@ public class LoanOfficerScreeningController {
         }
     }
     
+<<<<<<< HEAD
+=======
+    /**
+     * Get compliance verdict for a specific loan
+     * This allows loan officers to see compliance decisions and take appropriate action
+     */
+    @GetMapping("/loan/{loanId}/compliance-verdict")
+    public ResponseEntity<?> getComplianceVerdictForLoan(@PathVariable Long loanId) {
+        try {
+            log.info("Getting compliance verdict for loan ID: {}", loanId);
+            
+            com.tss.springsecurity.dto.ComplianceVerdictResponse verdict = 
+                    screeningService.getComplianceVerdictForLoan(loanId);
+            
+            if (verdict != null) {
+                return ResponseEntity.ok(verdict);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("No compliance verdict found for this loan"));
+            }
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error fetching compliance verdict: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Process loan after compliance verdict
+     * Allows loan officer to take final action based on compliance recommendation
+     */
+    @PostMapping("/{officerId}/process-after-compliance")
+    public ResponseEntity<?> processLoanAfterCompliance(
+            @PathVariable Long officerId,
+            @RequestBody java.util.Map<String, Object> request) {
+        try {
+            Long loanId = Long.valueOf(request.get("loanId").toString());
+            Long assignmentId = Long.valueOf(request.get("assignmentId").toString());
+            String decision = request.get("decision").toString(); // APPROVE, REJECT
+            String remarks = request.get("remarks") != null ? request.get("remarks").toString() : "";
+            
+            log.info("Processing loan {} after compliance verdict by officer {}", loanId, officerId);
+            
+            com.tss.springsecurity.dto.LoanScreeningResponse response = 
+                    screeningService.processLoanAfterCompliance(officerId, loanId, assignmentId, decision, remarks);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error processing loan after compliance: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get pending loans that need final decision after compliance verdict
+     * This shows loans that are escalated to compliance and now have verdicts available
+     */
+    @GetMapping("/{officerId}/pending-after-compliance")
+    public ResponseEntity<?> getPendingLoansAfterCompliance(@PathVariable Long officerId) {
+        try {
+            List<LoanScreeningResponse> loans = screeningService.getAssignedLoansForOfficer(officerId);
+            
+            // Filter to only show loans that need final action after compliance verdict
+            List<LoanScreeningResponse> pendingAfterCompliance = loans.stream()
+                    .filter(loan -> "COMPLIANCE_VERDICT_AVAILABLE".equals(loan.getStatus()) || 
+                                   ("ESCALATED_TO_COMPLIANCE".equals(loan.getStatus()) && 
+                                    Boolean.TRUE.equals(loan.getHasComplianceVerdict())))
+                    .collect(java.util.stream.Collectors.toList());
+            
+            return ResponseEntity.ok(pendingAfterCompliance);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error fetching pending loans after compliance: " + e.getMessage()));
+        }
+    }
+    
+>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
     // ==================== Document Resubmission Requests from Compliance Officer ====================
     
     /**
@@ -650,10 +759,19 @@ public class LoanOfficerScreeningController {
                     if (assignment.getOfficer().getOfficerId().equals(officerId)) {
                         log.info("Including request for officer ID: {}", officerId);
                         
+<<<<<<< HEAD
                         // Get loan information from the loan officer assignment
                         com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
                         if (assignment.getLoan() != null) {
                             loan = assignment.getLoan();
+=======
+                        // Get loan information from the compliance assignment (which should have the loan)
+                        com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
+                        if (assignment.getLoan() != null) {
+                            loan = assignment.getLoan();
+                        } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
+                            loan = docRequest.getAssignment().getLoan();
+>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
                         } else {
                             // Try to find loan by applicant ID
                             java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 

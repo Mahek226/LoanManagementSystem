@@ -28,7 +28,7 @@ public class OfficerApplicationAssignment {
     private Applicant applicant;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "loan_id")
+    @JoinColumn(name = "loan_id", nullable = true, foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private ApplicantLoanDetails loan;
     
     @Column(name = "status", length = 50)

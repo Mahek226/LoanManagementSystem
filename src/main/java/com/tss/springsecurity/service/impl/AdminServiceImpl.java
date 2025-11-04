@@ -7,6 +7,7 @@ import com.tss.springsecurity.dto.DashboardStatsResponse;
 import com.tss.springsecurity.entity.Admin;
 import com.tss.springsecurity.repository.AdminRepository;
 import com.tss.springsecurity.repository.ApplicantRepository;
+import com.tss.springsecurity.repository.ApplicantLoanDetailsRepository;
 import com.tss.springsecurity.service.AdminService;
 import com.tss.springsecurity.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AdminServiceImpl implements AdminService {
 
     private final AdminRepository adminRepository;
     private final ApplicantRepository applicantRepository;
+    private final ApplicantLoanDetailsRepository loanDetailsRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
@@ -102,8 +104,11 @@ public class AdminServiceImpl implements AdminService {
         long rejectedApplications = applicantRepository.countByApprovalStatus("REJECTED");
         System.out.println("Rejected applications from DB: " + rejectedApplications);
 
-        // Mock data for loan amounts (you can implement actual loan calculations)
-        double totalLoanAmount = 15750000.0;
+        // Calculate actual loan amounts from database
+        Double totalLoanAmount = loanDetailsRepository.sumAllLoanAmounts();
+        if (totalLoanAmount == null) {
+            totalLoanAmount = 0.0;
+        }
         double averageLoanAmount = totalApplicants > 0 ? totalLoanAmount / totalApplicants : 0.0;
 
         // Get real monthly applications data from database

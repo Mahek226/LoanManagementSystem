@@ -214,6 +214,19 @@ public class ApplicantLoanDetails {
     @Column(name = "monthly_emi", precision = 15, scale = 2)
     private BigDecimal monthlyEmi;
     
+    // Approval/Rejection tracking fields
+    @Column(name = "approved_by", length = 200)
+    private String approvedBy;
+    
+    @Column(name = "rejected_by", length = 200)
+    private String rejectedBy;
+    
+    @Column(name = "rejection_date")
+    private LocalDateTime rejectionDate;
+    
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
+    
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"loan", "applicant"})
     private List<FraudFlag> fraudFlags;

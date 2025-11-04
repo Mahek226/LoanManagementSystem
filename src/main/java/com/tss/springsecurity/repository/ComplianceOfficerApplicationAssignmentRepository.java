@@ -22,4 +22,12 @@ public interface ComplianceOfficerApplicationAssignmentRepository extends JpaRep
     
     @Query("SELECT COUNT(c) FROM ComplianceOfficerApplicationAssignment c WHERE c.complianceOfficer.officerId = :officerId AND c.status IN ('PENDING', 'IN_PROGRESS')")
     Long countActiveAssignmentsByOfficer(@Param("officerId") Long officerId);
+    
+    // New methods using loan_id relationship
+    List<ComplianceOfficerApplicationAssignment> findByLoan_LoanId(Long loanId);
+    
+    Optional<ComplianceOfficerApplicationAssignment> findByLoan_LoanIdAndStatus(Long loanId, String status);
+    
+    @Query("SELECT c FROM ComplianceOfficerApplicationAssignment c WHERE c.loan.loanId = :loanId ORDER BY c.assignedAt DESC")
+    List<ComplianceOfficerApplicationAssignment> findByLoanIdOrderByAssignedAtDesc(@Param("loanId") Long loanId);
 }

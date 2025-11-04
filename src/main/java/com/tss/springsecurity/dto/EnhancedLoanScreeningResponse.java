@@ -30,6 +30,15 @@ public class EnhancedLoanScreeningResponse {
     private String officerName;
     private String officerType; // LOAN_OFFICER, COMPLIANCE_OFFICER
     
+    // Compliance verdict details (when available)
+    private String complianceVerdict; // APPROVED, REJECTED, FLAGGED, CONDITIONAL_APPROVAL
+    private String complianceVerdictReason;
+    private String complianceRemarks;
+    private String complianceOfficerName;
+    private LocalDateTime complianceVerdictTimestamp;
+    private String nextAction; // What the loan officer should do next
+    private Boolean hasComplianceVerdict; // Flag to indicate if compliance review is complete
+    
     // Enhanced scoring information
     private NormalizedRiskScore normalizedRiskScore;
     private ScoringBreakdown scoringBreakdown;

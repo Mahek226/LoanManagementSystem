@@ -10,6 +10,7 @@ import com.tss.springsecurity.externalfraud.repository.*;
 import com.tss.springsecurity.externalfraud.entity.*;
 import com.tss.springsecurity.externalfraud.service.ExternalFraudScreeningService;
 import com.tss.springsecurity.externalfraud.model.ExternalFraudCheckResult;
+import com.tss.springsecurity.service.EnhancedLoanScreeningService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -17,7 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,8 +68,14 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     @Autowired
     private HistoricalAndCurrentLoanRepository loanHistoryRepository;
     
+    @Autowired
+    private GovernmentIssuedDocumentRepository governmentIssuedDocumentRepository;
+    
     @Autowired(required = false)
     private ExternalFraudScreeningService externalFraudScreeningService;
+    
+    @Autowired
+    private EnhancedLoanScreeningService enhancedLoanScreeningService;
     
     @Override
     public LoanScreeningResponse getLoanScreeningDetails(Long assignmentId) {
@@ -313,6 +322,26 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     
     // Helper methods
     private LoanScreeningResponse mapToLoanScreeningResponse(ComplianceOfficerApplicationAssignment assignment) {
+        ApplicantLoanDetails loan = null;
+        
+        try {
+            loan = assignment.getLoan();
+            // Try to access a property to trigger proxy initialization and catch EntityNotFoundException
+            if (loan != null) {
+                loan.getLoanId(); // This will trigger the exception if loan_id = 0
+            }
+        } catch (Exception e) {
+            // If there's any exception (including EntityNotFoundException), use fallback
+            loan = null;
+        }
+        
+        // Fallback to fetching loan by applicant if assignment loan is null or invalid
+        if (loan == null) {
+            if (assignment.getApplicant().getLoanDetails() != null && !assignment.getApplicant().getLoanDetails().isEmpty()) {
+                loan = assignment.getApplicant().getLoanDetails().get(0);
+            }
+        }
+        
         LoanScreeningResponse response = new LoanScreeningResponse();
         response.setAssignmentId(assignment.getAssignmentId());
         response.setApplicantId(assignment.getApplicant().getApplicantId());
@@ -328,11 +357,10 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         response.setOfficerType("COMPLIANCE_OFFICER");
         
         // Set loan details if available
-        if (assignment.getApplicant().getLoanDetails() != null && !assignment.getApplicant().getLoanDetails().isEmpty()) {
-            ApplicantLoanDetails loanDetails = assignment.getApplicant().getLoanDetails().get(0);
-            response.setLoanId(loanDetails.getLoanId());
-            response.setLoanType(loanDetails.getLoanType());
-            response.setLoanAmount(loanDetails.getLoanAmount());
+        if (loan != null) {
+            response.setLoanId(loan.getLoanId());
+            response.setLoanType(loan.getLoanType());
+            response.setLoanAmount(loan.getLoanAmount());
         }
         
         // Set risk assessment if available
@@ -389,49 +417,49 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     
     // ==================== NEW METHODS FOR KYC, AML, RISK ANALYSIS ====================
     
-    @Override
-    public KYCVerificationResponse performKYCVerification(KYCVerificationRequest request) {
-        log.info("Performing KYC verification for applicant ID: {}", request.getApplicantId());
-        
-        Applicant applicant = applicantRepository.findById(request.getApplicantId())
-                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + request.getApplicantId()));
-        
-        KYCVerificationResponse response = KYCVerificationResponse.builder()
-                .verified(true)
-                .nameMatch(true)
-                .addressMatch(true)
-                .duplicateFound(false)
-                .build();
-        
-        // Verify PAN if requested
-        if ("PAN".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
-            // TODO: Integrate with actual PAN verification API
-            response.setPanStatus("VERIFIED");
-            log.info("PAN verification completed for: {}", request.getPanNumber());
-        }
-        
-        // Verify Aadhaar if requested
-        if ("AADHAAR".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
-            // TODO: Integrate with actual Aadhaar verification API
-            response.setAadhaarStatus("VERIFIED");
-            log.info("Aadhaar verification completed for: {}", request.getAadhaarNumber());
-        }
-        
-        // Check for duplicates
-        List<Applicant> duplicates = applicantRepository.findByPanNumber(request.getPanNumber());
-        if (duplicates.size() > 1) {
-            response.setDuplicateFound(true);
-            response.setVerified(false);
-            response.setRemarks("Duplicate PAN number found in system");
-        } else {
-            response.setRemarks("KYC verification completed successfully");
-        }
-        
-        // Log the verification
-        logActivity(request.getApplicantId(), "KYC_VERIFICATION", "KYC verification performed", "COMPLETED");
-        
-        return response;
-    }
+//    @Override
+//    public KYCVerificationResponse performKYCVerification(KYCVerificationRequest request) {
+//        log.info("Performing KYC verification for applicant ID: {}", request.getApplicantId());
+//        
+//        Applicant applicant = applicantRepository.findById(request.getApplicantId())
+//                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + request.getApplicantId()));
+//        
+//        KYCVerificationResponse response = KYCVerificationResponse.builder()
+//                .verified(true)
+//                .nameMatch(true)
+//                .addressMatch(true)
+//                .duplicateFound(false)
+//                .build();
+//        
+//        // Verify PAN if requested
+//        if ("PAN".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
+//            // TODO: Integrate with actual PAN verification API
+//            response.setPanStatus("VERIFIED");
+//            log.info("PAN verification completed for: {}", request.getPanNumber());
+//        }
+//        
+//        // Verify Aadhaar if requested
+//        if ("AADHAAR".equals(request.getVerificationType()) || "BOTH".equals(request.getVerificationType())) {
+//            // TODO: Integrate with actual Aadhaar verification API
+//            response.setAadhaarStatus("VERIFIED");
+//            log.info("Aadhaar verification completed for: {}", request.getAadhaarNumber());
+//        }
+//        
+//        // Check for duplicates
+//        List<Applicant> duplicates = applicantRepository.findByPanNumber(request.getPanNumber());
+//        if (duplicates.size() > 1) {
+//            response.setDuplicateFound(true);
+//            response.setVerified(false);
+//            response.setRemarks("Duplicate PAN number found in system");
+//        } else {
+//            response.setRemarks("KYC verification completed successfully");
+//        }
+//        
+//        // Log the verification
+//        logActivity(request.getApplicantId(), "KYC_VERIFICATION", "KYC verification performed", "COMPLETED");
+//        
+//        return response;
+//    }
     
     @Override
     public AMLScreeningResponse performAMLScreening(AMLScreeningRequest request) {
@@ -722,13 +750,763 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     
     @Override
     public List<FraudHistoryResponse> getFraudHistory(Long applicantId) {
-        log.info("Getting fraud history for applicant ID: {}", applicantId);
+        // Implementation for getting fraud history
+        // This would typically involve querying fraud databases or external services
+        return List.of(); // Placeholder implementation
+    }
+    
+    @Override
+    public Map<String, Object> getExternalFraudData(Long applicantId) {
+        log.info("Fetching external fraud data for applicant ID: {}", applicantId);
         
-        List<FraudFlag> fraudFlags = fraudFlagRepository.findByApplicant_ApplicantId(applicantId);
+        try {
+            // Get applicant details with basic details loaded
+            Applicant applicant = applicantRepository.findByIdWithBasicDetails(applicantId)
+                    .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+            
+            // Extract PAN and Aadhaar numbers for external lookups
+            String panNumber = extractPanNumber(applicant);
+            String aadhaarNumber = extractAadhaarNumber(applicant);
+            
+            log.info("Extracted PAN: {}, Aadhaar: {} for applicant ID: {}", 
+                    panNumber != null ? panNumber.substring(0, 3) + "****" : "null", 
+                    aadhaarNumber != null ? "****" + aadhaarNumber.substring(8) : "null", 
+                    applicantId);
+            
+            // Try to find matching person in external database
+            Optional<Person> externalPersonOpt = Optional.empty();
+            
+            // First try PAN matching
+            if (panNumber != null) {
+                externalPersonOpt = personRepository.findByPanNumber(panNumber);
+                log.info("PAN matching result: {}", externalPersonOpt.isPresent() ? "Found" : "Not found");
+            }
+            
+            // If not found by PAN, try Aadhaar matching
+            if (!externalPersonOpt.isPresent() && aadhaarNumber != null) {
+                externalPersonOpt = personRepository.findByAadhaarNumber(aadhaarNumber);
+                log.info("Aadhaar matching result: {}", externalPersonOpt.isPresent() ? "Found" : "Not found");
+            }
+            
+            Map<String, Object> externalData = new HashMap<>();
+            
+            if (externalPersonOpt.isPresent()) {
+                Person externalPerson = externalPersonOpt.get();
+                Long externalPersonId = externalPerson.getId();
+                
+                log.info("Found matching external person with ID: {} for applicant ID: {}", 
+                        externalPersonId, applicantId);
+                
+                // Get comprehensive external person details
+                Map<String, Object> personDetails = getExternalPersonDetails(externalPersonId);
+                
+                // Add matching information
+                externalData.put("personFound", true);
+                externalData.put("externalPersonId", externalPersonId);
+                externalData.put("matchedBy", panNumber != null ? "PAN" : "AADHAAR");
+                externalData.put("searchCriteria", Map.of(
+                        "panNumber", panNumber != null ? panNumber.substring(0, 3) + "****" : "null",
+                        "aadhaarNumber", aadhaarNumber != null ? "****" + aadhaarNumber.substring(8) : "null"
+                ));
+                
+                // Merge person details into external data
+                externalData.putAll(personDetails);
+                
+            } else {
+                log.info("No matching external person found for applicant ID: {}", applicantId);
+                
+                externalData.put("personFound", false);
+                externalData.put("externalPersonId", null);
+                externalData.put("message", "No matching person found in external fraud database");
+                externalData.put("searchCriteria", Map.of(
+                        "panNumber", panNumber != null ? panNumber.substring(0, 3) + "****" : "null",
+                        "aadhaarNumber", aadhaarNumber != null ? "****" + aadhaarNumber.substring(8) : "null"
+                ));
+                
+                // Return empty data structures
+                externalData.put("bankRecords", createEmptyBankRecords());
+                externalData.put("criminalRecords", createEmptyCriminalRecords());
+                externalData.put("loanHistory", createEmptyLoanHistory());
+                externalData.put("governmentDocuments", createEmptyGovernmentDocuments());
+                externalData.put("riskAssessment", createEmptyRiskAssessment());
+                externalData.put("lastUpdated", LocalDateTime.now());
+            }
+            
+            externalData.put("lastChecked", LocalDateTime.now());
+            
+            log.info("Successfully fetched external fraud data for applicant ID: {}", applicantId);
+            
+            return externalData;
+            
+        } catch (Exception e) {
+            log.error("Error fetching external fraud data for applicant ID: {}", applicantId, e);
+            throw new RuntimeException("Failed to fetch external fraud data: " + e.getMessage(), e);
+        }
+    }
+    
+    @Override
+    public Map<String, Object> getExternalPersonDetails(Long personId) {
+        log.info("Fetching external person details for person ID: {}", personId);
         
-        return fraudFlags.stream()
-                .map(this::mapToFraudHistoryResponse)
-                .collect(Collectors.toList());
+        try {
+            // Get person details
+            Person person = personRepository.findById(personId)
+                    .orElseThrow(() -> new RuntimeException("Person not found with ID: " + personId));
+            
+            log.info("Found person: {} {} with PAN: {}", 
+                    person.getFirstName(), 
+                    person.getLastName(),
+                    person.getPanNumber() != null ? person.getPanNumber().substring(0, 3) + "****" : "null");
+        
+        Map<String, Object> personDetails = new HashMap<>();
+        
+        // Basic person information
+        personDetails.put("personId", person.getId());
+        personDetails.put("firstName", person.getFirstName());
+        personDetails.put("lastName", person.getLastName());
+        personDetails.put("dateOfBirth", person.getDob());
+        personDetails.put("gender", person.getGender());
+        personDetails.put("panNumber", person.getPanNumber() != null ? person.getPanNumber().substring(0, 3) + "****" : null);
+        personDetails.put("aadhaarNumber", person.getAadhaarNumber() != null ? "****" + person.getAadhaarNumber().substring(8) : null);
+        personDetails.put("phoneNumber", person.getPhoneNumber());
+        personDetails.put("email", person.getEmail());
+//        personDetails.put("address", person.getAddress());
+        
+        // Fetch bank records
+        List<BankRecord> bankRecords = bankRecordRepository.findByPersonId(personId);
+        Map<String, Object> bankData = new HashMap<>();
+        if (!bankRecords.isEmpty()) {
+            bankData.put("totalAccounts", bankRecords.size());
+            bankData.put("totalBalance", bankRecords.stream()
+                    .filter(br -> br.getBalanceAmount() != null)
+                    .mapToDouble(br -> br.getBalanceAmount().doubleValue())
+                    .sum());
+            bankData.put("activeAccounts", bankRecords.stream()
+                    .filter(br -> br.getIsActive() != null && br.getIsActive())
+                    .count());
+            bankData.put("accounts", bankRecords.stream()
+                    .map(br -> {
+                        Map<String, Object> bankMap = new HashMap<>();
+                        bankMap.put("bankName", br.getBankName() != null ? br.getBankName() : "Unknown");
+                        bankMap.put("accountType", br.getAccountType() != null ? br.getAccountType() : "Unknown");
+                        bankMap.put("balance", br.getBalanceAmount() != null ? br.getBalanceAmount() : 0);
+                        bankMap.put("isActive", br.getIsActive() != null ? br.getIsActive() : false);
+                        bankMap.put("lastTransaction", br.getLastTransactionDate());
+                        return bankMap;
+                    })
+                    .collect(Collectors.toList()));
+        } else {
+            bankData.put("totalAccounts", 0);
+            bankData.put("totalBalance", 0.0);
+            bankData.put("activeAccounts", 0);
+            bankData.put("accounts", List.of());
+        }
+        personDetails.put("bankRecords", bankData);
+        
+        // Fetch criminal records
+        List<CriminalRecord> criminalRecords = criminalRecordRepository.findByPersonId(personId);
+        Map<String, Object> criminalData = new HashMap<>();
+        if (!criminalRecords.isEmpty()) {
+            criminalData.put("totalCases", criminalRecords.size());
+            criminalData.put("cases", criminalRecords.stream()
+                    .map(cr -> {
+                        Map<String, Object> caseMap = new HashMap<>();
+                        caseMap.put("caseNumber", cr.getCaseNumber() != null ? cr.getCaseNumber() : "Unknown");
+                        caseMap.put("caseType", cr.getCaseType() != null ? cr.getCaseType() : "Unknown");
+                        caseMap.put("description", cr.getDescription() != null ? cr.getDescription() : "No description");
+                        caseMap.put("courtName", cr.getCourtName() != null ? cr.getCourtName() : "Unknown");
+                        caseMap.put("status", cr.getStatus() != null ? cr.getStatus() : "Unknown");
+                        caseMap.put("verdictDate", cr.getVerdictDate());
+                        return caseMap;
+                    })
+                    .collect(Collectors.toList()));
+        } else {
+            criminalData.put("totalCases", 0);
+            criminalData.put("cases", List.of());
+        }
+        personDetails.put("criminalRecords", criminalData);
+        
+        // Fetch loan history
+        List<HistoricalAndCurrentLoan> loanHistory = loanHistoryRepository.findByPersonId(personId);
+        Map<String, Object> loanData = new HashMap<>();
+        if (!loanHistory.isEmpty()) {
+            long defaultedLoans = loanHistory.stream()
+                    .filter(loan -> loan.getDefaultFlag() != null && loan.getDefaultFlag())
+                    .count();
+            
+            double totalBorrowed = loanHistory.stream()
+                    .filter(loan -> loan.getLoanAmount() != null)
+                    .mapToDouble(loan -> loan.getLoanAmount().doubleValue())
+                    .sum();
+            
+            double totalOutstanding = loanHistory.stream()
+                    .filter(loan -> loan.getOutstandingBalance() != null)
+                    .mapToDouble(loan -> loan.getOutstandingBalance().doubleValue())
+                    .sum();
+            
+            loanData.put("totalLoans", loanHistory.size());
+            loanData.put("defaultedLoans", (int) defaultedLoans);
+            loanData.put("totalAmountBorrowed", totalBorrowed);
+            loanData.put("totalOutstandingBalance", totalOutstanding);
+            loanData.put("defaultRate", loanHistory.size() > 0 ? (double) defaultedLoans / loanHistory.size() * 100 : 0.0);
+            loanData.put("loans", loanHistory.stream()
+                    .map(loan -> {
+                        Map<String, Object> loanMap = new HashMap<>();
+                        loanMap.put("loanId", loan.getId());
+                        loanMap.put("loanType", loan.getLoanType() != null ? loan.getLoanType() : "Unknown");
+                        loanMap.put("institutionName", loan.getInstitutionName() != null ? loan.getInstitutionName() : "Unknown");
+                        loanMap.put("loanAmount", loan.getLoanAmount() != null ? loan.getLoanAmount() : 0);
+                        loanMap.put("outstandingBalance", loan.getOutstandingBalance() != null ? loan.getOutstandingBalance() : 0);
+                        loanMap.put("startDate", loan.getStartDate());
+                        loanMap.put("endDate", loan.getEndDate());
+                        loanMap.put("status", loan.getStatus() != null ? loan.getStatus() : "Unknown");
+                        loanMap.put("defaultFlag", loan.getDefaultFlag() != null ? loan.getDefaultFlag() : false);
+                        return loanMap;
+                    })
+                    .collect(Collectors.toList()));
+        } else {
+            loanData.put("totalLoans", 0);
+            loanData.put("defaultedLoans", 0);
+            loanData.put("totalAmountBorrowed", 0.0);
+            loanData.put("totalOutstandingBalance", 0.0);
+            loanData.put("defaultRate", 0.0);
+            loanData.put("loans", List.of());
+        }
+        personDetails.put("loanHistory", loanData);
+        
+        // Fetch government documents
+        List<GovernmentIssuedDocument> govDocuments = governmentIssuedDocumentRepository.findByPersonId(personId);
+        Map<String, Object> docData = new HashMap<>();
+        if (!govDocuments.isEmpty()) {
+            long verifiedDocs = govDocuments.stream()
+                    .filter(doc -> "VERIFIED".equals(doc.getVerificationStatus()))
+                    .count();
+            
+            docData.put("totalDocuments", govDocuments.size());
+            docData.put("verifiedDocuments", (int) verifiedDocs);
+            docData.put("verificationRate", govDocuments.size() > 0 ? (double) verifiedDocs / govDocuments.size() * 100 : 0.0);
+            docData.put("documents", govDocuments.stream()
+                    .map(doc -> {
+                        Map<String, Object> docMap = new HashMap<>();
+                        docMap.put("documentId", doc.getId());
+                        docMap.put("documentType", doc.getDocumentType() != null ? doc.getDocumentType() : "Unknown");
+                        docMap.put("documentNumber", doc.getDocumentNumber() != null ? doc.getDocumentNumber() : "Unknown");
+                        docMap.put("issuedDate", doc.getIssuedDate());
+                        docMap.put("expiryDate", doc.getExpiryDate());
+                        docMap.put("issuingAuthority", doc.getIssuingAuthority() != null ? doc.getIssuingAuthority() : "Unknown");
+                        docMap.put("verificationStatus", doc.getVerificationStatus() != null ? doc.getVerificationStatus() : "PENDING");
+                        return docMap;
+                    })
+                    .collect(Collectors.toList()));
+        } else {
+            docData.put("totalDocuments", 0);
+            docData.put("verifiedDocuments", 0);
+            docData.put("verificationRate", 0.0);
+            docData.put("documents", List.of());
+        }
+        personDetails.put("governmentDocuments", docData);
+        
+        // Calculate overall risk assessment
+        Map<String, Object> riskAssessment = createRiskAssessment(bankRecords, criminalRecords, loanHistory, govDocuments);
+        personDetails.put("riskAssessment", riskAssessment);
+        
+        personDetails.put("lastUpdated", LocalDateTime.now());
+        
+            log.info("Successfully fetched external person details for person ID: {}", personId);
+            
+            return personDetails;
+            
+        } catch (Exception e) {
+            log.error("Error fetching external person details for person ID: {}", personId, e);
+            throw new RuntimeException("Failed to fetch external person details: " + e.getMessage(), e);
+        }
+    }
+    
+    // Helper methods for empty data structures
+    private Map<String, Object> createEmptyBankRecords() {
+        Map<String, Object> bankRecords = new HashMap<>();
+        bankRecords.put("hasDefaultHistory", false);
+        bankRecords.put("creditScore", 0);
+        bankRecords.put("accountStatus", "NOT_FOUND");
+        bankRecords.put("totalAccounts", 0);
+        bankRecords.put("totalBalance", 0.0);
+        bankRecords.put("lastChecked", LocalDateTime.now());
+        bankRecords.put("records", List.of());
+        return bankRecords;
+    }
+    
+    private Map<String, Object> createEmptyCriminalRecords() {
+        Map<String, Object> criminalRecords = new HashMap<>();
+        criminalRecords.put("hasCriminalHistory", false);
+        criminalRecords.put("totalCases", 0);
+        criminalRecords.put("convictions", List.of());
+        criminalRecords.put("lastChecked", LocalDateTime.now());
+        return criminalRecords;
+    }
+    
+    private Map<String, Object> createEmptyLoanHistory() {
+        Map<String, Object> loanHistory = new HashMap<>();
+        loanHistory.put("previousLoans", 0);
+        loanHistory.put("defaultedLoans", 0);
+        loanHistory.put("totalAmountBorrowed", 0.0);
+        loanHistory.put("totalOutstandingBalance", 0.0);
+        loanHistory.put("lastLoanDate", null);
+        loanHistory.put("loanDetails", List.of());
+        return loanHistory;
+    }
+    
+    private Map<String, Object> createEmptyRbiCheck() {
+        Map<String, Object> rbiCheck = new HashMap<>();
+        rbiCheck.put("isDefaulter", false);
+        rbiCheck.put("defaultedLoansCount", 0);
+        rbiCheck.put("lastChecked", LocalDateTime.now());
+        return rbiCheck;
+    }
+    
+    private Map<String, Object> createEmptyCibilData() {
+        Map<String, Object> cibilData = new HashMap<>();
+        cibilData.put("cibilScore", 0);
+        cibilData.put("creditUtilization", 0.0);
+        cibilData.put("paymentHistory", "NO_HISTORY");
+        cibilData.put("lastUpdated", LocalDateTime.now());
+        return cibilData;
+    }
+    
+    private Map<String, Object> createEmptySanctionsCheck() {
+        Map<String, Object> sanctionsCheck = new HashMap<>();
+        sanctionsCheck.put("isOnSanctionsList", false);
+        sanctionsCheck.put("pepStatus", false);
+        sanctionsCheck.put("lastChecked", LocalDateTime.now());
+        return sanctionsCheck;
+    }
+    
+    // Helper methods for calculations
+    private int calculateCibilScore(List<BankRecord> bankRecords, List<HistoricalAndCurrentLoan> loans) {
+        int baseScore = 300;
+        
+        // Add points for active bank accounts
+        int bankScore = (int) bankRecords.stream()
+                .filter(br -> br.getIsActive() != null && br.getIsActive())
+                .count() * 50;
+        
+        // Subtract points for defaulted loans
+        int loanPenalty = (int) loans.stream()
+                .filter(loan -> loan.getDefaultFlag() != null && loan.getDefaultFlag())
+                .count() * 100;
+        
+        // Add points for good loan history
+        int goodLoanBonus = (int) loans.stream()
+                .filter(loan -> loan.getDefaultFlag() != null && !loan.getDefaultFlag() && 
+                               "CLOSED".equalsIgnoreCase(loan.getStatus()))
+                .count() * 75;
+        
+        int finalScore = baseScore + bankScore + goodLoanBonus - loanPenalty;
+        return Math.min(850, Math.max(300, finalScore));
+    }
+    
+    private double calculateCreditUtilization(List<HistoricalAndCurrentLoan> loans) {
+        double totalLimit = loans.stream()
+                .filter(loan -> loan.getLoanAmount() != null)
+                .mapToDouble(loan -> loan.getLoanAmount().doubleValue())
+                .sum();
+        
+        double totalUsed = loans.stream()
+                .filter(loan -> loan.getOutstandingBalance() != null)
+                .mapToDouble(loan -> loan.getOutstandingBalance().doubleValue())
+                .sum();
+        
+        if (totalLimit == 0) return 0.0;
+        return (totalUsed / totalLimit) * 100;
+    }
+    
+    private String determinePaymentHistory(List<HistoricalAndCurrentLoan> loans) {
+        if (loans.isEmpty()) return "NO_HISTORY";
+        
+        long defaultedCount = loans.stream()
+                .filter(loan -> loan.getDefaultFlag() != null && loan.getDefaultFlag())
+                .count();
+        
+        double defaultRate = (double) defaultedCount / loans.size();
+        
+        if (defaultRate == 0) return "EXCELLENT";
+        if (defaultRate < 0.1) return "GOOD";
+        if (defaultRate < 0.3) return "FAIR";
+        return "POOR";
+    }
+    
+    // ==================== NEW COMPREHENSIVE HELPER METHODS ====================
+    
+    private Map<String, Object> createMatchingCriteria(String panNumber, String aadhaarNumber, boolean found) {
+        Map<String, Object> criteria = new HashMap<>();
+        criteria.put("panNumberUsed", panNumber != null);
+        criteria.put("aadhaarNumberUsed", aadhaarNumber != null);
+        criteria.put("matchFound", found);
+        criteria.put("matchingMethod", found ? (panNumber != null ? "PAN" : "AADHAAR") : "NONE");
+        return criteria;
+    }
+    
+    private Map<String, Object> createPersonDetails(Person person) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("firstName", person.getFirstName());
+        details.put("lastName", person.getLastName());
+        details.put("dateOfBirth", person.getDob());
+        details.put("gender", person.getGender());
+        details.put("phoneNumber", person.getPhoneNumber());
+        details.put("email", person.getEmail());
+        details.put("maritalStatus", person.getMaritalStatus());
+        details.put("nationality", person.getNationality());
+        details.put("panNumber", person.getPanNumber());
+        details.put("aadhaarNumber", person.getAadhaarNumber());
+        details.put("createdAt", person.getCreatedAt());
+        details.put("updatedAt", person.getUpdatedAt());
+        return details;
+    }
+    
+    private Map<String, Object> createLoanHistoryData(List<HistoricalAndCurrentLoan> loansList) {
+        Map<String, Object> loanHistory = new HashMap<>();
+        
+        if (!loansList.isEmpty()) {
+            long defaultedLoans = loansList.stream()
+                    .filter(loan -> loan.getDefaultFlag() != null && loan.getDefaultFlag())
+                    .count();
+            
+            double totalAmountBorrowed = loansList.stream()
+                    .filter(loan -> loan.getLoanAmount() != null)
+                    .mapToDouble(loan -> loan.getLoanAmount().doubleValue())
+                    .sum();
+            
+            double totalOutstanding = loansList.stream()
+                    .filter(loan -> loan.getOutstandingBalance() != null)
+                    .mapToDouble(loan -> loan.getOutstandingBalance().doubleValue())
+                    .sum();
+            
+            Optional<LocalDate> lastLoanDate = loansList.stream()
+                    .filter(loan -> loan.getStartDate() != null)
+                    .map(HistoricalAndCurrentLoan::getStartDate)
+                    .max(Comparator.naturalOrder());
+            
+            // Group loans by status
+            Map<String, Long> loansByStatus = loansList.stream()
+                    .collect(Collectors.groupingBy(
+                            loan -> loan.getStatus() != null ? loan.getStatus() : "UNKNOWN",
+                            Collectors.counting()
+                    ));
+            
+            // Group loans by type
+            Map<String, Long> loansByType = loansList.stream()
+                    .collect(Collectors.groupingBy(
+                            loan -> loan.getLoanType() != null ? loan.getLoanType() : "UNKNOWN",
+                            Collectors.counting()
+                    ));
+            
+            loanHistory.put("previousLoans", loansList.size());
+            loanHistory.put("defaultedLoans", (int) defaultedLoans);
+            loanHistory.put("totalAmountBorrowed", totalAmountBorrowed);
+            loanHistory.put("totalOutstandingBalance", totalOutstanding);
+            loanHistory.put("lastLoanDate", lastLoanDate.orElse(null));
+            loanHistory.put("defaultRate", loansList.size() > 0 ? (double) defaultedLoans / loansList.size() * 100 : 0.0);
+            loanHistory.put("loansByStatus", loansByStatus);
+            loanHistory.put("loansByType", loansByType);
+            loanHistory.put("loanDetails", loansList.stream()
+                    .map(loan -> Map.of(
+                            "loanId", loan.getId(),
+                            "loanType", loan.getLoanType() != null ? loan.getLoanType() : "Unknown",
+                            "institutionName", loan.getInstitutionName() != null ? loan.getInstitutionName() : "Unknown",
+                            "loanAmount", loan.getLoanAmount() != null ? loan.getLoanAmount() : 0,
+                            "outstandingBalance", loan.getOutstandingBalance() != null ? loan.getOutstandingBalance() : 0,
+                            "startDate", loan.getStartDate(),
+                            "endDate", loan.getEndDate(),
+                            "status", loan.getStatus() != null ? loan.getStatus() : "Unknown",
+                            "defaultFlag", loan.getDefaultFlag() != null ? loan.getDefaultFlag() : false
+                    ))
+                    .collect(Collectors.toList()));
+        } else {
+            loanHistory = createEmptyLoanHistory();
+        }
+        
+        return loanHistory;
+    }
+    
+    private Map<String, Object> createGovernmentDocumentsData(List<GovernmentIssuedDocument> govDocuments) {
+        Map<String, Object> documents = new HashMap<>();
+        
+        if (!govDocuments.isEmpty()) {
+            // Group by document type
+            Map<String, Long> documentsByType = govDocuments.stream()
+                    .collect(Collectors.groupingBy(
+                            doc -> doc.getDocumentType() != null ? doc.getDocumentType() : "UNKNOWN",
+                            Collectors.counting()
+                    ));
+            
+            // Group by verification status
+            Map<String, Long> documentsByStatus = govDocuments.stream()
+                    .collect(Collectors.groupingBy(
+                            doc -> doc.getVerificationStatus() != null ? doc.getVerificationStatus() : "UNKNOWN",
+                            Collectors.counting()
+                    ));
+            
+            long verifiedCount = govDocuments.stream()
+                    .filter(doc -> "VERIFIED".equals(doc.getVerificationStatus()))
+                    .count();
+            
+            long expiredCount = govDocuments.stream()
+                    .filter(doc -> "EXPIRED".equals(doc.getVerificationStatus()))
+                    .count();
+            
+            documents.put("totalDocuments", govDocuments.size());
+            documents.put("verifiedDocuments", (int) verifiedCount);
+            documents.put("expiredDocuments", (int) expiredCount);
+            documents.put("verificationRate", govDocuments.size() > 0 ? (double) verifiedCount / govDocuments.size() * 100 : 0.0);
+            documents.put("documentsByType", documentsByType);
+            documents.put("documentsByStatus", documentsByStatus);
+            documents.put("documentDetails", govDocuments.stream()
+                    .map(doc -> Map.of(
+                            "documentId", doc.getId(),
+                            "documentType", doc.getDocumentType() != null ? doc.getDocumentType() : "Unknown",
+                            "documentNumber", doc.getDocumentNumber() != null ? doc.getDocumentNumber() : "Unknown",
+                            "issuedDate", doc.getIssuedDate(),
+                            "expiryDate", doc.getExpiryDate(),
+                            "issuingAuthority", doc.getIssuingAuthority() != null ? doc.getIssuingAuthority() : "Unknown",
+                            "verificationStatus", doc.getVerificationStatus() != null ? doc.getVerificationStatus() : "Unknown"
+                    ))
+                    .collect(Collectors.toList()));
+            documents.put("lastChecked", LocalDateTime.now());
+        } else {
+            documents = createEmptyGovernmentDocuments();
+        }
+        
+        return documents;
+    }
+    
+    private Map<String, Object> createSanctionsScreeningData(List<CriminalRecord> criminalRecordsList) {
+        Map<String, Object> sanctionsCheck = new HashMap<>();
+        
+        boolean isOnSanctionsList = !criminalRecordsList.isEmpty();
+        boolean pepStatus = criminalRecordsList.stream()
+                .anyMatch(cr -> cr.getCaseType() != null && 
+                        (cr.getCaseType().toLowerCase().contains("political") || 
+                         cr.getCaseType().toLowerCase().contains("corruption") ||
+                         cr.getCaseType().toLowerCase().contains("money laundering")));
+        
+        // Count different types of cases
+        Map<String, Long> casesByType = criminalRecordsList.stream()
+                .collect(Collectors.groupingBy(
+                        cr -> cr.getCaseType() != null ? cr.getCaseType() : "UNKNOWN",
+                        Collectors.counting()
+                ));
+        
+        // Count cases by status
+        Map<String, Long> casesByStatus = criminalRecordsList.stream()
+                .collect(Collectors.groupingBy(
+                        cr -> cr.getStatus() != null ? cr.getStatus() : "UNKNOWN",
+                        Collectors.counting()
+                ));
+        
+        sanctionsCheck.put("isOnSanctionsList", isOnSanctionsList);
+        sanctionsCheck.put("pepStatus", pepStatus);
+        sanctionsCheck.put("totalCases", criminalRecordsList.size());
+        sanctionsCheck.put("casesByType", casesByType);
+        sanctionsCheck.put("casesByStatus", casesByStatus);
+        sanctionsCheck.put("lastChecked", LocalDateTime.now());
+        
+        return sanctionsCheck;
+    }
+    
+    private Map<String, Object> createRiskAssessment(List<BankRecord> bankRecords, 
+                                                   List<CriminalRecord> criminalRecords, 
+                                                   List<HistoricalAndCurrentLoan> loans,
+                                                   List<GovernmentIssuedDocument> govDocuments) {
+        Map<String, Object> riskAssessment = new HashMap<>();
+        
+        // Calculate overall risk score (0-100, higher is riskier)
+        int riskScore = 0;
+        List<String> riskFactors = new ArrayList<>();
+        
+        // Criminal record risk (0-40 points)
+        if (!criminalRecords.isEmpty()) {
+            int criminalScore = Math.min(40, criminalRecords.size() * 10);
+            riskScore += criminalScore;
+            riskFactors.add("Criminal records found: " + criminalRecords.size() + " cases");
+        }
+        
+        // Loan default risk (0-30 points)
+        long defaultedLoans = loans.stream()
+                .filter(loan -> loan.getDefaultFlag() != null && loan.getDefaultFlag())
+                .count();
+        if (defaultedLoans > 0) {
+            int loanScore = Math.min(30, (int) defaultedLoans * 15);
+            riskScore += loanScore;
+            riskFactors.add("Loan defaults found: " + defaultedLoans + " loans");
+        }
+        
+        // Bank account risk (0-20 points)
+        long inactiveBankAccounts = bankRecords.stream()
+                .filter(br -> br.getIsActive() != null && !br.getIsActive())
+                .count();
+        if (inactiveBankAccounts > 0) {
+            int bankScore = Math.min(20, (int) inactiveBankAccounts * 5);
+            riskScore += bankScore;
+            riskFactors.add("Inactive bank accounts: " + inactiveBankAccounts);
+        }
+        
+        // Document verification risk (0-10 points)
+        long unverifiedDocs = govDocuments.stream()
+                .filter(doc -> !"VERIFIED".equals(doc.getVerificationStatus()))
+                .count();
+        if (unverifiedDocs > 0) {
+            int docScore = Math.min(10, (int) unverifiedDocs * 2);
+            riskScore += docScore;
+            riskFactors.add("Unverified documents: " + unverifiedDocs);
+        }
+        
+        // Determine risk level
+        String riskLevel;
+        String recommendation;
+        
+        if (riskScore >= 70) {
+            riskLevel = "CRITICAL";
+            recommendation = "REJECT";
+        } else if (riskScore >= 50) {
+            riskLevel = "HIGH";
+            recommendation = "MANUAL_REVIEW";
+        } else if (riskScore >= 30) {
+            riskLevel = "MEDIUM";
+            recommendation = "ENHANCED_VERIFICATION";
+        } else if (riskScore >= 15) {
+            riskLevel = "LOW";
+            recommendation = "STANDARD_PROCESS";
+        } else {
+            riskLevel = "MINIMAL";
+            recommendation = "APPROVE";
+        }
+        
+        riskAssessment.put("overallRiskScore", riskScore);
+        riskAssessment.put("riskLevel", riskLevel);
+        riskAssessment.put("recommendation", recommendation);
+        riskAssessment.put("riskFactors", riskFactors);
+        riskAssessment.put("assessmentDate", LocalDateTime.now());
+        
+        // Detailed breakdown
+        Map<String, Object> breakdown = new HashMap<>();
+        breakdown.put("criminalRisk", criminalRecords.size() > 0 ? "HIGH" : "LOW");
+        breakdown.put("financialRisk", defaultedLoans > 0 ? "HIGH" : "LOW");
+        breakdown.put("documentRisk", unverifiedDocs > 0 ? "MEDIUM" : "LOW");
+        breakdown.put("bankingRisk", inactiveBankAccounts > 0 ? "MEDIUM" : "LOW");
+        
+        riskAssessment.put("riskBreakdown", breakdown);
+        
+        return riskAssessment;
+    }
+    
+    private Map<String, Object> createEmptyGovernmentDocuments() {
+        Map<String, Object> documents = new HashMap<>();
+        documents.put("totalDocuments", 0);
+        documents.put("verifiedDocuments", 0);
+        documents.put("expiredDocuments", 0);
+        documents.put("verificationRate", 0.0);
+        documents.put("documentsByType", new HashMap<>());
+        documents.put("documentsByStatus", new HashMap<>());
+        documents.put("documentDetails", List.of());
+        documents.put("lastChecked", LocalDateTime.now());
+        return documents;
+    }
+    
+    private Map<String, Object> createEmptyRiskAssessment() {
+        Map<String, Object> riskAssessment = new HashMap<>();
+        riskAssessment.put("overallRiskScore", 0);
+        riskAssessment.put("riskLevel", "MINIMAL");
+        riskAssessment.put("recommendation", "STANDARD_PROCESS");
+        riskAssessment.put("riskFactors", List.of());
+        riskAssessment.put("assessmentDate", LocalDateTime.now());
+        
+        Map<String, Object> breakdown = new HashMap<>();
+        breakdown.put("criminalRisk", "LOW");
+        breakdown.put("financialRisk", "LOW");
+        breakdown.put("documentRisk", "LOW");
+        breakdown.put("bankingRisk", "LOW");
+        riskAssessment.put("riskBreakdown", breakdown);
+        
+        return riskAssessment;
+    }
+    
+    @Override
+    public Map<String, Object> getEnhancedScreeningDetails(Long assignmentId) {
+        log.info("Getting enhanced screening details for compliance assignment ID: {}", assignmentId);
+        
+        // Get compliance assignment
+        ComplianceOfficerApplicationAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Compliance assignment not found with ID: " + assignmentId));
+        
+        // Get applicant details
+        Applicant applicant = assignment.getApplicant();
+        
+        // Get loan details
+        ApplicantLoanDetails loan = null;
+        try {
+            loan = assignment.getLoan();
+            if (loan != null) {
+                loan.getLoanId(); // Trigger proxy initialization
+            }
+        } catch (Exception e) {
+            // Fallback to getting loan by applicant
+            if (applicant.getLoanDetails() != null && !applicant.getLoanDetails().isEmpty()) {
+                loan = applicant.getLoanDetails().get(0);
+            }
+        }
+        
+        // Perform enhanced screening
+        EnhancedLoanScreeningService.EnhancedScoringResult enhancedResult = 
+                enhancedLoanScreeningService.performEnhancedScreening(applicant.getApplicantId());
+        
+        // Build response similar to the existing enhanced screening API
+        Map<String, Object> response = new HashMap<>();
+        
+        // Basic assignment information
+        response.put("assignmentId", assignment.getAssignmentId());
+        response.put("loanId", loan != null ? loan.getLoanId() : null);
+        response.put("applicantId", applicant.getApplicantId());
+        response.put("applicantName", applicant.getFirstName() + " " + 
+                    (applicant.getLastName() != null ? applicant.getLastName() : ""));
+        response.put("loanType", loan != null ? loan.getLoanType() : null);
+        response.put("loanAmount", loan != null ? loan.getLoanAmount() : null);
+        response.put("status", assignment.getStatus());
+        response.put("remarks", assignment.getRemarks());
+        response.put("assignedAt", assignment.getAssignedAt());
+        response.put("processedAt", assignment.getCompletedAt());
+        response.put("officerId", assignment.getComplianceOfficer().getOfficerId());
+        response.put("officerName", assignment.getComplianceOfficer().getFirstName() + " " + 
+                    (assignment.getComplianceOfficer().getLastName() != null ? 
+                     assignment.getComplianceOfficer().getLastName() : ""));
+        response.put("officerType", "COMPLIANCE_OFFICER");
+        
+        // Enhanced scoring information
+        Map<String, Object> normalizedRiskScore = new HashMap<>();
+        normalizedRiskScore.put("finalScore", enhancedResult.getNormalizedScore());
+        normalizedRiskScore.put("riskLevel", enhancedResult.getFinalRiskLevel());
+        normalizedRiskScore.put("scoreInterpretation", generateScoreInterpretation(
+                enhancedResult.getNormalizedScore(), enhancedResult.getFinalRiskLevel()));
+        response.put("normalizedRiskScore", normalizedRiskScore);
+        
+        response.put("scoringBreakdown", enhancedResult.getScoringBreakdown());
+        response.put("ruleViolations", enhancedResult.getRuleViolations());
+        response.put("finalRecommendation", enhancedResult.getFinalRecommendation());
+        response.put("canApproveReject", true); // Compliance officers can always approve/reject
+        
+        return response;
+    }
+    
+    private String generateScoreInterpretation(Double score, String riskLevel) {
+        if (score >= 80) {
+            return String.format("Critical Risk (%.1f%%) - Multiple high-severity fraud indicators detected. Immediate rejection recommended.", score);
+        } else if (score >= 60) {
+            return String.format("High Risk (%.1f%%) - Significant fraud indicators present. Rejection or thorough review required.", score);
+        } else if (score >= 35) {
+            return String.format("Medium Risk (%.1f%%) - Some fraud indicators detected. Manual review recommended before approval.", score);
+        } else if (score >= 15) {
+            return String.format("Low Risk (%.1f%%) - Minor fraud indicators present. Standard approval process can proceed.", score);
+        } else {
+            return String.format("Clean (%.1f%%) - No significant fraud indicators detected. Safe for approval.", score);
+        }
     }
     
     @Override
@@ -890,7 +1668,7 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         response.setRiskAssessment(fetchRiskAssessment(applicant.getApplicantId()));
         
         // 5. Get action history
-        response.setActionHistory(fetchActionHistory(assignmentId));
+//        response.setActionHistory(fetchActionHistory(assignmentId));
         
         return response;
     }
@@ -1178,36 +1956,20 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
                 .build();
     }
     
-    private List<ComplianceReviewDetailsResponse.ComplianceActionHistory> fetchActionHistory(Long assignmentId) {
-        // Use pageable to fetch the latest 20 activity logs
-        List<ActivityLog> logs = activityLogRepository
-                .findByEntityTypeAndEntityIdOrderByTimestampDesc("COMPLIANCE_ASSIGNMENT", assignmentId, PageRequest.of(0, 20))
-                .getContent();
-        
-        return logs.stream()
-                .map(log -> ComplianceReviewDetailsResponse.ComplianceActionHistory.builder()
-                        .actionId(log.getLogId())
-                        .actionType(log.getActivityType())
-                        .performedBy(log.getPerformedBy() != null ? log.getPerformedBy().toString() : "System")
-                        .remarks(log.getDescription())
-                        .timestamp(log.getTimestamp())
-                        .build())
-                .collect(Collectors.toList());
-    }
-    
-    private String extractPanNumber(Applicant applicant) {
-        if (applicant.getPanDetails() != null && !applicant.getPanDetails().isEmpty()) {
-            return applicant.getPanDetails().get(0).getPanNumber();
-        }
-        return null;
-    }
-    
-    private String extractAadhaarNumber(Applicant applicant) {
-        if (applicant.getAadhaarDetails() != null && !applicant.getAadhaarDetails().isEmpty()) {
-            return applicant.getAadhaarDetails().get(0).getAadhaarNumber();
-        }
-        return null;
-    }
+//    private List<ComplianceReviewDetailsResponse.ComplianceActionHistory> fetchActionHistory(Long assignmentId) {
+//        // Use pageable to fetch the latest 20 activity logs
+//        List<ActivityLog> logs = activityLogRepository
+//                .findByEntityTypeAndEntityIdOrderByTimestampDesc("COMPLIANCE_ASSIGNMENT", assignmentId, PageRequest.of(0, 20))
+//                .getContent();
+//        
+//        return logs.stream()
+//                .map(log -> ComplianceReviewDetailsResponse.ComplianceActionHistory.builder()
+//                        .actionId(log.getLogId())
+//                        .actionType(log.getActivityType())
+//                        .performedBy(log.getPerformedBy() != null ? log.getPerformedBy().toString() : "System")
+//                        .remarks(log.getDescription()
+//        return null;
+//    }
     
     private String determineNextAction(ComplianceVerdictRequest.VerdictType verdict) {
         switch (verdict) {
@@ -1234,6 +1996,7 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         activityLogRepository.save(log);
     }
     
+<<<<<<< HEAD
     // ==================== External Fraud Data Implementation ====================
     
     @Override
@@ -1371,4 +2134,45 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         }
         return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
+=======
+    private String extractPanNumber(Applicant applicant) {
+        log.debug("Extracting PAN for applicant ID: {} from basic details", applicant.getApplicantId());
+        
+        try {
+            if (applicant.getBasicDetails() != null && applicant.getBasicDetails().getPanNumber() != null) {
+                String panNumber = applicant.getBasicDetails().getPanNumber();
+                log.debug("Found PAN in basic details: {}", panNumber.substring(0, 3) + "****");
+                return panNumber;
+            }
+        } catch (Exception e) {
+            log.error("Error accessing basic details for applicant ID: {}", applicant.getApplicantId(), e);
+        }
+        
+        log.debug("No PAN found in basic details for applicant ID: {}", applicant.getApplicantId());
+        return null;
+    }
+    
+    private String extractAadhaarNumber(Applicant applicant) {
+        log.debug("Extracting Aadhaar for applicant ID: {} from basic details", applicant.getApplicantId());
+        
+        try {
+            if (applicant.getBasicDetails() != null && applicant.getBasicDetails().getAadhaarNumber() != null) {
+                String aadhaarNumber = applicant.getBasicDetails().getAadhaarNumber();
+                log.debug("Found Aadhaar in basic details: {}", "****" + aadhaarNumber.substring(8));
+                return aadhaarNumber;
+            }
+        } catch (Exception e) {
+            log.error("Error accessing basic details for applicant ID: {}", applicant.getApplicantId(), e);
+        }
+        
+        log.debug("No Aadhaar found in basic details for applicant ID: {}", applicant.getApplicantId());
+        return null;
+    }
+
+	@Override
+	public KYCVerificationResponse performKYCVerification(KYCVerificationRequest request) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
 }
