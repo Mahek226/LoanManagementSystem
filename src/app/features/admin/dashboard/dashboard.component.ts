@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } fr
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { AdminService, DashboardStats } from '../../../core/services/admin.service';
+import { AdminService, DashboardStats, ActivityLog } from '../../../core/services/admin.service';
 import { ThemeService, Theme } from '../../../core/services/theme.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApplicantsComponent } from '../applicants/applicants.component';
@@ -43,10 +43,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   stats: DashboardStats | null = null;
   recentActivities: Activity[] = [];
+  isLoadingStats = true;
+  isLoadingActivities = true;
   
   private monthlyChart: Chart | null = null;
   private statusChart: Chart | null = null;
   private themeSubscription: Subscription | null = null;
+  private statsSubscription: Subscription | null = null;
+  private activitiesSubscription: Subscription | null = null;
 
   constructor(
     private adminService: AdminService,
@@ -56,8 +60,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadDashboardData();
-    this.loadRecentActivities();
+    this.initializeData();
     
     // Subscribe to theme changes
     this.themeSubscription = this.themeService.theme$.subscribe(theme => {
@@ -80,6 +83,12 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.themeSubscription) {
       this.themeSubscription.unsubscribe();
     }
+    if (this.statsSubscription) {
+      this.statsSubscription.unsubscribe();
+    }
+    if (this.activitiesSubscription) {
+      this.activitiesSubscription.unsubscribe();
+    }
     if (this.monthlyChart) {
       this.monthlyChart.destroy();
     }
@@ -88,50 +97,70 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private loadDashboardData(): void {
-    // Load real data from backend
-    this.adminService.getDashboardStats().subscribe({
-      next: (stats) => {
-        console.log('Dashboard stats received:', stats);
+  private initializeData(): void {
+    // Check if we already have cached data
+    const cachedStats = this.adminService.getCachedDashboardStats();
+    const cachedActivities = this.adminService.getCachedRecentActivities();
+
+    if (cachedStats) {
+      this.stats = cachedStats;
+      this.isLoadingStats = false;
+      setTimeout(() => {
+        this.initializeCharts();
+      }, 100);
+    }
+
+    if (cachedActivities && cachedActivities.length > 0) {
+      this.recentActivities = cachedActivities.map(log => this.mapActivityLogToActivity(log));
+      this.isLoadingActivities = false;
+    }
+
+    // Subscribe to dashboard stats observable
+    this.statsSubscription = this.adminService.dashboardStats$.subscribe(stats => {
+      if (stats) {
         this.stats = stats;
-        // Update charts after data is loaded
+        this.isLoadingStats = false;
         setTimeout(() => {
           this.initializeCharts();
         }, 100);
+      }
+    });
+
+    // Subscribe to recent activities observable
+    this.activitiesSubscription = this.adminService.recentActivities$.subscribe(activities => {
+      if (activities && activities.length > 0) {
+        this.recentActivities = activities.map(log => this.mapActivityLogToActivity(log));
+        this.isLoadingActivities = false;
+      }
+    });
+
+    // Load fresh data if not cached
+    this.loadDashboardData();
+    this.loadRecentActivities();
+  }
+
+  private loadDashboardData(): void {
+    this.adminService.getDashboardStats().subscribe({
+      next: (stats) => {
+        console.log('Dashboard stats loaded:', stats);
+        this.isLoadingStats = false;
       },
       error: (error) => {
         console.error('Error loading dashboard stats:', error);
-        // Fallback to mock data if backend fails
-        this.stats = {
-          totalApplicants: 0,
-          pendingApplications: 0,
-          approvedLoans: 0,
-          rejectedApplications: 0,
-          totalLoanAmount: 0,
-          averageLoanAmount: 0,
-          monthlyApplications: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-          loanStatusDistribution: [
-            { status: 'Approved', count: 0 },
-            { status: 'Pending', count: 0 },
-            { status: 'Rejected', count: 0 },
-            { status: 'Under Review', count: 0 }
-          ]
-        };
+        this.isLoadingStats = false;
       }
     });
   }
 
   private loadRecentActivities(): void {
-    // Load real activity logs from backend
     this.adminService.getRecentActivityLogs().subscribe({
       next: (logs) => {
-        console.log('Recent activity logs received:', logs);
-        this.recentActivities = logs.map(log => this.mapActivityLogToActivity(log));
+        console.log('Recent activity logs loaded:', logs);
+        this.isLoadingActivities = false;
       },
       error: (error) => {
         console.error('Error loading recent activities:', error);
-        // Fallback to empty array if backend fails
-        this.recentActivities = [];
+        this.isLoadingActivities = false;
       }
     });
   }
@@ -383,6 +412,21 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   // Navigation methods
   setActiveTab(tab: string): void {
     this.activeTab = tab;
+    
+    // If returning to dashboard tab, ensure data is loaded
+    if (tab === 'dashboard') {
+      // Check if we need to refresh data
+      if (!this.stats) {
+        this.initializeData();
+      }
+    }
+  }
+
+  // Refresh data method
+  refreshData(): void {
+    this.isLoadingStats = true;
+    this.isLoadingActivities = true;
+    this.adminService.refreshDashboardData();
   }
 
   // Utility methods
@@ -391,6 +435,8 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   logout(): void {
+    // Clear cached data on logout
+    this.adminService.clearCache();
     this.authService.logout();
     this.router.navigate(['/auth/login']);
   }

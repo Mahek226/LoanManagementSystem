@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface DashboardStats {
@@ -165,18 +166,60 @@ export interface FraudRuleUpdateRequest {
 export class AdminService {
   private readonly API_URL = environment.apiUrl;
 
+  // State management for dashboard data
+  private dashboardStatsSubject = new BehaviorSubject<DashboardStats | null>(null);
+  public dashboardStats$ = this.dashboardStatsSubject.asObservable();
+
+  private applicantsSubject = new BehaviorSubject<{content: Applicant[], totalElements: number} | null>(null);
+  public applicants$ = this.applicantsSubject.asObservable();
+
+  private recentActivitiesSubject = new BehaviorSubject<ActivityLog[]>([]);
+  public recentActivities$ = this.recentActivitiesSubject.asObservable();
+
   constructor(private http: HttpClient) {}
 
   // Dashboard Statistics
-  getDashboardStats(): Observable<any> {
-    // Use public endpoint for testing
-    return this.http.get<any>(`${this.API_URL}/public/admin/dashboard/stats`);
+  getDashboardStats(): Observable<DashboardStats> {
+    // Check if we already have cached data
+    const cachedStats = this.dashboardStatsSubject.value;
+    if (cachedStats) {
+      return of(cachedStats);
+    }
+
+    // Use the correct backend endpoint path
+    return this.http.get<DashboardStats>(`${this.API_URL}/admin/dashboard/stats`).pipe(
+      catchError(() => {
+        // Fallback to public endpoint if auth fails
+        return this.http.get<DashboardStats>(`${this.API_URL}/public/admin/dashboard/stats`);
+      }),
+      tap(stats => {
+        // Cache the data
+        this.dashboardStatsSubject.next(stats);
+      })
+    );
   }
 
   // Applicant Management
-  getAllApplicants(page: number = 0, size: number = 10): Observable<{content: Applicant[], totalElements: number}> {
-    // Use public endpoint for testing
-    return this.http.get<{content: Applicant[], totalElements: number}>(`${this.API_URL}/public/admin/applicants?page=${page}&size=${size}`);
+  getAllApplicants(page: number = 0, size: number = 10, forceRefresh: boolean = false): Observable<{content: Applicant[], totalElements: number}> {
+    // Check if we already have cached data and don't need to refresh
+    const cachedApplicants = this.applicantsSubject.value;
+    if (cachedApplicants && !forceRefresh && page === 0) {
+      return of(cachedApplicants);
+    }
+
+    // Use the correct backend endpoint path
+    return this.http.get<{content: Applicant[], totalElements: number}>(`${this.API_URL}/admin/applicants?page=${page}&size=${size}`).pipe(
+      catchError(() => {
+        // Fallback to public endpoint if auth fails
+        return this.http.get<{content: Applicant[], totalElements: number}>(`${this.API_URL}/public/admin/applicants?page=${page}&size=${size}`);
+      }),
+      tap(applicants => {
+        // Cache the data only for first page
+        if (page === 0) {
+          this.applicantsSubject.next(applicants);
+        }
+      })
+    );
   }
 
   getApplicantById(id: number): Observable<Applicant> {
@@ -263,7 +306,24 @@ export class AdminService {
   }
 
   getRecentActivityLogs(): Observable<ActivityLog[]> {
-    return this.http.get<ActivityLog[]>(`${this.API_URL}/admin/activity-logs/recent`);
+    // Check if we already have cached data
+    const cachedActivities = this.recentActivitiesSubject.value;
+    if (cachedActivities && cachedActivities.length > 0) {
+      return of(cachedActivities);
+    }
+
+    // Use the correct backend endpoint path
+    return this.http.get<ActivityLog[]>(`${this.API_URL}/admin/activity-logs/recent`).pipe(
+      catchError(() => {
+        // Return empty array if API fails - no mock data
+        console.warn('Failed to load recent activity logs from backend');
+        return of([]);
+      }),
+      tap(activities => {
+        // Cache the data
+        this.recentActivitiesSubject.next(activities);
+      })
+    );
   }
 
   getActivityLogsByUser(username: string, page: number = 0, size: number = 20): Observable<any> {
@@ -289,7 +349,7 @@ export class AdminService {
 
   getActiveFraudRules(): Observable<FraudRule[]> {
     return this.http.get<FraudRule[]>(`${this.API_URL}/admin/fraud-rules/active`);
-  }
+  } 
 
   getFraudRulesByCategory(category: string): Observable<FraudRule[]> {
     return this.http.get<FraudRule[]>(`${this.API_URL}/admin/fraud-rules/category/${category}`);
@@ -317,5 +377,32 @@ export class AdminService {
 
   getFraudRuleStatistics(): Observable<any> {
     return this.http.get(`${this.API_URL}/admin/fraud-rules/statistics`);
+  }
+
+  // Cache management methods
+  clearCache(): void {
+    this.dashboardStatsSubject.next(null);
+    this.applicantsSubject.next(null);
+    this.recentActivitiesSubject.next([]);
+  }
+
+  refreshDashboardData(): void {
+    this.clearCache();
+    // Trigger fresh data load
+    this.getDashboardStats().subscribe();
+    this.getRecentActivityLogs().subscribe();
+  }
+
+  // Get cached data without making API calls
+  getCachedDashboardStats(): DashboardStats | null {
+    return this.dashboardStatsSubject.value;
+  }
+
+  getCachedApplicants(): {content: Applicant[], totalElements: number} | null {
+    return this.applicantsSubject.value;
+  }
+
+  getCachedRecentActivities(): ActivityLog[] {
+    return this.recentActivitiesSubject.value;
   }
 }
