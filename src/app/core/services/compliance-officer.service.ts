@@ -525,6 +525,20 @@ export class ComplianceOfficerService {
   }
 
   /**
+   * Extract single document data using FastAPI
+   */
+  extractSingleDocument(applicantId: number, documentType: string, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('applicant_id', applicantId.toString());
+    formData.append('document_type', documentType);
+
+    // Use FastAPI extraction endpoint (assuming it's available at port 8000)
+    const fastApiUrl = 'http://localhost:8000';
+    return this.http.post<any>(`${fastApiUrl}/extract_single_document/`, formData);
+  }
+
+  /**
    * Get compliance officer profile
    */
   getOfficerProfile(officerId: number): Observable<any> {
@@ -674,6 +688,8 @@ export class ComplianceOfficerService {
    * Request document resubmission using DTO structure
    */
   requestDocumentResubmissionDTO(request: DocumentResubmissionRequestDTO): Observable<any> {
+    console.log('Calling document resubmission endpoint:', `${this.apiUrl}/document/${request.documentId}/request-resubmission`);
+    console.log('Request payload:', request);
     return this.http.post(`${this.apiUrl}/document/${request.documentId}/request-resubmission`, request);
   }
 

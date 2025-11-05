@@ -43,6 +43,12 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   selectedDocument: any = null;
   extractedData: any = null;
   
+  // Document extraction state
+  extracting = false;
+  extractionCache: Map<number, any> = new Map();
+  extractedDocumentIds: Set<number> = new Set();
+  successMessage = '';
+  
   // Forms
   verdictForm: FormGroup;
   resubmissionForm: FormGroup;
@@ -315,8 +321,10 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.selectedDocument = document;
     this.showDocumentModal = true;
     
-    // Load extracted data if available
-    if (this.hasExtractedData(document)) {
+    // Load cached extraction data if available
+    if (this.extractionCache.has(document.documentId)) {
+      this.extractedData = this.extractionCache.get(document.documentId) || null;
+    } else if (this.hasExtractedData(document)) {
       this.extractedData = this.parseExtractedData(document);
     } else {
       this.extractedData = null;
@@ -328,6 +336,71 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.selectedDocument = null;
     this.extractedData = null;
   }
+
+  extractDocumentData(document: any): void {
+    // Check if already extracted
+    if (this.extractedDocumentIds.has(document.documentId)) {
+      this.error = 'This document has already been extracted. Using cached data.';
+      setTimeout(() => this.error = '', 3000);
+      return;
+    }
+    
+    this.extracting = true;
+    this.error = '';
+    this.extractedData = null;
+    
+    // Check if we have the document file
+    if (!document['fileUrl'] && !document['cloudinaryUrl'] && !document['documentUrl']) {
+      this.error = 'Document file not available for extraction.';
+      this.extracting = false;
+      setTimeout(() => this.error = '', 5000);
+      return;
+    }
+
+    // Get the document URL
+    const documentUrl = document['fileUrl'] || document['cloudinaryUrl'] || document['documentUrl'];
+    
+    // Convert URL to File object for extraction
+    fetch(documentUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], document.documentName || 'document.jpg', { type: blob.type });
+        
+        // Call FastAPI extraction service through compliance officer service
+        this.complianceService.extractSingleDocument(
+          document['applicantId'] || this.escalation?.applicantId || 1,
+          document.documentType,
+          file
+        ).subscribe({
+          next: (response: any) => {
+            console.log('FastAPI Response:', response);
+            this.extractedData = response;
+            
+            // Cache the extracted data
+            if (this.extractedData) {
+              this.extractionCache.set(document.documentId, this.extractedData);
+              this.extractedDocumentIds.add(document.documentId);
+            }
+            
+            this.extracting = false;
+            this.successMessage = 'Document data extracted successfully using AI!';
+            setTimeout(() => this.successMessage = '', 3000);
+          },
+          error: (err: any) => {
+            console.error('Error extracting document with FastAPI:', err);
+            this.extracting = false;
+            this.error = 'Failed to extract document data. Please try again.';
+            setTimeout(() => this.error = '', 5000);
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching document file:', err);
+        this.extracting = false;
+        this.error = 'Failed to load document file for extraction.';
+        setTimeout(() => this.error = '', 5000);
+      });
+  }
   
   // ==================== Document Resubmission ====================
   
@@ -338,17 +411,24 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   
   submitResubmissionRequest(): void {
     if (this.resubmissionForm.valid && this.selectedDocument && this.escalation) {
+      // Get compliance officer ID from auth service (need to inject AuthService)
+      // For now, using a default value - should be updated to use proper auth service
+      const complianceOfficerId = 1;
+      
       const request: DocumentResubmissionRequestDTO = {
         documentId: this.selectedDocument.documentId,
         loanId: this.escalation.loanId,
-        complianceOfficerId: 1, // Get from auth service
+        complianceOfficerId: complianceOfficerId,
         resubmissionReason: this.resubmissionForm.value.reason,
         specificInstructions: this.resubmissionForm.value.instructions,
         directToApplicant: false // Send to loan officer first
       };
       
+      console.log('Sending document resubmission request:', request);
+      
       const resubSub = this.complianceService.requestDocumentResubmissionDTO(request).subscribe({
         next: (response: any) => {
+          console.log('Resubmission request response:', response);
           this.showResubmissionModal = false;
           this.resubmissionForm.reset();
           this.selectedDocument = null;
@@ -356,11 +436,25 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
           this.loadLoanDocuments(this.escalation!.loanId);
           // Show success message
           this.error = null;
-          alert('Document resubmission request sent to loan officer successfully!');
+          this.successMessage = 'Document resubmission request sent to loan officer successfully!';
+          setTimeout(() => this.successMessage = '', 5000);
         },
-        error: (error: any) => {
-          console.error('Error requesting document resubmission:', error);
-          this.error = 'Failed to send resubmission request. Please try again.';
+        error: (err: any) => {
+          console.error('Error requesting document resubmission:', err);
+          console.error('Error details:', err.error);
+          console.error('Status:', err.status);
+          console.error('Full error response:', JSON.stringify(err, null, 2));
+          
+          let errorMessage = 'Please try again.';
+          if (err.error?.message) {
+            errorMessage = err.error.message;
+          } else if (err.message) {
+            errorMessage = err.message;
+          } else if (err.status === 400) {
+            errorMessage = 'Bad request - please check the data and try again.';
+          }
+          
+          this.error = `Failed to send resubmission request: ${errorMessage}`;
         }
       });
       
@@ -654,6 +748,27 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
    */
   getDocumentUrl(doc: any): string {
     return doc.cloudinaryUrl || doc.documentUrl || '';
+  }
+
+  /**
+   * Check if document has been extracted
+   */
+  isExtracted(document: any): boolean {
+    return this.extractedDocumentIds.has(document.documentId);
+  }
+
+  /**
+   * Check if document can be extracted
+   */
+  canExtract(document: any): boolean {
+    return this.hasDocumentUrl(document) && !this.extracting;
+  }
+
+  /**
+   * Get count of verified documents (for progress tracking)
+   */
+  getVerifiedCount(): number {
+    return this.loanDocuments.filter(doc => doc.verificationStatus === 'VERIFIED').length;
   }
   
   // ==================== Screening Details Modal ====================

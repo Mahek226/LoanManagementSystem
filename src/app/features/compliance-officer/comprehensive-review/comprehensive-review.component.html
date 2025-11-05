@@ -196,181 +196,165 @@
 
     <!-- Documents Tab -->
     <div *ngIf="activeTab === 'documents'" class="tab-pane fade show active">
-      <div class="row g-4">
-        <div class="col-12">
-          <!-- Documents List -->
-          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
-            <div class="card-header bg-danger text-white">
-              <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Uploaded Documents</h5>
-                <span class="badge bg-light text-dark">{{ loanDocuments.length }} Total</span>
-              </div>
+      <!-- Header Section -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="h4 fw-bold mb-1" style="color: var(--text-primary);">
+            <i class="fas fa-file-check me-2 text-danger"></i>Document Verification
+          </h2>
+          <p class="text-muted mb-0">Review and verify applicant documents with AI extraction</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="fas fa-arrow-left me-2"></i>Back to Escalations
+          </button>
+        </div>
+      </div>
+
+      <!-- Verification Progress -->
+      <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="loanDocuments.length > 0">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-tasks me-2 text-danger"></i>Verification Progress
+            </h6>
+            <span class="badge" 
+                  [class.bg-success]="getVerifiedCount() === loanDocuments.length"
+                  [class.bg-warning]="getVerifiedCount() !== loanDocuments.length">
+              {{ getVerifiedCount() }} / {{ loanDocuments.length }} Verified
+            </span>
+          </div>
+          <div class="progress" style="height: 10px;">
+            <div class="progress-bar" 
+                 [class.bg-success]="getVerifiedCount() === loanDocuments.length"
+                 [class.bg-warning]="getVerifiedCount() !== loanDocuments.length"
+                 role="progressbar" 
+                 [style.width.%]="(getVerifiedCount() / loanDocuments.length) * 100"
+                 [attr.aria-valuenow]="getVerifiedCount()"
+                 [attr.aria-valuemin]="0"
+                 [attr.aria-valuemax]="loanDocuments.length">
             </div>
+          </div>
+          <small class="text-muted mt-2 d-block" *ngIf="getVerifiedCount() !== loanDocuments.length">
+            <i class="fas fa-info-circle me-1"></i>Complete document review for compliance assessment
+          </small>
+          <small class="text-success mt-2 d-block" *ngIf="getVerifiedCount() === loanDocuments.length">
+            <i class="fas fa-check-circle me-1"></i>All documents reviewed! Ready for compliance verdict.
+          </small>
+        </div>
+      </div>
+
+      <!-- Success Message -->
+      <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3">
+        <i class="fas fa-check-circle me-2"></i>{{ successMessage }}
+        <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error" class="alert alert-danger alert-dismissible fade show mb-3">
+        <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+        <button type="button" class="btn-close" (click)="error = ''"></button>
+      </div>
+
+      <!-- Documents Grid -->
+      <div class="row g-4">
+        <div class="col-lg-4 col-md-6" *ngFor="let doc of loanDocuments; let i = index">
+          <div class="card border-0 shadow-sm h-100 animate-slide-up" 
+               [style.animation-delay.s]="i * 0.1"
+               style="background-color: var(--bg-primary);">
             <div class="card-body">
-              <div *ngIf="loanDocuments.length === 0" class="text-center py-5">
-                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                <h5 class="text-muted">No documents found</h5>
-                <p class="text-muted">Documents will appear here once uploaded by the applicant</p>
-              </div>
-
-              <div *ngIf="loanDocuments.length > 0">
-                <!-- Document Cards with Extracted Data -->
-                <div *ngFor="let doc of loanDocuments; let i = index" class="card mb-3 border-0 shadow-sm">
-                  <div class="card-header d-flex justify-content-between align-items-center" 
-                       style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white;">
-                    <div>
-                      <h6 class="mb-0">
-                        <i class="fas fa-file-alt me-2"></i>
-                        <strong>{{ doc.documentType.replace('_', ' ') }}</strong>
-                      </h6>
-                      <small class="opacity-75">{{ doc.documentName }}</small>
-                    </div>
-                    <div>
-                      <span class="badge me-2" 
-                            [class.bg-success]="doc.verificationStatus === 'VERIFIED'"
-                            [class.bg-warning]="doc.verificationStatus === 'PENDING'"
-                            [class.bg-danger]="doc.verificationStatus === 'REJECTED'"
-                            [class.bg-info]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
-                        {{ doc.verificationStatus || 'PENDING' }}
-                      </span>
-                    </div>
+              <!-- Document Header -->
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="document-icon bg-danger bg-opacity-10 rounded-3 p-3">
+                    <i class="fas {{ getDocumentIcon(doc.documentType) }} text-danger fs-3"></i>
                   </div>
-                  
-                  <div class="card-body">
-                    <div class="row mb-3">
-                      <div class="col-md-6">
-                        <small class="text-muted">
-                          <i class="fas fa-clock me-1"></i> Uploaded: {{ formatDate(doc.uploadedAt) }}
-                        </small>
-                        <div *ngIf="doc.verifiedBy" class="mt-1">
-                          <small class="text-muted">
-                            <i class="fas fa-user-check me-1"></i> Verified by: {{ doc.verifiedBy }}
-                          </small>
-                        </div>
-                      </div>
-                      <div class="col-md-6 text-end">
-                        <div class="btn-group" role="group">
-                          <button class="btn btn-sm" 
-                                  [class.btn-info]="hasDocumentUrl(doc)"
-                                  [class.btn-secondary]="!hasDocumentUrl(doc)"
-                                  (click)="viewDocument(doc)"
-                                  [disabled]="!hasDocumentUrl(doc)"
-                                  [title]="!hasDocumentUrl(doc) ? 'Document URL not available' : ''">
-                            <i class="fas fa-eye me-1"></i>
-                            {{ hasExtractedData(doc) ? 'View & Data' : 'View Document' }}
-                          </button>
-                          <button class="btn btn-sm" 
-                                  [class.btn-outline-primary]="hasDocumentUrl(doc)"
-                                  [class.btn-outline-secondary]="!hasDocumentUrl(doc)"
-                                  [disabled]="!hasDocumentUrl(doc)"
-                                  (click)="hasDocumentUrl(doc) && window.open(getDocumentUrl(doc), '_blank')"
-                                  [title]="!hasDocumentUrl(doc) ? 'Document URL not available' : ''">
-                            <i class="fas fa-external-link-alt me-1"></i>Open
-                          </button>
-                          <button class="btn btn-sm btn-warning" 
-                                  (click)="requestDocumentResubmission(doc)"
-                                  [disabled]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
-                            <i class="fas fa-redo me-1"></i>
-                            {{ doc.verificationStatus === 'RESUBMISSION_REQUESTED' ? 'Requested' : 'Resubmit' }}
-                          </button>
-                        </div>
-                        
-                        <!-- Debug info for missing URLs -->
-                        <div *ngIf="!hasDocumentUrl(doc)" class="mt-2">
-                          <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Document URL not available (cloudinaryUrl: {{ doc.cloudinaryUrl || 'null' }}, documentUrl: {{ doc.documentUrl || 'null' }})
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Resubmission Details -->
-                    <div *ngIf="doc.resubmissionRequested" class="alert alert-warning">
-                      <h6><i class="fas fa-exclamation-triangle me-2"></i>Resubmission Requested</h6>
-                      <div *ngIf="doc.resubmissionReason">
-                        <strong>Reason:</strong> {{ doc.resubmissionReason }}
-                      </div>
-                      <div *ngIf="doc.resubmissionInstructions" class="mt-2">
-                        <strong>Instructions:</strong> {{ doc.resubmissionInstructions }}
-                      </div>
-                    </div>
-
-                    <!-- Extracted Data Section -->
-                    <div *ngIf="hasExtractedData(doc)" class="mt-3">
-                      <div class="accordion" [attr.id]="'extractedAccordion' + i">
-                        <div class="accordion-item border-0" style="background-color: #f8f9fa;">
-                          <h2 class="accordion-header" [attr.id]="'heading' + i">
-                            <button class="accordion-button collapsed" type="button" 
-                                    data-bs-toggle="collapse" 
-                                    [attr.data-bs-target]="'#collapse' + i" 
-                                    aria-expanded="false" 
-                                    [attr.aria-controls]="'collapse' + i"
-                                    style="background-color: #fef2f2; color: #dc2626; font-weight: 600;">
-                              <i class="fas fa-search-plus me-2"></i>
-                              Extracted Data
-                            </button>
-                          </h2>
-                          <div [attr.id]="'collapse' + i" 
-                               class="accordion-collapse collapse" 
-                               [attr.aria-labelledby]="'heading' + i" 
-                               [attr.data-bs-parent]="'#extractedAccordion' + i">
-                            <div class="accordion-body bg-white">
-                              <div class="extracted-data-container p-3" style="background-color: #fafafa; border-radius: 8px;">
-                                <ng-container *ngFor="let key of objectKeys(parseExtractedData(doc))">
-                                  <div class="mb-3 pb-2 border-bottom">
-                                    <div class="row">
-                                      <div class="col-md-4">
-                                        <strong class="text-danger">
-                                          <i class="fas fa-tag me-2"></i>{{ formatExtractedField(key) }}:
-                                        </strong>
-                                      </div>
-                                      <div class="col-md-8">
-                                        <!-- Display nested objects -->
-                                        <ng-container *ngIf="isObject(parseExtractedData(doc)[key])">
-                                          <div class="ps-3">
-                                            <ng-container *ngFor="let subKey of objectKeys(parseExtractedData(doc)[key])">
-                                              <div class="mb-1">
-                                                <span class="text-muted">{{ formatExtractedField(subKey) }}:</span>
-                                                <span class="ms-2 fw-semibold">{{ parseExtractedData(doc)[key][subKey] }}</span>
-                                              </div>
-                                            </ng-container>
-                                          </div>
-                                        </ng-container>
-                                        
-                                        <!-- Display arrays -->
-                                        <ng-container *ngIf="isArray(parseExtractedData(doc)[key])">
-                                          <ul class="mb-0">
-                                            <li *ngFor="let item of parseExtractedData(doc)[key]">{{ item }}</li>
-                                          </ul>
-                                        </ng-container>
-                                        
-                                        <!-- Display simple values -->
-                                        <ng-container *ngIf="!isObject(parseExtractedData(doc)[key]) && !isArray(parseExtractedData(doc)[key])">
-                                          <span class="fw-semibold" style="color: #2c3e50;">
-                                            {{ parseExtractedData(doc)[key] }}
-                                          </span>
-                                        </ng-container>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </ng-container>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- No Extracted Data Message -->
-                    <div *ngIf="!hasExtractedData(doc)" class="alert alert-info mb-0">
-                      <i class="fas fa-info-circle me-2"></i>
-                      No extracted data available for this document.
-                    </div>
+                  <div>
+                    <h5 class="fw-bold mb-1" style="color: var(--text-primary);">
+                      {{ doc.documentType.replace('_', ' ') }}
+                    </h5>
+                    <small class="text-muted">{{ doc.documentName }}</small>
                   </div>
                 </div>
               </div>
+
+              <!-- Document Status -->
+              <div class="mb-3">
+                <span class="badge bg-{{ getDocumentStatusColor(doc.verificationStatus || 'PENDING') }} fs-6">
+                  <i class="fas fa-circle me-1"></i>{{ doc.verificationStatus || 'PENDING' }}
+                </span>
+              </div>
+
+              <!-- Document Details -->
+              <div class="mb-3">
+                <div class="row g-2">
+                  <div class="col-12">
+                    <small class="text-muted d-block">Uploaded On</small>
+                    <strong style="color: var(--text-primary);">{{ formatDate(doc.uploadedAt) }}</strong>
+                  </div>
+                  <div class="col-12" *ngIf="doc.verifiedBy">
+                    <small class="text-muted d-block">Verified By</small>
+                    <strong style="color: var(--text-primary);">{{ doc.verifiedBy }}</strong>
+                  </div>
+                  <div class="col-12" *ngIf="doc.verifiedAt">
+                    <small class="text-muted d-block">Verified On</small>
+                    <strong style="color: var(--text-primary);">{{ formatDate(doc.verifiedAt) }}</strong>
+                  </div>
+                  <div class="col-12" *ngIf="doc.remarks">
+                    <small class="text-muted d-block">Remarks</small>
+                    <p class="mb-0 small" style="color: var(--text-primary);">{{ doc.remarks }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status Indicators -->
+              <div class="mb-2" *ngIf="isExtracted(doc)">
+                <small class="text-success">
+                  <i class="fas fa-check-circle me-1"></i>AI Data Extracted
+                </small>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="d-flex gap-2 justify-content-center">
+                <button class="btn btn-primary btn-sm" 
+                        (click)="viewDocument(doc)">
+                  <i class="fas fa-eye me-1"></i>View
+                </button>
+                <button class="btn btn-success btn-sm" 
+                        (click)="extractDocumentData(doc)"
+                        [disabled]="!canExtract(doc) || extracting">
+                  <i class="fas" 
+                     [class.fa-spinner]="extracting"
+                     [class.fa-spin]="extracting"
+                     [class.fa-robot]="!extracting && !isExtracted(doc)"
+                     [class.fa-check]="!extracting && isExtracted(doc)"
+                     class="me-1"></i>
+                  {{ extracting ? 'Extracting...' : (isExtracted(doc) ? 'Extracted' : 'Extract') }}
+                </button>
+                <button class="btn btn-warning btn-sm" 
+                        (click)="requestDocumentResubmission(doc)"
+                        [disabled]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
+                  <i class="fas fa-redo me-1"></i>
+                  {{ doc.verificationStatus === 'RESUBMISSION_REQUESTED' ? 'Requested' : 'Resubmit' }}
+                </button>
+              </div>
+
+              <!-- Already Processed Notice -->
+              <div class="mt-2" *ngIf="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
+                <small class="text-muted fst-italic">
+                  <i class="fas fa-clock me-1"></i>Resubmission requested
+                </small>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="col-12" *ngIf="loanDocuments.length === 0 && !loading">
+          <div class="text-center py-5">
+            <i class="fas fa-folder-open text-muted" style="font-size: 4rem;"></i>
+            <h4 class="mt-3 text-muted">No Documents Found</h4>
+            <p class="text-muted">No documents have been uploaded for this loan application</p>
           </div>
         </div>
       </div>
@@ -1005,12 +989,12 @@
   [document]="selectedDocument"
   [show]="showDocumentModal"
   [extractedData]="extractedData"
-  [extracting]="false"
-  [canExtract]="false"
+  [extracting]="extracting"
+  [canExtract]="true"
   [canVerify]="false"
   themeColor="danger"
   (close)="closeDocumentModal()"
-  (extract)="null"
+  (extract)="extractDocumentData($event)"
   (approve)="requestDocumentResubmission($event); closeDocumentModal()"
   (reject)="null">
 </app-document-viewer>
