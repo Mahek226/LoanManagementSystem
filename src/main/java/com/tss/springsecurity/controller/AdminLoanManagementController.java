@@ -251,29 +251,81 @@ public class AdminLoanManagementController {
             }
         }
         
-        // Final Event: Approved or Rejected
-        if ("approved".equalsIgnoreCase(loan.getStatus())) {
+        // Final Event: Approved or Rejected (handled by loan officer, not system)
+        if ("approved".equalsIgnoreCase(loan.getStatus()) || "rejected".equalsIgnoreCase(loan.getStatus())) {
+            // Find the loan officer who made the final decision
+            String finalDecisionOfficer = "Unknown Officer";
+            String finalDecisionRole = "LOAN_OFFICER";
+            Long finalOfficerId = null;
+            
+            // Check if there's a reviewed by officer in the loan record
+            if (loan.getReviewedBy() != null && !loan.getReviewedBy().trim().isEmpty()) {
+                finalDecisionOfficer = loan.getReviewedBy();
+            } else {
+                // Find the last officer assignment that was completed
+                for (OfficerApplicationAssignment assignment : officerAssignments) {
+                    if (assignment.getCompletedAt() != null) {
+                        finalDecisionOfficer = formatOfficerName(
+                                assignment.getOfficer().getFirstName(),
+                                assignment.getOfficer().getLastName(),
+                                assignment.getOfficer().getUsername());
+                        finalOfficerId = assignment.getOfficer().getOfficerId();
+                        break;
+                    }
+                }
+                
+                // If no loan officer found, check compliance officers
+                if ("Unknown Officer".equals(finalDecisionOfficer)) {
+                    for (ComplianceOfficerApplicationAssignment compAssignment : complianceAssignments) {
+                        if (compAssignment.getCompletedAt() != null) {
+                            finalDecisionOfficer = formatOfficerName(
+                                    compAssignment.getComplianceOfficer().getFirstName(),
+                                    compAssignment.getComplianceOfficer().getLastName(),
+                                    compAssignment.getComplianceOfficer().getUsername());
+                            finalDecisionRole = "COMPLIANCE_OFFICER";
+                            finalOfficerId = compAssignment.getComplianceOfficer().getOfficerId();
+                            break;
+                        }
+                    }
+                }
+            }
+            
             LoanProgressTimelineResponse.LoanProgressEvent finalEvent = new LoanProgressTimelineResponse.LoanProgressEvent();
             finalEvent.setEventId(eventId++);
-            finalEvent.setEventType("APPROVED");
+            finalEvent.setEventType("approved".equalsIgnoreCase(loan.getStatus()) ? "APPROVED" : "REJECTED");
             finalEvent.setEventStatus("COMPLETED");
-            finalEvent.setPerformedBy("System");
-            finalEvent.setPerformedByRole("SYSTEM");
-            finalEvent.setAction("Loan Approved");
-            finalEvent.setRemarks("Loan application has been approved");
+            finalEvent.setPerformedBy(finalDecisionOfficer);
+            finalEvent.setPerformedByRole(finalDecisionRole);
+            finalEvent.setOfficerId(finalOfficerId);
+            finalEvent.setOfficerName(finalDecisionOfficer);
+            finalEvent.setAction("approved".equalsIgnoreCase(loan.getStatus()) ? "Loan Approved" : "Loan Rejected");
+            finalEvent.setRemarks("approved".equalsIgnoreCase(loan.getStatus()) ? 
+                    "Loan application has been approved by " + finalDecisionOfficer : 
+                    "Loan application has been rejected by " + finalDecisionOfficer);
             finalEvent.setTimestamp(loan.getReviewedAt() != null ? loan.getReviewedAt().toString() : null);
             events.add(finalEvent);
-        } else if ("rejected".equalsIgnoreCase(loan.getStatus())) {
-            LoanProgressTimelineResponse.LoanProgressEvent finalEvent = new LoanProgressTimelineResponse.LoanProgressEvent();
-            finalEvent.setEventId(eventId++);
-            finalEvent.setEventType("REJECTED");
-            finalEvent.setEventStatus("COMPLETED");
-            finalEvent.setPerformedBy("System");
-            finalEvent.setPerformedByRole("SYSTEM");
-            finalEvent.setAction("Loan Rejected");
-            finalEvent.setRemarks("Loan application has been rejected");
-            finalEvent.setTimestamp(loan.getReviewedAt() != null ? loan.getReviewedAt().toString() : null);
-            events.add(finalEvent);
+        }
+        
+        // Sort events by timestamp to ensure chronological order
+        events.sort((e1, e2) -> {
+            if (e1.getTimestamp() == null && e2.getTimestamp() == null) return 0;
+            if (e1.getTimestamp() == null) return 1;
+            if (e2.getTimestamp() == null) return -1;
+            
+            try {
+                // Parse timestamps and compare
+                java.time.LocalDateTime time1 = java.time.LocalDateTime.parse(e1.getTimestamp());
+                java.time.LocalDateTime time2 = java.time.LocalDateTime.parse(e2.getTimestamp());
+                return time1.compareTo(time2);
+            } catch (Exception ex) {
+                // If parsing fails, maintain original order
+                return 0;
+            }
+        });
+        
+        // Reassign event IDs after sorting to maintain sequential order
+        for (int i = 0; i < events.size(); i++) {
+            events.get(i).setEventId(i + 1);
         }
         
         timeline.setEvents(events);

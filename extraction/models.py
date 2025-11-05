@@ -27,23 +27,11 @@ class Document(Base):
     applicant = relationship("Applicant", back_populates="documents")
     fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
 
-# class ExtractedField(Base):
-    # __tablename__ = "extracted_fields"
-    # id = Column(BigInteger, primary_key=True, index=True)
-    # document_id = Column(BigInteger, ForeignKey("uploaded_documents.document_id"))
-    # field_name = Column(String(150))
-    # field_value = Column(Text)
-    # verified = Column(Boolean, default=False)  # Add missing verified field
-    # created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # document = relationship("Document", back_populates="fields")
-
 class ExtractedField(Base):
     __tablename__ = "extracted_fields"
-
     id = Column(BigInteger, primary_key=True, index=True)
     document_id = Column(BigInteger, ForeignKey("uploaded_documents.document_id"))
-    field_name = Column(String(150), nullable=False)
+    field_name = Column(String(150))
     field_value = Column(Text)
     extraction_method = Column(String(100))  # 👈 added
     confidence_score = Column(

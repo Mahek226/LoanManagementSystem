@@ -17,4 +17,7 @@ public class CommonLoginRequest {
     private String password;
     
     private String userType; // LOAN_OFFICER, COMPLIANCE_OFFICER, ADMIN, APPLICANT
+    
+    @NotBlank(message = "CAPTCHA token is required")
+    private String captchaToken;
 }

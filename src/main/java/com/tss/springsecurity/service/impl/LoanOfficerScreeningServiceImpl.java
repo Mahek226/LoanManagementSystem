@@ -9,6 +9,7 @@ import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
 import com.tss.springsecurity.service.EnhancedLoanScreeningService;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
+import com.tss.springsecurity.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private final ApplicantLoanDetailsRepository loanRepository;
     private final LoanOfficerRepository loanOfficerRepository;
     private final ComplianceOfficerRepository complianceOfficerRepository;
+    private final EmailService emailService;
     
     @Autowired
     private EnhancedLoanScreeningService enhancedScreeningService;
@@ -182,12 +184,36 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     public List<LoanScreeningResponse> getComplianceEscalations() {
         log.info("Getting compliance escalations");
         
+        // Get all compliance assignments (both pending and completed) ordered by assigned date
         List<ComplianceOfficerApplicationAssignment> assignments = complianceAssignmentRepository
-                .findByStatus("PENDING");
+                .findAllByOrderByAssignedAtDesc();
         
-        return assignments.stream()
-                .map(this::mapComplianceToScreeningResponse)
+        log.info("Found {} compliance assignments in database", assignments.size());
+        
+        // Debug: Log each assignment
+        for (ComplianceOfficerApplicationAssignment assignment : assignments) {
+            log.info("Assignment ID: {}, Status: {}, Officer ID: {}, Applicant ID: {}", 
+                    assignment.getAssignmentId(), 
+                    assignment.getStatus(),
+                    assignment.getComplianceOfficer() != null ? assignment.getComplianceOfficer().getOfficerId() : "null",
+                    assignment.getApplicant() != null ? assignment.getApplicant().getApplicantId() : "null");
+        }
+        
+        List<LoanScreeningResponse> responses = assignments.stream()
+                .map(assignment -> {
+                    try {
+                        return this.mapComplianceToScreeningResponse(assignment);
+                    } catch (Exception e) {
+                        log.error("Error mapping assignment {} to response: {}", assignment.getAssignmentId(), e.getMessage(), e);
+                        return null;
+                    }
+                })
+                .filter(response -> response != null)
                 .collect(Collectors.toList());
+        
+        log.info("Successfully mapped {} out of {} assignments to responses", responses.size(), assignments.size());
+        
+        return responses;
     }
     
     @Override
@@ -202,7 +228,11 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
             throw new RuntimeException("Compliance officer is not authorized to process this assignment");
         }
         
-        ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        // Get the specific loan from the assignment
+        ApplicantLoanDetails loan = assignment.getApplicant().getLoanDetails().stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Loan not found for applicant"));
+        log.info("DEBUG: Retrieved loan ID {} for compliance assignment {}", loan.getLoanId(), request.getAssignmentId());
         
         switch (request.getAction().toUpperCase()) {
             case "APPROVE":
@@ -217,17 +247,37 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     }
     
     private LoanScreeningResponse approveLoan(OfficerApplicationAssignment assignment, ApplicantLoanDetails loan, String remarks) {
+        log.info("DEBUG: approveLoan method called for loan ID: {}", loan.getLoanId());
         assignment.setStatus("APPROVED");
         assignment.setRemarks(remarks);
         assignment.setCompletedAt(LocalDateTime.now());
         assignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("approved");
+        log.info("DEBUG: Setting loan status to APPROVED for loan ID: {}", loan.getLoanId());
+        loan.setStatus("APPROVED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
+        log.info("DEBUG: Loan status saved to database for loan ID: {}", loan.getLoanId());
         
         log.info("Loan {} approved by officer {}", loan.getLoanId(), assignment.getOfficer().getOfficerId());
+        
+        // Send email notification to applicant
+        try {
+            String applicantEmail = assignment.getApplicant().getEmail();
+            String applicantName = assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName();
+            emailService.sendLoanApprovedEmail(
+                applicantEmail,
+                applicantName,
+                loan.getLoanId().toString(),
+                loan.getLoanType(),
+                loan.getLoanAmount().toString(),
+                loan.getInterestRate() != null ? loan.getInterestRate().toString() : "TBD",
+                loan.getTenureMonths() != null ? loan.getTenureMonths().toString() : "TBD"
+            );
+        } catch (Exception e) {
+            log.error("Failed to send loan approval email for loan {}", loan.getLoanId(), e);
+        }
         
         return mapToScreeningResponse(assignment);
     }
@@ -239,11 +289,25 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         assignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("rejected");
+        loan.setStatus("REJECTED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
         
         log.info("Loan {} rejected by officer {}", loan.getLoanId(), assignment.getOfficer().getOfficerId());
+        
+        // Send email notification to applicant
+        try {
+            String applicantEmail = assignment.getApplicant().getEmail();
+            String applicantName = assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName();
+            emailService.sendLoanRejectedEmail(
+                applicantEmail,
+                applicantName,
+                loan.getLoanId().toString(),
+                rejectionReason
+            );
+        } catch (Exception e) {
+            log.error("Failed to send loan rejection email for loan {}", loan.getLoanId(), e);
+        }
         
         return mapToScreeningResponse(assignment);
     }
@@ -255,7 +319,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         complianceAssignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("approved");
+        loan.setStatus("APPROVED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
         
@@ -271,7 +335,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         complianceAssignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("rejected");
+        loan.setStatus("REJECTED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
         
@@ -366,6 +430,8 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     }
     
     private LoanScreeningResponse mapComplianceToScreeningResponse(ComplianceOfficerApplicationAssignment assignment) {
+        log.debug("Mapping compliance assignment {} to screening response", assignment.getAssignmentId());
+        
         ApplicantLoanDetails loan = null;
         
         try {
@@ -375,13 +441,21 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
                 loan.getLoanId(); // This will trigger the exception if loan_id = 0
             }
         } catch (Exception e) {
+            log.warn("Error accessing loan from assignment {}: {}", assignment.getAssignmentId(), e.getMessage());
             // If there's any exception (including EntityNotFoundException), use fallback
             loan = null;
         }
         
         // Fallback to fetching loan by applicant if assignment loan is null or invalid
         if (loan == null) {
-            loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+            try {
+                loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+                log.debug("Used fallback to get loan {} for applicant {}", loan.getLoanId(), assignment.getApplicant().getApplicantId());
+            } catch (Exception e) {
+                log.error("Failed to get loan for applicant {} in assignment {}: {}", 
+                         assignment.getApplicant().getApplicantId(), assignment.getAssignmentId(), e.getMessage());
+                throw new RuntimeException("Cannot map assignment without valid loan data", e);
+            }
         }
         
         LoanScreeningResponse response = new LoanScreeningResponse();
@@ -398,10 +472,19 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         response.setRemarks(assignment.getRemarks());
         response.setAssignedAt(assignment.getAssignedAt());
         response.setProcessedAt(assignment.getCompletedAt());
-        response.setOfficerId(assignment.getComplianceOfficer().getOfficerId());
-        response.setOfficerName(assignment.getComplianceOfficer().getFirstName() + " " + assignment.getComplianceOfficer().getLastName());
+        
+        // Handle compliance officer details safely
+        if (assignment.getComplianceOfficer() != null) {
+            response.setOfficerId(assignment.getComplianceOfficer().getOfficerId());
+            response.setOfficerName(assignment.getComplianceOfficer().getFirstName() + " " + assignment.getComplianceOfficer().getLastName());
+        } else {
+            log.warn("Compliance officer is null for assignment {}", assignment.getAssignmentId());
+            response.setOfficerId(0L);
+            response.setOfficerName("Unknown Compliance Officer");
+        }
         response.setOfficerType("COMPLIANCE_OFFICER");
         
+        log.debug("Successfully mapped compliance assignment {} to response", assignment.getAssignmentId());
         return response;
     }
     
@@ -489,7 +572,13 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
             throw new RuntimeException("Officer is not authorized to process this assignment");
         }
         
-        ApplicantLoanDetails loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        // Get the specific loan from the assignment (not just any loan for the applicant)
+        ApplicantLoanDetails loan = assignment.getLoan();
+        if (loan == null) {
+            // Fallback to getting loan by applicant ID if not directly linked
+            loan = getLoanForApplicant(assignment.getApplicant().getApplicantId());
+        }
+        log.info("DEBUG: Retrieved loan ID {} for assignment {}", loan.getLoanId(), assignmentId);
         
         // Process the decision
         log.info("Processing decision: {} for loan {}", decision.getDecision(), loan.getLoanId());
@@ -536,6 +625,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     private LoanScreeningResponse processApprovalDecision(OfficerApplicationAssignment assignment, 
                                                          ApplicantLoanDetails loan, 
                                                          LoanScreeningDecision decision) {
+        log.info("DEBUG: processApprovalDecision method called for loan ID: {}", loan.getLoanId());
         log.info("[processApprovalDecision] Starting approval process for loan {}", loan.getLoanId());
         // Check if officer can approve based on risk score
         if (loan.getRiskScore() >= riskScoreThreshold && 
@@ -543,14 +633,14 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
             throw new RuntimeException("Cannot approve high-risk loan without manager approval. Please escalate to compliance.");
         }
         
-        log.info("[processApprovalDecision] Setting assignment status to APPROVED and loan status to approved");
+        log.info("[processApprovalDecision] Setting assignment status to APPROVED and loan status to APPROVED");
         assignment.setStatus("APPROVED");
         assignment.setRemarks(decision.getRemarks());
         assignment.setCompletedAt(LocalDateTime.now());
         assignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("approved");
+        loan.setStatus("APPROVED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
         
@@ -563,7 +653,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
                                                           ApplicantLoanDetails loan, 
                                                           LoanScreeningDecision decision) {
         log.info("[processRejectionDecision] Starting rejection process for loan {}", loan.getLoanId());
-        log.info("[processRejectionDecision] Setting assignment status to REJECTED and loan status to rejected");
+        log.info("[processRejectionDecision] Setting assignment status to REJECTED and loan status to REJECTED");
         assignment.setStatus("REJECTED");
         assignment.setRemarks(decision.getRejectionReason() != null ? 
                              decision.getRejectionReason() : decision.getRemarks());
@@ -571,7 +661,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         assignmentRepository.save(assignment);
         
         // Update loan status
-        loan.setStatus("rejected");
+        loan.setStatus("REJECTED");
         loan.setReviewedAt(LocalDateTime.now());
         loanRepository.save(loan);
         
@@ -636,6 +726,7 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
     @Override
     @Transactional
     public LoanScreeningResponse processLoanAfterCompliance(Long officerId, Long loanId, Long assignmentId, String decision, String remarks) {
+        log.info("DEBUG: processLoanAfterCompliance method called for loan ID: {} with decision: {}", loanId, decision);
         log.info("Processing loan {} after compliance verdict by officer {}", loanId, officerId);
         
         // Find the original loan officer assignment
@@ -666,11 +757,13 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         
         if ("APPROVE".equalsIgnoreCase(decision)) {
             finalStatus = "APPROVED";
+            log.info("DEBUG: Setting loan status to APPROVED for loan ID: {}", loanId);
             loan.setStatus("APPROVED");
             loan.setApprovalDate(LocalDateTime.now());
             loan.setApprovedBy("Officer #" + officerId);
         } else if ("REJECT".equalsIgnoreCase(decision)) {
             finalStatus = "REJECTED";
+            log.info("DEBUG: Setting loan status to REJECTED for loan ID: {}", loanId);
             loan.setStatus("REJECTED");
             loan.setRejectionDate(LocalDateTime.now());
             loan.setRejectedBy("Officer #" + officerId);
@@ -686,8 +779,10 @@ public class LoanOfficerScreeningServiceImpl implements LoanOfficerScreeningServ
         assignment.setProcessedAt(LocalDateTime.now());
         
         // Save changes
+        log.info("DEBUG: Saving assignment and loan to database for loan ID: {}", loanId);
         assignmentRepository.save(assignment);
         loanRepository.save(loan);
+        log.info("DEBUG: Successfully saved loan status to database for loan ID: {}", loanId);
         
         log.info("Loan {} processed after compliance verdict by officer {}", loanId, officerId);
         return mapToScreeningResponse(assignment);

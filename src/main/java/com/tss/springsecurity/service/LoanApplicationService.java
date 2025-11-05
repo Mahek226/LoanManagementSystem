@@ -58,4 +58,11 @@ public interface LoanApplicationService {
      * @return Loan details
      */
     ApplicantLoanDetails getLoanById(Long loanId);
+    
+    /**
+     * Save loan details
+     * @param loanDetails Loan details to save
+     * @return Saved loan details
+     */
+    ApplicantLoanDetails saveLoanDetails(ApplicantLoanDetails loanDetails);
 }

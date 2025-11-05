@@ -5,9 +5,7 @@ import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ComplianceOfficer;
 import com.tss.springsecurity.entity.LoanOfficer;
 import com.tss.springsecurity.payload.response.MessageResponse;
-import com.tss.springsecurity.repository.ApplicantRepository;
-import com.tss.springsecurity.repository.ComplianceOfficerRepository;
-import com.tss.springsecurity.repository.LoanOfficerRepository;
+import com.tss.springsecurity.service.ProfileManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,19 +19,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProfileManagementController {
 
-    private final ApplicantRepository applicantRepository;
-    private final LoanOfficerRepository loanOfficerRepository;
-    private final ComplianceOfficerRepository complianceOfficerRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final ProfileManagementService profileManagementService;
 
     // ==================== APPLICANT PROFILE ====================
     
     @GetMapping("/applicant/{applicantId}")
     @PreAuthorize("hasRole('APPLICANT')")
     public ResponseEntity<?> getApplicantProfile(@PathVariable Long applicantId) {
-        Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found"));
-        
+        Applicant applicant = profileManagementService.getApplicantById(applicantId);
         return ResponseEntity.ok(applicant);
     }
 
@@ -43,34 +36,7 @@ public class ProfileManagementController {
             @PathVariable Long applicantId,
             @Valid @RequestBody ProfileUpdateRequest request) {
         
-        Applicant applicant = applicantRepository.findById(applicantId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found"));
-
-        // Update allowed fields
-        if (request.getFirstName() != null) {
-            applicant.setFirstName(request.getFirstName());
-        }
-        if (request.getLastName() != null) {
-            applicant.setLastName(request.getLastName());
-        }
-        if (request.getPhone() != null) {
-            applicant.setPhone(request.getPhone());
-        }
-        if (request.getAddress() != null) {
-            applicant.setAddress(request.getAddress());
-        }
-        if (request.getCity() != null) {
-            applicant.setCity(request.getCity());
-        }
-        if (request.getState() != null) {
-            applicant.setState(request.getState());
-        }
-        if (request.getCountry() != null) {
-            applicant.setCountry(request.getCountry());
-        }
-
-        applicantRepository.save(applicant);
-        
+        profileManagementService.updateApplicantProfile(applicantId, request);
         return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
     }
 
@@ -79,9 +45,7 @@ public class ProfileManagementController {
     @GetMapping("/loan-officer/{officerId}")
     @PreAuthorize("hasRole('LOAN_OFFICER')")
     public ResponseEntity<?> getLoanOfficerProfile(@PathVariable Long officerId) {
-        LoanOfficer officer = loanOfficerRepository.findById(officerId)
-                .orElseThrow(() -> new RuntimeException("Loan Officer not found"));
-        
+        LoanOfficer officer = profileManagementService.getLoanOfficerById(officerId);
         return ResponseEntity.ok(officer);
     }
 
@@ -91,28 +55,13 @@ public class ProfileManagementController {
             @PathVariable Long officerId,
             @Valid @RequestBody ProfileUpdateRequest request) {
         
-        LoanOfficer officer = loanOfficerRepository.findById(officerId)
-                .orElseThrow(() -> new RuntimeException("Loan Officer not found"));
-
-        // Update allowed fields
-        if (request.getFirstName() != null) {
-            officer.setFirstName(request.getFirstName());
+        try {
+            profileManagementService.updateLoanOfficerProfile(officerId, request);
+            return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
         }
-        if (request.getLastName() != null) {
-            officer.setLastName(request.getLastName());
-        }
-        if (request.getEmail() != null && !request.getEmail().equals(officer.getEmail())) {
-            // Check if email already exists
-            if (loanOfficerRepository.existsByEmail(request.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Email already in use"));
-            }
-            officer.setEmail(request.getEmail());
-        }
-
-        loanOfficerRepository.save(officer);
-        
-        return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
     }
 
     // ==================== COMPLIANCE OFFICER PROFILE ====================
@@ -120,9 +69,7 @@ public class ProfileManagementController {
     @GetMapping("/compliance-officer/{officerId}")
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<?> getComplianceOfficerProfile(@PathVariable Long officerId) {
-        ComplianceOfficer officer = complianceOfficerRepository.findById(officerId)
-                .orElseThrow(() -> new RuntimeException("Compliance Officer not found"));
-        
+        ComplianceOfficer officer = profileManagementService.getComplianceOfficerById(officerId);
         return ResponseEntity.ok(officer);
     }
 
@@ -132,28 +79,13 @@ public class ProfileManagementController {
             @PathVariable Long officerId,
             @Valid @RequestBody ProfileUpdateRequest request) {
         
-        ComplianceOfficer officer = complianceOfficerRepository.findById(officerId)
-                .orElseThrow(() -> new RuntimeException("Compliance Officer not found"));
-
-        // Update allowed fields
-        if (request.getFirstName() != null) {
-            officer.setFirstName(request.getFirstName());
+        try {
+            profileManagementService.updateComplianceOfficerProfile(officerId, request);
+            return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
         }
-        if (request.getLastName() != null) {
-            officer.setLastName(request.getLastName());
-        }
-        if (request.getEmail() != null && !request.getEmail().equals(officer.getEmail())) {
-            // Check if email already exists
-            if (complianceOfficerRepository.existsByEmail(request.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Email already in use"));
-            }
-            officer.setEmail(request.getEmail());
-        }
-
-        complianceOfficerRepository.save(officer);
-        
-        return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
     }
 
     // ==================== PASSWORD CHANGE (ALL USERS) ====================
@@ -165,63 +97,15 @@ public class ProfileManagementController {
             @PathVariable Long userId,
             @RequestBody PasswordChangeRequest request) {
         
-        switch (userType.toUpperCase()) {
-            case "APPLICANT":
-                return changeApplicantPassword(userId, request);
-            case "LOAN_OFFICER":
-                return changeLoanOfficerPassword(userId, request);
-            case "COMPLIANCE_OFFICER":
-                return changeComplianceOfficerPassword(userId, request);
-            default:
-                return ResponseEntity.badRequest()
-                        .body(new MessageResponse("Invalid user type"));
+        try {
+            profileManagementService.changePassword(userType, userId, request.getCurrentPassword(), request.getNewPassword());
+            return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
 
-    private ResponseEntity<?> changeApplicantPassword(Long userId, PasswordChangeRequest request) {
-        Applicant applicant = applicantRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Applicant not found"));
-        
-        if (!passwordEncoder.matches(request.getCurrentPassword(), applicant.getPasswordHash())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Current password is incorrect"));
-        }
-        
-        applicant.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        applicantRepository.save(applicant);
-        
-        return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
-    }
-
-    private ResponseEntity<?> changeLoanOfficerPassword(Long userId, PasswordChangeRequest request) {
-        LoanOfficer officer = loanOfficerRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Loan Officer not found"));
-        
-        if (!passwordEncoder.matches(request.getCurrentPassword(), officer.getPasswordHash())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Current password is incorrect"));
-        }
-        
-        officer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        loanOfficerRepository.save(officer);
-        
-        return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
-    }
-
-    private ResponseEntity<?> changeComplianceOfficerPassword(Long userId, PasswordChangeRequest request) {
-        ComplianceOfficer officer = complianceOfficerRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Compliance Officer not found"));
-        
-        if (!passwordEncoder.matches(request.getCurrentPassword(), officer.getPasswordHash())) {
-            return ResponseEntity.badRequest()
-                    .body(new MessageResponse("Current password is incorrect"));
-        }
-        
-        officer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        complianceOfficerRepository.save(officer);
-        
-        return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
-    }
 
     // ==================== INNER CLASSES ====================
     

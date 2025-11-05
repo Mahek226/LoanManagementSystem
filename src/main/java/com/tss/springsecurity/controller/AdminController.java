@@ -7,10 +7,10 @@ import com.tss.springsecurity.dto.ApplicantSummaryDTO;
 import com.tss.springsecurity.dto.DashboardStatsResponse;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.UploadedDocument;
-import com.tss.springsecurity.repository.UploadedDocumentRepository;
 import com.tss.springsecurity.service.AdminService;
 import com.tss.springsecurity.service.ApplicantService;
 import com.tss.springsecurity.service.CloudinaryService;
+import com.tss.springsecurity.service.DocumentUploadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,7 +32,7 @@ public class AdminController {
     private final AdminService adminService;
     private final ApplicantService applicantService;
     private final CloudinaryService cloudinaryService;
-    private final UploadedDocumentRepository documentRepository;
+    private final DocumentUploadService documentUploadService;
 
     // Auth endpoints
     @PostMapping("/api/admin/auth/register")
@@ -160,8 +160,8 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> fixCloudinaryAccess() {
         try {
-            // Get all documents from database
-            List<UploadedDocument> allDocuments = documentRepository.findAll();
+            // Get all documents from database through service
+            List<UploadedDocument> allDocuments = documentUploadService.getAllDocuments();
             
             if (allDocuments.isEmpty()) {
                 return ResponseEntity.ok(new FixCloudinaryResponse(

@@ -295,7 +295,8 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         dto.setStatus(loan.getStatus());
         dto.setLoanPurpose(loan.getLoanPurpose());
         dto.setApplicationStatus(loan.getApplicationStatus());
-        dto.setLoanStatus(loan.getLoanStatus());
+        // Use status field for loanStatus since loan_status column may not exist
+        dto.setLoanStatus(loan.getStatus() != null ? loan.getStatus().toUpperCase() : "PENDING");
         dto.setRiskScore(loan.getRiskScore());
         dto.setSubmittedAt(loan.getSubmittedAt());
         dto.setReviewedAt(loan.getReviewedAt());
@@ -321,6 +322,11 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     public ApplicantLoanDetails getLoanById(Long loanId) {
         return loanDetailsRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+    }
+    
+    @Override
+    public ApplicantLoanDetails saveLoanDetails(ApplicantLoanDetails loanDetails) {
+        return loanDetailsRepository.save(loanDetails);
     }
     
     private BigDecimal calculateInterestRate(String loanType, Integer creditScore) {

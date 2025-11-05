@@ -229,6 +229,11 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
         return summary;
     }
     
+    @Override
+    public List<UploadedDocument> getAllDocuments() {
+        return uploadedDocumentRepository.findAll();
+    }
+    
     private boolean isValidFileType(String contentType) {
         if (contentType == null) {
             return false;

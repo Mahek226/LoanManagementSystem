@@ -1,7 +1,7 @@
 package com.tss.springsecurity.controller;
 
 import com.tss.springsecurity.entity.FraudRuleDefinition;
-import com.tss.springsecurity.repository.FraudRuleDefinitionRepository;
+import com.tss.springsecurity.service.FraudRuleManagementService;
 import com.tss.springsecurity.service.ActivityLogService;
 import jakarta.validation.Valid;
 import lombok.Data;
@@ -24,7 +24,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class FraudRuleManagementController {
     
-    private final FraudRuleDefinitionRepository ruleRepository;
+    private final FraudRuleManagementService fraudRuleManagementService;
     private final ActivityLogService activityLogService;
     
     /**
@@ -32,7 +32,7 @@ public class FraudRuleManagementController {
      */
     @GetMapping
     public ResponseEntity<List<FraudRuleDefinition>> getAllRules() {
-        List<FraudRuleDefinition> rules = ruleRepository.findAll();
+        List<FraudRuleDefinition> rules = fraudRuleManagementService.getAllRules();
         return ResponseEntity.ok(rules);
     }
     
@@ -41,7 +41,7 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/active")
     public ResponseEntity<List<FraudRuleDefinition>> getActiveRules() {
-        List<FraudRuleDefinition> rules = ruleRepository.findByIsActiveTrueOrderByExecutionOrderAsc();
+        List<FraudRuleDefinition> rules = fraudRuleManagementService.getActiveRules();
         return ResponseEntity.ok(rules);
     }
     
@@ -50,7 +50,7 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/category/{category}")
     public ResponseEntity<List<FraudRuleDefinition>> getRulesByCategory(@PathVariable String category) {
-        List<FraudRuleDefinition> rules = ruleRepository.findByRuleCategory(category);
+        List<FraudRuleDefinition> rules = fraudRuleManagementService.getRulesByCategory(category);
         return ResponseEntity.ok(rules);
     }
     
@@ -59,12 +59,13 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/{ruleId}")
     public ResponseEntity<?> getRuleById(@PathVariable Long ruleId) {
-        Optional<FraudRuleDefinition> rule = ruleRepository.findById(ruleId);
-        if (rule.isPresent()) {
-            return ResponseEntity.ok(rule.get());
+        try {
+            FraudRuleDefinition rule = fraudRuleManagementService.getRuleById(ruleId);
+            return ResponseEntity.ok(rule);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", "Rule not found with id: " + ruleId));
     }
     
     /**
@@ -72,12 +73,13 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/code/{ruleCode}")
     public ResponseEntity<?> getRuleByCode(@PathVariable String ruleCode) {
-        Optional<FraudRuleDefinition> rule = ruleRepository.findByRuleCode(ruleCode);
-        if (rule.isPresent()) {
-            return ResponseEntity.ok(rule.get());
+        try {
+            FraudRuleDefinition rule = fraudRuleManagementService.getRuleByCode(ruleCode);
+            return ResponseEntity.ok(rule);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", "Rule not found with code: " + ruleCode));
     }
     
     /**
@@ -86,26 +88,7 @@ public class FraudRuleManagementController {
     @PostMapping
     public ResponseEntity<?> createRule(@Valid @RequestBody CreateRuleRequest request, Principal principal) {
         try {
-            // Check if rule code already exists
-            if (ruleRepository.findByRuleCode(request.getRuleCode()).isPresent()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Rule code already exists: " + request.getRuleCode()));
-            }
-            
-            FraudRuleDefinition rule = new FraudRuleDefinition();
-            rule.setRuleCode(request.getRuleCode());
-            rule.setRuleName(request.getRuleName());
-            rule.setRuleDescription(request.getRuleDescription());
-            rule.setRuleCategory(request.getRuleCategory());
-            rule.setSeverity(request.getSeverity());
-            rule.setFraudPoints(request.getFraudPoints());
-            rule.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
-            rule.setRuleType(request.getRuleType());
-            rule.setExecutionOrder(request.getExecutionOrder() != null ? request.getExecutionOrder() : 100);
-            rule.setCreatedBy(principal.getName());
-            rule.setUpdatedBy(principal.getName());
-            
-            FraudRuleDefinition savedRule = ruleRepository.save(rule);
+            FraudRuleDefinition savedRule = fraudRuleManagementService.createRule(request, principal.getName());
             
             // Log activity
             activityLogService.logActivity(
@@ -119,6 +102,9 @@ public class FraudRuleManagementController {
             
             return ResponseEntity.status(HttpStatus.CREATED).body(savedRule);
             
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to create rule: " + e.getMessage()));
@@ -133,34 +119,16 @@ public class FraudRuleManagementController {
                                        @Valid @RequestBody UpdateRuleRequest request,
                                        Principal principal) {
         try {
-            FraudRuleDefinition rule = ruleRepository.findById(ruleId)
-                    .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleId));
-            
-            String oldValue = rule.toString();
-            
-            if (request.getRuleName() != null) rule.setRuleName(request.getRuleName());
-            if (request.getRuleDescription() != null) rule.setRuleDescription(request.getRuleDescription());
-            if (request.getRuleCategory() != null) rule.setRuleCategory(request.getRuleCategory());
-            if (request.getSeverity() != null) rule.setSeverity(request.getSeverity());
-            if (request.getFraudPoints() != null) rule.setFraudPoints(request.getFraudPoints());
-            if (request.getIsActive() != null) rule.setIsActive(request.getIsActive());
-            if (request.getRuleType() != null) rule.setRuleType(request.getRuleType());
-            if (request.getExecutionOrder() != null) rule.setExecutionOrder(request.getExecutionOrder());
-            
-            rule.setUpdatedBy(principal.getName());
-            
-            FraudRuleDefinition updatedRule = ruleRepository.save(rule);
+            FraudRuleDefinition updatedRule = fraudRuleManagementService.updateRule(ruleId, request, principal.getName());
             
             // Log activity
-            activityLogService.logActivityWithValues(
+            activityLogService.logActivity(
                     principal.getName(),
                     "ADMIN",
                     "UPDATE",
                     "FRAUD_RULE",
                     updatedRule.getRuleId(),
-                    "Updated fraud rule: " + updatedRule.getRuleName(),
-                    oldValue,
-                    updatedRule.toString()
+                    "Updated fraud rule: " + updatedRule.getRuleName()
             );
             
             return ResponseEntity.ok(updatedRule);
@@ -180,14 +148,7 @@ public class FraudRuleManagementController {
     @PatchMapping("/{ruleId}/toggle")
     public ResponseEntity<?> toggleRuleStatus(@PathVariable Long ruleId, Principal principal) {
         try {
-            FraudRuleDefinition rule = ruleRepository.findById(ruleId)
-                    .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleId));
-            
-            boolean oldStatus = rule.getIsActive();
-            rule.setIsActive(!oldStatus);
-            rule.setUpdatedBy(principal.getName());
-            
-            FraudRuleDefinition updatedRule = ruleRepository.save(rule);
+            FraudRuleDefinition updatedRule = fraudRuleManagementService.toggleRuleStatus(ruleId, principal.getName());
             
             // Log activity
             activityLogService.logActivity(
@@ -216,11 +177,7 @@ public class FraudRuleManagementController {
     @DeleteMapping("/{ruleId}")
     public ResponseEntity<?> deleteRule(@PathVariable Long ruleId, Principal principal) {
         try {
-            FraudRuleDefinition rule = ruleRepository.findById(ruleId)
-                    .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleId));
-            
-            String ruleName = rule.getRuleName();
-            ruleRepository.delete(rule);
+            String ruleName = fraudRuleManagementService.deleteRule(ruleId);
             
             // Log activity
             activityLogService.logActivity(
@@ -248,29 +205,7 @@ public class FraudRuleManagementController {
      */
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getRuleStatistics() {
-        Map<String, Object> stats = new HashMap<>();
-        
-        long totalRules = ruleRepository.count();
-        long activeRules = ruleRepository.findByIsActiveTrueOrderByExecutionOrderAsc().size();
-        long identityRules = ruleRepository.countByRuleCategoryAndIsActiveTrue("IDENTITY");
-        long financialRules = ruleRepository.countByRuleCategoryAndIsActiveTrue("FINANCIAL");
-        long employmentRules = ruleRepository.countByRuleCategoryAndIsActiveTrue("EMPLOYMENT");
-        long crossVerificationRules = ruleRepository.countByRuleCategoryAndIsActiveTrue("CROSS_VERIFICATION");
-        
-        stats.put("totalRules", totalRules);
-        stats.put("activeRules", activeRules);
-        stats.put("inactiveRules", totalRules - activeRules);
-        stats.put("identityRules", identityRules);
-        stats.put("financialRules", financialRules);
-        stats.put("employmentRules", employmentRules);
-        stats.put("crossVerificationRules", crossVerificationRules);
-        
-        // Severity distribution
-        stats.put("criticalRules", ruleRepository.countBySeverityAndIsActiveTrue("CRITICAL"));
-        stats.put("highRules", ruleRepository.countBySeverityAndIsActiveTrue("HIGH"));
-        stats.put("mediumRules", ruleRepository.countBySeverityAndIsActiveTrue("MEDIUM"));
-        stats.put("lowRules", ruleRepository.countBySeverityAndIsActiveTrue("LOW"));
-        
+        Map<String, Object> stats = fraudRuleManagementService.getRuleStatistics();
         return ResponseEntity.ok(stats);
     }
     

@@ -5,6 +5,7 @@ import com.tss.springsecurity.dto.LoanScreeningResponse;
 import com.tss.springsecurity.dto.LoanScreeningDecision;
 import com.tss.springsecurity.dto.ScreeningDashboardResponse;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
+import com.tss.springsecurity.payload.response.MessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,15 +23,15 @@ public class LoanOfficerScreeningController {
     
     private final LoanOfficerScreeningService screeningService;
     private final com.tss.springsecurity.service.DocumentExtractionService documentExtractionService;
-    private final com.tss.springsecurity.repository.UploadedDocumentRepository documentRepository;
     private final com.tss.springsecurity.service.DocumentUploadService documentUploadService;
-    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
-    private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
     private final com.tss.springsecurity.service.ApplicantNotificationService notificationService;
     private final com.tss.springsecurity.service.ComprehensiveLoanViewService comprehensiveLoanViewService;
     private final com.tss.springsecurity.service.ComprehensiveDashboardService comprehensiveDashboardService;
-    private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
+    private final com.tss.springsecurity.service.LoanOfficerDocumentService loanOfficerDocumentService;
+    private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
+    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
     private final com.tss.springsecurity.repository.ApplicantBasicDetailsRepository basicDetailsRepository;
+    private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
     private final com.tss.springsecurity.repository.DocumentResubmissionRepository documentResubmissionRepository;
     
     @GetMapping("/{officerId}/assigned-loans")
@@ -82,7 +83,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error generating dashboard: " + e.getMessage()));
+                    .body(new MessageResponse("Error generating dashboard: " + e.getMessage()));
         }
     }
     
@@ -93,7 +94,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -106,7 +107,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -119,7 +120,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -130,7 +131,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -144,7 +145,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -158,7 +159,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(history);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -180,13 +181,13 @@ public class LoanOfficerScreeningController {
             
             // Get only documents for this specific loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
+                loanOfficerDocumentService.getDocumentsByLoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
             if (documents.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No documents found for this loan"));
+                        .body(new MessageResponse("No documents found for this loan"));
             }
             
             // Extract each document by downloading from Cloudinary
@@ -276,12 +277,12 @@ public class LoanOfficerScreeningController {
             System.err.println("RuntimeException in document extraction: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             System.err.println("Exception in document extraction: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to extract documents: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to extract documents: " + e.getMessage()));
         }
     }
     
@@ -295,7 +296,7 @@ public class LoanOfficerScreeningController {
             
             // Only get documents specifically associated with this loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
+                loanOfficerDocumentService.getDocumentsByLoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
@@ -307,7 +308,7 @@ public class LoanOfficerScreeningController {
                 docInfo.put("documentName", doc.getDocumentName());
                 docInfo.put("documentUrl", doc.getCloudinaryUrl());
                 docInfo.put("uploadedAt", doc.getUploadedAt());
-                docInfo.put("verificationStatus", doc.getVerificationStatus().toString());
+                docInfo.put("verificationStatus", doc.getVerificationStatus() != null ? doc.getVerificationStatus().toString() : "PENDING");
                 docInfo.put("verifiedBy", doc.getVerifiedBy());
                 docInfo.put("verifiedAt", doc.getVerifiedAt());
                 docInfo.put("remarks", doc.getVerificationNotes());
@@ -320,7 +321,7 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to retrieve documents: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to retrieve documents: " + e.getMessage()));
         }
     }
     
@@ -348,7 +349,7 @@ public class LoanOfficerScreeningController {
             docInfo.put("documentName", updatedDoc.getDocumentName());
             docInfo.put("documentUrl", updatedDoc.getCloudinaryUrl());
             docInfo.put("uploadedAt", updatedDoc.getUploadedAt());
-            docInfo.put("verificationStatus", updatedDoc.getVerificationStatus().toString());
+            docInfo.put("verificationStatus", updatedDoc.getVerificationStatus() != null ? updatedDoc.getVerificationStatus().toString() : "PENDING");
             docInfo.put("verifiedBy", updatedDoc.getVerifiedBy());
             docInfo.put("verifiedAt", updatedDoc.getVerifiedAt());
             docInfo.put("remarks", updatedDoc.getVerificationNotes());
@@ -357,7 +358,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to verify document: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to verify document: " + e.getMessage()));
         }
     }
     
@@ -409,7 +410,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request document resubmission: " + e.getMessage()));
         }
     }
     
@@ -461,7 +462,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to request more info: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request more info: " + e.getMessage()));
         }
     }
     
@@ -480,25 +481,13 @@ public class LoanOfficerScreeningController {
             
             // Get assignment details
             com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = 
-                assignmentRepository.findById(request.getAssignmentId())
-                    .orElseThrow(() -> new RuntimeException("Assignment not found"));
+                loanOfficerDocumentService.getAssignmentById(request.getAssignmentId());
             
             Long applicantId = assignment.getApplicant().getApplicantId();
             Long loanId = assignment.getLoan().getLoanId();
             
             // Update document status to "RESUBMISSION_REQUESTED" for specified documents
-            List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
-            
-            for (com.tss.springsecurity.entity.UploadedDocument doc : documents) {
-                if (request.getDocumentTypes().contains(doc.getDocumentType())) {
-                    doc.setVerificationStatus(com.tss.springsecurity.entity.UploadedDocument.VerificationStatus.RESUBMISSION_REQUESTED);
-                    doc.setVerificationNotes(request.getReason());
-                    doc.setVerifiedBy("Officer #" + officerId);
-                    doc.setVerifiedAt(java.time.LocalDateTime.now());
-                    documentRepository.save(doc);
-                }
-            }
+            loanOfficerDocumentService.updateDocumentsForResubmission(loanId, request.getDocumentTypes(), request.getReason(), officerId);
             
             // Create notification for applicant
             String requestedBy = "Loan Officer #" + officerId;
@@ -526,10 +515,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request document resubmission: " + e.getMessage()));
         }
     }
     
@@ -582,7 +571,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to trigger fraud check: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to trigger fraud check: " + e.getMessage()));
         }
     }
     
@@ -607,7 +596,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("Fraud check results not found"));
+                    .body(new MessageResponse("Fraud check results not found"));
         }
     }
     
@@ -625,10 +614,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching comprehensive loan view: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching comprehensive loan view: " + e.getMessage()));
         }
     }
     
@@ -648,15 +637,15 @@ public class LoanOfficerScreeningController {
                 return ResponseEntity.ok(verdict);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No compliance verdict found for this loan"));
+                        .body(new MessageResponse("No compliance verdict found for this loan"));
             }
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching compliance verdict: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching compliance verdict: " + e.getMessage()));
         }
     }
     
@@ -683,10 +672,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error processing loan after compliance: " + e.getMessage()));
+                    .body(new MessageResponse("Error processing loan after compliance: " + e.getMessage()));
         }
     }
     
@@ -709,7 +698,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(pendingAfterCompliance);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching pending loans after compliance: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching pending loans after compliance: " + e.getMessage()));
         }
     }
     
@@ -853,7 +842,7 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             log.error("Error getting document resubmission requests for officer ID: {}", officerId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to get document resubmission requests: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to get document resubmission requests: " + e.getMessage()));
         }
     }
     
@@ -963,16 +952,11 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to process document resubmission request: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to process document resubmission request: " + e.getMessage()));
         }
     }
     
-    // ==================== Response Classes ====================
-    
-    private record ErrorResponse(String message) {}
-    
-    private record SuccessResponse(String message) {}
 }

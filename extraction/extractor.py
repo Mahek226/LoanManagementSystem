@@ -146,6 +146,8 @@ def extract_by_type(doc, doc_type):
     return {"raw_text": _first_text(doc)}
 
 
+
+
 def compute_confidence(field_name, field_value):
     """
     Compute confidence score heuristically.
