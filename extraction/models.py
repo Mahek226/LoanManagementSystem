@@ -52,7 +52,7 @@ class ExtractedField(Base):
         # Use Numeric if you want SQLAlchemy’s type match
         # but String is fine if your DB stores as string
         # here we use Float for convenience
-        Float
+        # Float
     )  # 👈 added
     verified = Column(Boolean, default=False, nullable=False)
     verified_by = Column(String(255))  # 👈 added

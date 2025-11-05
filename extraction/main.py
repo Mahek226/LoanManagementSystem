@@ -358,21 +358,23 @@ async def extract_document(
 
     # Step 5: Extract fields using dispatcher
     extracted = extractor_dispatch(doc, document_type)
-    raw_text = "\n".join(chunk.text for chunk in doc.chunks if chunk.text) if doc.chunks else "No text"
-    print(f"\n🔍 Raw extracted text length: {len(raw_text)}")
-    print(f"Extracted fields: {extracted}")
+    # raw_text = "\n".join(chunk.text for chunk in doc.chunks if chunk.text) if doc.chunks else "No text"
+    # print(f"\n🔍 Raw extracted text length: {len(raw_text)}")
+    # print(f"Extracted fields: {extracted}")
 
     # Fallback if nothing extracted
     if not extracted or all(v in (None, "") for v in extracted.values()):
-        extracted = {"raw_text": raw_text[:1000], "extraction_method": "fallback"}
+        extracted = {"raw_text": raw_text[:1000]}
+
 
     # Step 6: Compute confidence
-    extracted_with_conf = {}
+    extracted_with_confidence = {}
     for field, value in extracted.items():
-        conf = compute_confidence(field, value)
-        extracted_with_conf[field] = {
+        confidence = compute_confidence(field, value)
+        extracted_with_confidence[field] = {
             "value": value,
-            "confidence": conf
+            "confidence": round(confidence, 4)
+
         }
 
     # Step 7: Print result summary
