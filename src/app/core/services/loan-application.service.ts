@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpEvent, HttpEventType } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '@environments/environment';
+import { ToastService } from './toast.service';
 
 // Application Form Interfaces
 export interface BasicDetails {
@@ -162,7 +163,10 @@ export class LoanApplicationService {
   private applicationState = new BehaviorSubject<LoanApplicationForm | null>(null);
   public applicationState$ = this.applicationState.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private toastService: ToastService
+  ) {
     this.loadDraft();
   }
 
@@ -598,7 +602,21 @@ export class LoanApplicationService {
     console.log('Mapped DTO:', comprehensiveDTO);
     console.log('API Endpoint:', `${this.API_URL}/loan-applications/submit-for-existing-applicant`);
     
-    return this.http.post(`${this.API_URL}/loan-applications/submit-for-existing-applicant`, comprehensiveDTO);
+    return this.http.post(`${this.API_URL}/loan-applications/submit-for-existing-applicant`, comprehensiveDTO).pipe(
+      tap((response: any) => {
+        // Show success toast
+        const loanId = response?.loanId || response?.data?.loanId || 'N/A';
+        this.toastService.showLoanToast('submitted', loanId.toString(), 'We will review your application and get back to you soon.');
+        
+        // Clear draft after successful submission
+        this.clearDraft();
+      }),
+      catchError((error) => {
+        // Show error toast
+        this.toastService.showHttpError(error, 'Application Submission Failed');
+        throw error;
+      })
+    );
   }
 
   private mapToComprehensiveDTO(application: LoanApplicationForm): any {
