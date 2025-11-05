@@ -323,6 +323,11 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
                 .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
     }
     
+    @Override
+    public ApplicantLoanDetails saveLoanDetails(ApplicantLoanDetails loanDetails) {
+        return loanDetailsRepository.save(loanDetails);
+    }
+    
     private BigDecimal calculateInterestRate(String loanType, Integer creditScore) {
         BigDecimal baseRate;
         

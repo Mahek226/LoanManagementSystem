@@ -5,6 +5,7 @@ import com.tss.springsecurity.dto.LoanScreeningResponse;
 import com.tss.springsecurity.dto.LoanScreeningDecision;
 import com.tss.springsecurity.dto.ScreeningDashboardResponse;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
+import com.tss.springsecurity.payload.response.MessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,15 +23,15 @@ public class LoanOfficerScreeningController {
     
     private final LoanOfficerScreeningService screeningService;
     private final com.tss.springsecurity.service.DocumentExtractionService documentExtractionService;
-    private final com.tss.springsecurity.repository.UploadedDocumentRepository documentRepository;
     private final com.tss.springsecurity.service.DocumentUploadService documentUploadService;
-    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
-    private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
     private final com.tss.springsecurity.service.ApplicantNotificationService notificationService;
     private final com.tss.springsecurity.service.ComprehensiveLoanViewService comprehensiveLoanViewService;
     private final com.tss.springsecurity.service.ComprehensiveDashboardService comprehensiveDashboardService;
-    private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
+    private final com.tss.springsecurity.service.LoanOfficerDocumentService loanOfficerDocumentService;
+    private final com.tss.springsecurity.repository.ApplicantRepository applicantRepository;
+    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanRepository;
     private final com.tss.springsecurity.repository.ApplicantBasicDetailsRepository basicDetailsRepository;
+    private final com.tss.springsecurity.repository.OfficerApplicationAssignmentRepository assignmentRepository;
     private final com.tss.springsecurity.repository.DocumentResubmissionRepository documentResubmissionRepository;
     
     @GetMapping("/{officerId}/assigned-loans")
@@ -82,7 +83,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error generating dashboard: " + e.getMessage()));
+                    .body(new MessageResponse("Error generating dashboard: " + e.getMessage()));
         }
     }
     
@@ -93,7 +94,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -106,7 +107,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -119,7 +120,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -130,7 +131,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(dashboard);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -144,7 +145,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -158,7 +159,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(history);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         }
     }
     
@@ -180,13 +181,13 @@ public class LoanOfficerScreeningController {
             
             // Get only documents for this specific loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
+                loanOfficerDocumentService.getDocumentsByLoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
             if (documents.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No documents found for this loan"));
+                        .body(new MessageResponse("No documents found for this loan"));
             }
             
             // Extract each document by downloading from Cloudinary
@@ -276,12 +277,12 @@ public class LoanOfficerScreeningController {
             System.err.println("RuntimeException in document extraction: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             System.err.println("Exception in document extraction: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to extract documents: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to extract documents: " + e.getMessage()));
         }
     }
     
@@ -295,7 +296,7 @@ public class LoanOfficerScreeningController {
             
             // Only get documents specifically associated with this loan
             List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
+                loanOfficerDocumentService.getDocumentsByLoanId(loanId);
             
             System.out.println("Found " + documents.size() + " documents for loan ID: " + loanId);
             
@@ -320,7 +321,7 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to retrieve documents: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to retrieve documents: " + e.getMessage()));
         }
     }
     
@@ -357,7 +358,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to verify document: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to verify document: " + e.getMessage()));
         }
     }
     
@@ -409,7 +410,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request document resubmission: " + e.getMessage()));
         }
     }
     
@@ -461,7 +462,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to request more info: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request more info: " + e.getMessage()));
         }
     }
     
@@ -480,25 +481,13 @@ public class LoanOfficerScreeningController {
             
             // Get assignment details
             com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = 
-                assignmentRepository.findById(request.getAssignmentId())
-                    .orElseThrow(() -> new RuntimeException("Assignment not found"));
+                loanOfficerDocumentService.getAssignmentById(request.getAssignmentId());
             
             Long applicantId = assignment.getApplicant().getApplicantId();
             Long loanId = assignment.getLoan().getLoanId();
             
             // Update document status to "RESUBMISSION_REQUESTED" for specified documents
-            List<com.tss.springsecurity.entity.UploadedDocument> documents = 
-                documentRepository.findByLoan_LoanId(loanId);
-            
-            for (com.tss.springsecurity.entity.UploadedDocument doc : documents) {
-                if (request.getDocumentTypes().contains(doc.getDocumentType())) {
-                    doc.setVerificationStatus(com.tss.springsecurity.entity.UploadedDocument.VerificationStatus.RESUBMISSION_REQUESTED);
-                    doc.setVerificationNotes(request.getReason());
-                    doc.setVerifiedBy("Officer #" + officerId);
-                    doc.setVerifiedAt(java.time.LocalDateTime.now());
-                    documentRepository.save(doc);
-                }
-            }
+            loanOfficerDocumentService.updateDocumentsForResubmission(loanId, request.getDocumentTypes(), request.getReason(), officerId);
             
             // Create notification for applicant
             String requestedBy = "Loan Officer #" + officerId;
@@ -526,10 +515,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to request document resubmission: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to request document resubmission: " + e.getMessage()));
         }
     }
     
@@ -582,7 +571,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Failed to trigger fraud check: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to trigger fraud check: " + e.getMessage()));
         }
     }
     
@@ -607,7 +596,7 @@ public class LoanOfficerScreeningController {
             
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("Fraud check results not found"));
+                    .body(new MessageResponse("Fraud check results not found"));
         }
     }
     
@@ -625,10 +614,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching comprehensive loan view: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching comprehensive loan view: " + e.getMessage()));
         }
     }
     
@@ -648,15 +637,15 @@ public class LoanOfficerScreeningController {
                 return ResponseEntity.ok(verdict);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(new ErrorResponse("No compliance verdict found for this loan"));
+                        .body(new MessageResponse("No compliance verdict found for this loan"));
             }
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching compliance verdict: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching compliance verdict: " + e.getMessage()));
         }
     }
     
@@ -683,10 +672,10 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error processing loan after compliance: " + e.getMessage()));
+                    .body(new MessageResponse("Error processing loan after compliance: " + e.getMessage()));
         }
     }
     
@@ -709,7 +698,7 @@ public class LoanOfficerScreeningController {
             return ResponseEntity.ok(pendingAfterCompliance);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Error fetching pending loans after compliance: " + e.getMessage()));
+                    .body(new MessageResponse("Error fetching pending loans after compliance: " + e.getMessage()));
         }
     }
     
@@ -732,55 +721,108 @@ public class LoanOfficerScreeningController {
             List<java.util.Map<String, Object>> requests = new java.util.ArrayList<>();
             
             for (com.tss.springsecurity.entity.DocumentResubmission docRequest : docRequests) {
-                log.info("Processing document request ID: {} for applicant ID: {}", 
+                log.info("=== Processing document request ID: {} for applicant ID: {} ===", 
                     docRequest.getResubmissionId(), docRequest.getApplicant().getApplicantId());
+                log.info("Requested by compliance officer: {} (ID: {})", 
+                    docRequest.getRequestedByOfficer().getFirstName() + " " + docRequest.getRequestedByOfficer().getLastName(),
+                    docRequest.getRequestedByOfficer().getOfficerId());
                 
-                // Find the loan officer assignment for this applicant - try multiple statuses
-                List<String> assignmentStatuses = java.util.Arrays.asList("PENDING", "IN_PROGRESS", "ASSIGNED");
-                java.util.Optional<com.tss.springsecurity.entity.OfficerApplicationAssignment> loanOfficerAssignment = 
-                    assignmentRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId())
-                    .stream()
-                    .filter(a -> assignmentStatuses.contains(a.getStatus()))
-                    .findFirst();
+                // Find the original loan officer who was assigned to this loan before escalation
+                // Look for the loan officer assignment for this specific loan (not just applicant)
+                com.tss.springsecurity.entity.ApplicantLoanDetails foundLoan = null;
+                if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
+                    foundLoan = docRequest.getAssignment().getLoan();
+                    log.info("Found loan from compliance assignment: Loan ID {} for applicant {}", 
+                        foundLoan.getLoanId(), foundLoan.getApplicant().getFirstName() + " " + foundLoan.getApplicant().getLastName());
+                } else {
+                    log.warn("No loan found in compliance assignment for resubmission ID: {}", docRequest.getResubmissionId());
+                }
                 
-                if (loanOfficerAssignment.isPresent()) {
-                    com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = loanOfficerAssignment.get();
-                    log.info("Found loan officer assignment ID: {} with officer ID: {} for applicant ID: {}", 
-                        assignment.getAssignmentId(), assignment.getOfficer().getOfficerId(), 
-                        docRequest.getApplicant().getApplicantId());
+                com.tss.springsecurity.entity.OfficerApplicationAssignment assignment = null;
+                boolean shouldIncludeRequest = false;
+                final com.tss.springsecurity.entity.ApplicantLoanDetails finalLoan = foundLoan;
+                
+                if (finalLoan != null) {
+                    // Try to find any loan officer assignment for this applicant (not necessarily the same loan)
+                    // Since compliance and loan officer assignments are separate, we need a more flexible approach
+                    java.util.List<com.tss.springsecurity.entity.OfficerApplicationAssignment> loanOfficerAssignments = 
+                        assignmentRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId());
                     
-                    // Only include requests where this loan officer is assigned
-                    if (assignment.getOfficer().getOfficerId().equals(officerId)) {
+                    log.info("Found {} loan officer assignments for applicant ID: {}", loanOfficerAssignments.size(), docRequest.getApplicant().getApplicantId());
+                    
+                    // Log all assignments for debugging
+                    for (int i = 0; i < loanOfficerAssignments.size(); i++) {
+                        com.tss.springsecurity.entity.OfficerApplicationAssignment a = loanOfficerAssignments.get(i);
+                        log.info("Assignment {}: ID={}, Officer ID={}, Status={}, Officer Name={}, Loan ID={}", 
+                            i+1, a.getAssignmentId(), a.getOfficer().getOfficerId(), a.getStatus(),
+                            a.getOfficer().getFirstName() + " " + a.getOfficer().getLastName(),
+                            a.getLoan() != null ? a.getLoan().getLoanId() : "null");
+                    }
+                    
+                    if (!loanOfficerAssignments.isEmpty()) {
+                        // Find assignment for this specific loan, or any assignment for this applicant
+                        assignment = loanOfficerAssignments.stream()
+                            .filter(a -> a.getLoan() != null && a.getLoan().getLoanId().equals(finalLoan.getLoanId()))
+                            .findFirst()
+                            .orElse(loanOfficerAssignments.stream()
+                                .filter(a -> a.getOfficer().getOfficerId().equals(officerId))
+                                .findFirst()
+                                .orElse(loanOfficerAssignments.get(0)));
+                        
+                        log.info("Selected assignment ID: {} with officer ID: {} for processing", 
+                            assignment.getAssignmentId(), assignment.getOfficer().getOfficerId());
+                        
+                        // Show to any loan officer who has worked with this applicant
+                        shouldIncludeRequest = loanOfficerAssignments.stream()
+                            .anyMatch(a -> a.getOfficer().getOfficerId().equals(officerId));
+                        
+                        if (shouldIncludeRequest) {
+                            log.info("Including request for loan officer ID: {} (has assignment for this applicant)", officerId);
+                        } else {
+                            log.info("Skipping request - loan officer {} has no assignments for applicant {}", 
+                                officerId, docRequest.getApplicant().getApplicantId());
+                        }
+                    } else {
+                        log.warn("No loan officer assignments found for applicant ID: {}", docRequest.getApplicant().getApplicantId());
+                        // For testing purposes, show to all loan officers if no specific assignment exists
+                        shouldIncludeRequest = true;
+                        log.info("No specific assignment found - showing to all loan officers for testing");
+                    }
+                } else {
+                    log.warn("Could not find loan information for document resubmission ID: {}", docRequest.getResubmissionId());
+                    // For testing - show to all loan officers if we can't find loan info
+                    shouldIncludeRequest = true;
+                    log.info("No loan info found - showing to all loan officers for testing");
+                }
+                
+                if (shouldIncludeRequest) {
                         log.info("Including request for officer ID: {}", officerId);
                         
-                        // Get loan information from the compliance assignment (which should have the loan)
-                        com.tss.springsecurity.entity.ApplicantLoanDetails loan = null;
-                        if (assignment.getLoan() != null) {
-                            loan = assignment.getLoan();
-                        } else if (docRequest.getAssignment() != null && docRequest.getAssignment().getLoan() != null) {
-                            loan = docRequest.getAssignment().getLoan();
-                        } else {
-                            // Try to find loan by applicant ID
-                            java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
-                                loanRepository.findByApplicant_ApplicantId(assignment.getApplicant().getApplicantId());
-                            if (!loans.isEmpty()) {
-                                loan = loans.get(0); // Get the first loan for this applicant
-                            }
-                        }
+                        // Determine which loan to use
+                        com.tss.springsecurity.entity.ApplicantLoanDetails loanToUse = finalLoan;
                         
-                        if (loan == null) {
-                            log.warn("Could not find loan for assignment ID: {}, skipping this request", assignment.getAssignmentId());
-                            continue;
+                        // If loan is still null, try to find it by applicant ID as fallback
+                        if (loanToUse == null) {
+                            log.warn("Loan is null, trying to find loan by applicant ID: {}", docRequest.getApplicant().getApplicantId());
+                            java.util.List<com.tss.springsecurity.entity.ApplicantLoanDetails> loans = 
+                                loanRepository.findByApplicant_ApplicantId(docRequest.getApplicant().getApplicantId());
+                            if (!loans.isEmpty()) {
+                                loanToUse = loans.get(0); // Get the first loan for this applicant
+                                log.info("Found fallback loan ID: {} for applicant", loanToUse.getLoanId());
+                            } else {
+                                log.warn("Could not find any loan for applicant ID: {}, skipping this request", docRequest.getApplicant().getApplicantId());
+                                continue;
+                            }
                         }
                         
                         java.util.Map<String, Object> request = new java.util.HashMap<>();
                         request.put("resubmissionId", docRequest.getResubmissionId());
-                        request.put("assignmentId", assignment.getAssignmentId());
-                        request.put("loanId", loan.getLoanId());
-                        request.put("applicantId", assignment.getApplicant().getApplicantId());
-                        request.put("applicantName", assignment.getApplicant().getFirstName() + " " + assignment.getApplicant().getLastName());
-                        request.put("loanType", loan.getLoanType());
-                        request.put("loanAmount", loan.getLoanAmount());
+                        request.put("assignmentId", assignment != null ? assignment.getAssignmentId() : null);
+                        request.put("loanId", loanToUse.getLoanId());
+                        request.put("applicantId", docRequest.getApplicant().getApplicantId());
+                        request.put("applicantName", docRequest.getApplicant().getFirstName() + " " + docRequest.getApplicant().getLastName());
+                        request.put("loanType", loanToUse.getLoanType());
+                        request.put("loanAmount", loanToUse.getLoanAmount());
                         request.put("requestedDocuments", docRequest.getRequestedDocuments());
                         request.put("reason", docRequest.getReason());
                         request.put("additionalComments", docRequest.getAdditionalComments());
@@ -791,13 +833,6 @@ public class LoanOfficerScreeningController {
                         request.put("complianceOfficerId", docRequest.getRequestedByOfficer().getOfficerId());
                         request.put("status", docRequest.getStatus());
                         requests.add(request);
-                    } else {
-                        log.info("Skipping request - different officer ID: {} vs {}", 
-                            assignment.getOfficer().getOfficerId(), officerId);
-                    }
-                } else {
-                    log.warn("No loan officer assignment found for applicant ID: {}", 
-                        docRequest.getApplicant().getApplicantId());
                 }
             }
             
@@ -807,7 +842,7 @@ public class LoanOfficerScreeningController {
         } catch (Exception e) {
             log.error("Error getting document resubmission requests for officer ID: {}", officerId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to get document resubmission requests: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to get document resubmission requests: " + e.getMessage()));
         }
     }
     
@@ -917,16 +952,11 @@ public class LoanOfficerScreeningController {
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(e.getMessage()));
+                    .body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Failed to process document resubmission request: " + e.getMessage()));
+                    .body(new MessageResponse("Failed to process document resubmission request: " + e.getMessage()));
         }
     }
     
-    // ==================== Response Classes ====================
-    
-    private record ErrorResponse(String message) {}
-    
-    private record SuccessResponse(String message) {}
 }

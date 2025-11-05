@@ -37,14 +37,11 @@ import jakarta.validation.Valid;
 public class LoanApplicationController {
     
     private final LoanApplicationService loanApplicationService;
-    private final com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository;
     private final com.tss.springsecurity.service.LoanAssignmentService loanAssignmentService;
     
     public LoanApplicationController(LoanApplicationService loanApplicationService,
-                                    com.tss.springsecurity.repository.ApplicantLoanDetailsRepository loanDetailsRepository,
                                     com.tss.springsecurity.service.LoanAssignmentService loanAssignmentService) {
         this.loanApplicationService = loanApplicationService;
-        this.loanDetailsRepository = loanDetailsRepository;
         this.loanAssignmentService = loanAssignmentService;
     }
     
@@ -402,7 +399,7 @@ public class LoanApplicationController {
             loanDetails.setLoanStatus("PENDING");
             
             // Save loan application
-            ApplicantLoanDetails savedLoan = loanDetailsRepository.save(loanDetails);
+            ApplicantLoanDetails savedLoan = loanApplicationService.saveLoanDetails(loanDetails);
             
             // Automatically assign loan to an officer based on loan type
             try {

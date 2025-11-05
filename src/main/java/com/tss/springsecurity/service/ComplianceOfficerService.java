@@ -160,9 +160,33 @@ public interface ComplianceOfficerService {
      * Request document resubmission with detailed reasons
      */
     Map<String, Object> requestDocumentResubmissionDetailed(DocumentResubmissionRequestDTO request);
-    
+//    
+//<<<<<<< HEAD
+//    // ==================== External Fraud Data ====================
+//    
+//    /**
+//     * Get external fraud data for an applicant from external_lms database
+//     */
+//    Map<String, Object> getExternalFraudData(Long applicantId);
+//    
+//    /**
+//     * Get bank records for an applicant from external database
+//     */
+//    List<Map<String, Object>> getBankRecords(Long applicantId);
+//    
+//    /**
+//     * Get criminal records for an applicant from external database
+//     */
+//    List<Map<String, Object>> getCriminalRecords(Long applicantId);
+//    
+//    /**
+//     * Get historical and current loans for an applicant from external database
+//     */
+//    List<Map<String, Object>> getLoanHistory(Long applicantId);
+//=======
     /**
      * Get external person details by person ID from external database
      */
     Map<String, Object> getExternalPersonDetails(Long personId);
+//>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
 }

@@ -11,6 +11,7 @@ import java.util.List;
 public interface ApplicantLoanDetailsRepository extends JpaRepository<ApplicantLoanDetails, Long> {
     List<ApplicantLoanDetails> findByApplicant_ApplicantId(Long applicantId);
     List<ApplicantLoanDetails> findByStatus(String status);
+    List<ApplicantLoanDetails> findByLoanStatusOrderBySubmittedAtDesc(String loanStatus);
     
     @Query("SELECT SUM(ald.loanAmount) FROM ApplicantLoanDetails ald")
     Double sumAllLoanAmounts();

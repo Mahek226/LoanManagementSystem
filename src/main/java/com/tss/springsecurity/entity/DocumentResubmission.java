@@ -55,6 +55,12 @@ public class DocumentResubmission {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
     
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
+    
+    @Column(name = "processed_by", length = 200)
+    private String processedBy;
+    
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     

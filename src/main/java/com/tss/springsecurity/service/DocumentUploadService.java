@@ -72,4 +72,10 @@ public interface DocumentUploadService {
      * @return Summary map with counts and status
      */
     Map<String, Object> getDocumentUploadSummary(Long applicantId);
+    
+    /**
+     * Get all documents in the system
+     * @return List of all uploaded documents
+     */
+    List<UploadedDocument> getAllDocuments();
 }
