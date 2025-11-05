@@ -164,10 +164,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/applicant/apply-loan-new/apply-loan-new.component').then(m => m.ApplyLoanNewComponent)
       },
       {
-        path: 'documents',
-        loadComponent: () => import('./features/applicant/documents/documents.component').then(m => m.DocumentsComponent)
-      },
-      {
         path: 'track-application',
         loadComponent: () => import('./features/applicant/track-application/track-application.component').then(m => m.TrackApplicationComponent)
       },

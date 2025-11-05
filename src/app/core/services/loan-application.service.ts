@@ -776,29 +776,29 @@ export class LoanApplicationService {
     switch (step) {
       case 1: // Basic Details
         return !!(
-          application.basicDetails.loanAmount > 0 &&
-          application.basicDetails.tenure > 0 &&
-          application.basicDetails.purpose.trim()
+          application.basicDetails?.loanAmount > 0 &&
+          application.basicDetails?.tenure > 0 &&
+          application.basicDetails?.purpose?.trim()
         );
       case 2: // Financial Details
         return !!(
-          application.financialDetails.employmentType &&
-          application.financialDetails.monthlyGrossSalary &&
-          application.financialDetails.bankName &&
-          application.financialDetails.accountNumber &&
-          application.financialDetails.ifscCode
+          application.financialDetails?.employmentType &&
+          application.financialDetails?.monthlyGrossSalary &&
+          application.financialDetails?.bankName &&
+          application.financialDetails?.accountNumber &&
+          application.financialDetails?.ifscCode
         );
       case 3: // Documents
-        const requiredDocs = this.getRequiredDocuments(application.basicDetails.loanType);
+        const requiredDocs = this.getRequiredDocuments(application.basicDetails?.loanType || '');
         const requiredTypes = requiredDocs.filter(d => d.required).map(d => d.documentType);
-        const uploadedTypes = application.documents.map(d => d.documentType);
+        const uploadedTypes = application.documents?.map(d => d.documentType) || [];
         return requiredTypes.every(type => uploadedTypes.includes(type));
       case 4: // Declarations
         return !!(
-          application.declarations.kycConsent &&
-          application.declarations.creditBureauConsent &&
-          application.declarations.termsAccepted &&
-          application.declarations.privacyPolicyAccepted
+          application.declarations?.kycConsent &&
+          application.declarations?.creditBureauConsent &&
+          application.declarations?.termsAccepted &&
+          application.declarations?.privacyPolicyAccepted
         );
       default:
         return false;
@@ -812,5 +812,88 @@ export class LoanApplicationService {
       3: this.validateStep(3),
       4: this.validateStep(4)
     };
+  }
+
+  getStepValidationErrors(step: number): string[] {
+    const application = this.applicationState.value;
+    if (!application) return ['Application data not found'];
+
+    const errors: string[] = [];
+
+    switch (step) {
+      case 1: // Basic Details
+        if (!application.basicDetails?.loanAmount || application.basicDetails.loanAmount <= 0) {
+          errors.push('Loan amount is required and must be greater than 0');
+        }
+        if (!application.basicDetails?.tenure || application.basicDetails.tenure <= 0) {
+          errors.push('Loan tenure is required and must be greater than 0');
+        }
+        if (!application.basicDetails?.purpose?.trim()) {
+          errors.push('Loan purpose is required');
+        }
+        if (!application.basicDetails?.loanType) {
+          errors.push('Loan type is required');
+        }
+        break;
+
+      case 2: // Financial Details
+        if (!application.financialDetails?.employmentType) {
+          errors.push('Employment type is required');
+        }
+        if (!application.financialDetails?.monthlyGrossSalary || application.financialDetails.monthlyGrossSalary <= 0) {
+          errors.push('Monthly gross salary is required and must be greater than 0');
+        }
+        if (!application.financialDetails?.bankName?.trim()) {
+          errors.push('Bank name is required');
+        }
+        if (!application.financialDetails?.accountNumber?.trim()) {
+          errors.push('Account number is required');
+        }
+        if (!application.financialDetails?.ifscCode?.trim()) {
+          errors.push('IFSC code is required');
+        }
+        break;
+
+      case 3: // Documents
+        const requiredDocs = this.getRequiredDocuments(application.basicDetails?.loanType || '');
+        const requiredTypes = requiredDocs.filter(d => d.required).map(d => d.documentType);
+        const uploadedTypes = application.documents?.map(d => d.documentType) || [];
+        
+        requiredTypes.forEach(type => {
+          if (!uploadedTypes.includes(type)) {
+            const docName = requiredDocs.find(d => d.documentType === type)?.displayName || type;
+            errors.push(`${docName} is required`);
+          }
+        });
+        break;
+
+      case 4: // Declarations
+        if (!application.declarations?.kycConsent) {
+          errors.push('KYC consent is required');
+        }
+        if (!application.declarations?.creditBureauConsent) {
+          errors.push('Credit bureau consent is required');
+        }
+        if (!application.declarations?.termsAccepted) {
+          errors.push('Terms and conditions must be accepted');
+        }
+        if (!application.declarations?.privacyPolicyAccepted) {
+          errors.push('Privacy policy must be accepted');
+        }
+        break;
+    }
+
+    return errors;
+  }
+
+  getFormattedValidationMessage(step: number): string {
+    const errors = this.getStepValidationErrors(step);
+    if (errors.length === 0) return '';
+    
+    if (errors.length === 1) {
+      return errors[0];
+    }
+    
+    return `Please complete the following:\n• ${errors.join('\n• ')}`;
   }
 }

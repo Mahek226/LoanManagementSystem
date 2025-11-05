@@ -42,6 +42,17 @@ export interface AdditionalDocumentRequest {
   remarks?: string;
 }
 
+export interface FraudFlagResponse {
+  id: number;
+  ruleName: string;
+  severity: number;
+  flagNotes: string;
+  createdAt: string;
+  applicantId?: number;
+  loanId?: number;
+  severityLevel: string;
+}
+
 export interface FraudHistoryRecord {
   recordId: number;
   applicantId: number;
@@ -479,6 +490,34 @@ export class ComplianceOfficerService {
   }
 
   /**
+   * Get fraud flags for an applicant
+   */
+  getFraudFlags(applicantId: number): Observable<FraudFlagResponse[]> {
+    return this.http.get<FraudFlagResponse[]>(`${environment.apiUrl}/fraud-detection/flags/applicant/${applicantId}`);
+  }
+
+  /**
+   * Get fraud flags for a loan
+   */
+  getLoanFraudFlags(loanId: number): Observable<FraudFlagResponse[]> {
+    return this.http.get<FraudFlagResponse[]>(`${environment.apiUrl}/fraud-detection/flags/loan/${loanId}`);
+  }
+
+  /**
+   * Get high severity fraud flags
+   */
+  getHighSeverityFraudFlags(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/fraud-detection/flags/high-severity`);
+  }
+
+  /**
+   * Get critical fraud flags
+   */
+  getCriticalFraudFlags(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/fraud-detection/flags/critical`);
+  }
+
+  /**
    * Get loan documents for review
    */
   getLoanDocuments(loanId: number): Observable<any[]> {
@@ -578,10 +617,10 @@ export class ComplianceOfficerService {
   // ==================== External Fraud Data Methods ====================
 
   /**
-   * Get external fraud data for an applicant
+   * Get external fraud data for an applicant (dynamic applicant ID)
    */
   getExternalFraudData(applicantId: number): Observable<ExternalFraudData> {
-    return this.http.get<ExternalFraudData>(`${this.apiUrl}/applicant/${applicantId}/external-fraud-data`).pipe(
+    return this.http.get<ExternalFraudData>(`${this.apiUrl}/loan/${applicantId}/external-fraud-data`).pipe(
       catchError((error: any) => {
         console.warn('External fraud data endpoint not available, using mock data');
         return of(this.getMockExternalFraudData(applicantId));

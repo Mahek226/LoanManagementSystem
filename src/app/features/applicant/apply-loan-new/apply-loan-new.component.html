@@ -23,8 +23,8 @@
       <div class="d-flex align-items-center">
         <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
         <div class="flex-grow-1">
-          <strong>Validation Error</strong>
-          <p class="mb-0 mt-1">{{ error }}</p>
+          <strong>Please Complete Required Fields</strong>
+          <div class="mb-0 mt-1" [innerHTML]="getFormattedError()"></div>
         </div>
         <button type="button" class="btn-close" (click)="clearError()"></button>
       </div>
@@ -41,6 +41,43 @@
           <p class="mb-0 mt-1">{{ success }}</p>
         </div>
         <button type="button" class="btn-close" (click)="success = ''"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Draft Status -->
+  <div class="container-fluid px-4" *ngIf="hasFormData()">
+    <div class="draft-status-bar">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="draft-info">
+          <i class="fas fa-save me-2 text-info"></i>
+          <span class="text-muted">
+            <span *ngIf="draftSaved && !isDraftSaving">
+              <i class="fas fa-check text-success me-1"></i>Draft saved
+            </span>
+            <span *ngIf="isDraftSaving">
+              <i class="fas fa-spinner fa-spin me-1"></i>Saving draft...
+            </span>
+            <span *ngIf="!draftSaved && !isDraftSaving">
+              <i class="fas fa-exclamation-triangle text-warning me-1"></i>Unsaved changes
+            </span>
+          </span>
+          <small class="text-muted ms-2" *ngIf="getDraftInfo()">{{ getDraftInfo() }}</small>
+        </div>
+        <div class="draft-actions">
+          <button type="button" 
+                  class="btn btn-outline-info btn-sm me-2" 
+                  (click)="saveDraft()" 
+                  [disabled]="isDraftSaving">
+            <i class="fas fa-save me-1"></i>Save Draft
+          </button>
+          <button type="button" 
+                  class="btn btn-outline-secondary btn-sm" 
+                  (click)="clearDraft()" 
+                  [disabled]="isDraftSaving">
+            <i class="fas fa-trash me-1"></i>Clear Draft
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -94,14 +131,6 @@
               <label class="form-label required">Tenure (Months)</label>
               <input type="number" class="form-control" formControlName="tenure" 
                      placeholder="Enter tenure" min="6" max="360">
-              <input type="range" class="form-range mt-2" formControlName="tenure" 
-                     min="6" max="360" step="6">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label required">Purpose of Loan</label>
-              <textarea class="form-control" formControlName="purpose" rows="3" 
-                        placeholder="Describe the purpose"></textarea>
             </div>
 
             <div class="col-12">

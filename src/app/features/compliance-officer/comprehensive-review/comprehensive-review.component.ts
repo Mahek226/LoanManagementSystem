@@ -106,6 +106,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
         if (this.escalation) {
           this.loadExternalFraudData(this.escalation.applicantId);
           this.loadLoanDocuments(this.escalation.loanId);
+          this.loadFraudFlags(this.escalation.applicantId, this.escalation.loanId);
           this.loadScreeningResults(this.escalation.loanId);
           this.loadEnhancedScreeningData();
         }
@@ -153,6 +154,92 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     });
     
     this.subscriptions.push(docSub);
+  }
+
+  loadFraudFlags(applicantId: number, loanId: number): void {
+    console.log('Loading fraud flags for applicant ID:', applicantId, 'and loan ID:', loanId);
+    
+    // Load both applicant and loan fraud flags
+    const applicantFlagsSub = this.complianceService.getFraudFlags(applicantId).subscribe({
+      next: (applicantFlags) => {
+        console.log('Received applicant fraud flags:', applicantFlags);
+        
+        // Load loan fraud flags
+        const loanFlagsSub = this.complianceService.getLoanFraudFlags(loanId).subscribe({
+          next: (loanFlags) => {
+            console.log('Received loan fraud flags:', loanFlags);
+            
+            // Combine both sets of flags
+            const allFlags = [...(applicantFlags || []), ...(loanFlags || [])];
+            
+            // Process and normalize the fraud flags
+            this.fraudFlags = allFlags.map((flag: any, index: number) => ({
+              ...flag,
+              showDetails: false,
+              // Ensure consistent data structure for new API response
+              ruleName: flag.ruleName || `Flag ${index + 1}`,
+              ruleCode: flag.ruleCode || `FLAG_${String(index + 1).padStart(3, '0')}`,
+              severity: flag.severity || 2, // numeric severity from API
+              severityLevel: flag.severityLevel || this.getSeverityLevel(flag.severity),
+              points: this.getSeverityPoints(flag.severity),
+              source: flag.source || 'FRAUD_DETECTION',
+              description: flag.flagNotes || `Fraud flag detected: ${flag.ruleName}`,
+              details: flag.flagNotes || `Technical details for ${flag.ruleName}`,
+              detectedAt: flag.createdAt || new Date().toISOString(),
+              category: flag.category || 'FRAUD_FLAG',
+              flagNotes: flag.flagNotes || flag.description || 'No additional details available'
+            }));
+            
+            console.log('Processed fraud flags:', this.fraudFlags);
+          },
+          error: (error) => {
+            console.error('Error loading loan fraud flags:', error);
+            // Continue with just applicant flags
+            this.processFraudFlags(applicantFlags || []);
+          }
+        });
+        
+        this.subscriptions.push(loanFlagsSub);
+      },
+      error: (error) => {
+        console.error('Error loading applicant fraud flags:', error);
+        // Try to load loan flags anyway
+        const loanFlagsSub = this.complianceService.getLoanFraudFlags(loanId).subscribe({
+          next: (loanFlags) => {
+            this.processFraudFlags(loanFlags || []);
+          },
+          error: (loanError) => {
+            console.error('Error loading loan fraud flags:', loanError);
+            // If both fail, use empty array or fallback to risk correlation
+            this.fraudFlags = [];
+            console.warn('No fraud flags available, will fallback to risk correlation analysis');
+          }
+        });
+        
+        this.subscriptions.push(loanFlagsSub);
+      }
+    });
+    
+    this.subscriptions.push(applicantFlagsSub);
+  }
+
+  private processFraudFlags(flags: any[]): void {
+    this.fraudFlags = flags.map((flag: any, index: number) => ({
+      ...flag,
+      showDetails: false,
+      // Ensure consistent data structure for new API response
+      ruleName: flag.ruleName || `Flag ${index + 1}`,
+      ruleCode: flag.ruleCode || `FLAG_${String(index + 1).padStart(3, '0')}`,
+      severity: flag.severity || 2, // numeric severity from API
+      severityLevel: flag.severityLevel || this.getSeverityLevel(flag.severity),
+      points: this.getSeverityPoints(flag.severity),
+      source: flag.source || 'FRAUD_DETECTION',
+      description: flag.flagNotes || `Fraud flag detected: ${flag.ruleName}`,
+      details: flag.flagNotes || `Technical details for ${flag.ruleName}`,
+      detectedAt: flag.createdAt || new Date().toISOString(),
+      category: flag.category || 'FRAUD_FLAG',
+      flagNotes: flag.flagNotes || flag.description || 'No additional details available'
+    }));
   }
   
   loadEnhancedScreeningData(): void {
@@ -729,6 +816,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     if (this.escalation) {
       this.loadExternalFraudData(this.escalation.applicantId);
       this.loadLoanDocuments(this.escalation.loanId);
+      this.loadFraudFlags(this.escalation.applicantId, this.escalation.loanId);
       this.loadScreeningResults(this.escalation.loanId);
       this.loadEnhancedScreeningData();
     }
@@ -762,7 +850,38 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     // Load other data after creating escalation
     this.loadExternalFraudData(this.escalation.applicantId);
     this.loadLoanDocuments(this.escalation.loanId);
+    this.loadFraudFlags(this.escalation.applicantId, this.escalation.loanId);
     this.loadScreeningResults(this.escalation.loanId);
     this.loading = false;
+  }
+
+  // ==================== Helper Methods ====================
+
+  /**
+   * Get severity level string from numeric severity
+   */
+  getSeverityLevel(severity: number | string): string {
+    if (typeof severity === 'string') return severity;
+    if (severity == null) return 'UNKNOWN';
+    if (severity >= 4) return 'CRITICAL';
+    if (severity >= 3) return 'HIGH';
+    if (severity >= 2) return 'MEDIUM';
+    return 'LOW';
+  }
+
+  /**
+   * Get severity points for display
+   */
+  getSeverityPoints(severity: number | string): number {
+    if (typeof severity === 'string') {
+      switch (severity.toUpperCase()) {
+        case 'CRITICAL': return 10;
+        case 'HIGH': return 7;
+        case 'MEDIUM': return 5;
+        case 'LOW': return 2;
+        default: return 1;
+      }
+    }
+    return severity || 1;
   }
 }

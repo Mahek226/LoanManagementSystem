@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, PreQualificationStatus, LoanApplication, ApplicantProfile, Notification } from '@core/services/applicant.service';
-import { interval, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-enhanced-dashboard',
@@ -39,8 +39,8 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     notifications: true
   };
   
-  // Auto-refresh subscription
-  private refreshSubscription?: Subscription;
+  // Last updated timestamp
+  lastUpdated: Date = new Date();
   
   constructor(
     private authService: AuthService,
@@ -56,17 +56,10 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadDashboardData();
-    
-    // Auto-refresh every 30 seconds
-    this.refreshSubscription = interval(30000).subscribe(() => {
-      this.loadDashboardData(true);
-    });
   }
 
   ngOnDestroy(): void {
-    if (this.refreshSubscription) {
-      this.refreshSubscription.unsubscribe();
-    }
+    // Cleanup if needed
   }
 
   loadDashboardData(silent: boolean = false): void {
@@ -76,6 +69,9 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
       this.loading.applications = true;
       this.loading.notifications = true;
     }
+    
+    // Update last updated timestamp
+    this.lastUpdated = new Date();
     
     // Load profile
     this.applicantService.getApplicantProfile(this.applicantId).subscribe({
@@ -181,19 +177,6 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     return this.applicantService.getStatusColor(status);
   }
 
-  getTimeAgo(timestamp: string): string {
-    const now = new Date().getTime();
-    const time = new Date(timestamp).getTime();
-    const diff = now - time;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  }
 
   navigateToLoanTypes(): void {
     this.router.navigate(['/applicant/loan-types']);
@@ -203,13 +186,7 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/applicant/applications']);
   }
 
-  navigateToProfile(): void {
-    this.router.navigate(['/applicant/profile']);
-  }
 
-  navigateToDocuments(): void {
-    this.router.navigate(['/applicant/documents']);
-  }
 
   handleNotificationAction(notification: Notification): void {
     if (notification.actionUrl) {
@@ -224,5 +201,174 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
 
   viewApplication(loanId: number): void {
     this.router.navigate(['/applicant/applications', loanId]);
+  }
+
+  // Loan Summary Methods
+  getTotalAppliedAmount(): number {
+    return this.applications.reduce((total, app) => total + app.loanAmount, 0);
+  }
+
+  getApprovedAmount(): number {
+    return this.applications
+      .filter(app => app.loanStatus === 'APPROVED' || app.status === 'approved')
+      .reduce((total, app) => total + app.loanAmount, 0);
+  }
+
+  getAverageInterestRate(): number {
+    const applicationsWithRate = this.applications.filter(app => app.interestRate && app.interestRate > 0);
+    if (applicationsWithRate.length === 0) return 8.5; // Default rate
+    
+    const totalRate = applicationsWithRate.reduce((total, app) => total + (app.interestRate || 0), 0);
+    return Math.round((totalRate / applicationsWithRate.length) * 10) / 10;
+  }
+
+  getSuccessRate(): number {
+    if (this.applications.length === 0) return 0;
+    
+    const approvedCount = this.applications.filter(app => 
+      app.loanStatus === 'APPROVED' || app.status === 'approved' || 
+      app.loanStatus === 'DISBURSED' || app.status === 'disbursed'
+    ).length;
+    
+    return Math.round((approvedCount / this.applications.length) * 100);
+  }
+
+  // Loan Types Applied
+  getLoanTypesApplied(): any[] {
+    const loanTypeMap = new Map();
+    
+    this.applications.forEach(app => {
+      const type = app.loanType;
+      if (loanTypeMap.has(type)) {
+        const existing = loanTypeMap.get(type);
+        existing.count += 1;
+        existing.totalAmount += app.loanAmount;
+      } else {
+        loanTypeMap.set(type, {
+          type: type,
+          count: 1,
+          totalAmount: app.loanAmount
+        });
+      }
+    });
+    
+    return Array.from(loanTypeMap.values());
+  }
+
+  getLoanTypeIcon(loanType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'Personal Loan': 'fa-user',
+      'Home Loan': 'fa-home',
+      'Car Loan': 'fa-car',
+      'Business Loan': 'fa-briefcase',
+      'Education Loan': 'fa-graduation-cap',
+      'Gold Loan': 'fa-coins'
+    };
+    return iconMap[loanType] || 'fa-money-bill';
+  }
+
+  getLoanTypeIconClass(loanType: string): string {
+    const classMap: { [key: string]: string } = {
+      'Personal Loan': 'bg-primary',
+      'Home Loan': 'bg-success',
+      'Car Loan': 'bg-info',
+      'Business Loan': 'bg-warning',
+      'Education Loan': 'bg-purple',
+      'Gold Loan': 'bg-orange'
+    };
+    return classMap[loanType] || 'bg-secondary';
+  }
+
+  // Recent Activity
+  getRecentActivity(): any[] {
+    const activities: any[] = [];
+    
+    // Add application activities
+    this.applications.slice(0, 5).forEach(app => {
+      activities.push({
+        type: 'application',
+        title: 'Application Submitted',
+        description: `${app.loanType} for ${this.formatCurrency(app.loanAmount)}`,
+        timestamp: app.submittedAt || app.applicationDate
+      });
+      
+      if (app.reviewedAt) {
+        activities.push({
+          type: 'review',
+          title: 'Application Reviewed',
+          description: `${app.loanType} - Status: ${app.loanStatus}`,
+          timestamp: app.reviewedAt
+        });
+      }
+    });
+    
+    // Sort by timestamp (most recent first)
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    return activities.slice(0, 5);
+  }
+
+  getActivityIcon(activityType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'application': 'fa-file-alt',
+      'review': 'fa-eye',
+      'approval': 'fa-check-circle',
+      'rejection': 'fa-times-circle',
+      'disbursement': 'fa-university'
+    };
+    return iconMap[activityType] || 'fa-info-circle';
+  }
+
+  getActivityIconClass(activityType: string): string {
+    const classMap: { [key: string]: string } = {
+      'application': 'bg-primary',
+      'review': 'bg-info',
+      'approval': 'bg-success',
+      'rejection': 'bg-danger',
+      'disbursement': 'bg-warning'
+    };
+    return classMap[activityType] || 'bg-secondary';
+  }
+
+  getTimeAgo(timestamp: string): string {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now.getTime() - past.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+    } else {
+      return 'Just now';
+    }
+  }
+
+  // Quick Actions
+  downloadApplicationReport(): void {
+    // Generate CSV report of all applications
+    const headers = ['Loan ID', 'Type', 'Amount', 'Status', 'Interest Rate', 'Applied Date'];
+    const rows = this.applications.map(app => [
+      app.loanId,
+      app.loanType,
+      app.loanAmount,
+      app.loanStatus,
+      app.interestRate || 'N/A',
+      this.formatDate(app.submittedAt || app.applicationDate)
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `loan_applications_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }

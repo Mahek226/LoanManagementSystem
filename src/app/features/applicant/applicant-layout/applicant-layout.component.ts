@@ -50,8 +50,6 @@ export class ApplicantLayoutComponent implements OnInit {
       this.activeTab = 'profile';
     } else if (route.includes('apply-loan')) {
       this.activeTab = 'apply-loan';
-    } else if (route.includes('documents')) {
-      this.activeTab = 'documents';
     }
   }
 
@@ -72,9 +70,6 @@ export class ApplicantLayoutComponent implements OnInit {
         break;
       case 'apply-loan':
         this.router.navigate(['/applicant/apply-loan']);
-        break;
-      case 'documents':
-        this.router.navigate(['/applicant/documents']);
         break;
     }
   }

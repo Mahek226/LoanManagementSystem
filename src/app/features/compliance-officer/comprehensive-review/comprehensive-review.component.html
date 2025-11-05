@@ -781,29 +781,37 @@
                 <div class="flag-header">
                   <div class="flag-number">{{ i + 1 }}</div>
                   <div class="flag-title-section">
-                    <h6 class="flag-title mb-1">{{ flag.ruleName || flag.category }}</h6>
+                    <h6 class="flag-title mb-1" 
+                        [title]="flag.ruleName || flag.category || 'Fraud Rule'"
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="top">
+                      {{ flag.ruleName || flag.category || 'Fraud Rule' }}
+                    </h6>
                     <div class="flag-meta">
-                      <span class="flag-code">{{ flag.ruleCode || 'RULE_' + (i + 1) }}</span>
+                      <span class="flag-code">{{ flag.ruleCode || 'FLAG_' + (i + 1) }}</span>
                       <span class="flag-separator">•</span>
-                      <span class="flag-source">{{ flag.source || 'INTERNAL' }}</span>
+                      <span class="flag-source">{{ flag.source || 'FRAUD_DETECTION' }}</span>
                       <span class="flag-separator">•</span>
-                      <span class="flag-points">{{ flag.points || flag.weight }} pts</span>
+                      <span class="flag-points">{{ getSeverityPoints(flag.severity) }} pts</span>
                     </div>
                   </div>
                   <div class="flag-severity">
                     <span class="severity-badge" 
-                          [class.critical]="flag.severity === 'CRITICAL'"
-                          [class.high]="flag.severity === 'HIGH'"
-                          [class.medium]="flag.severity === 'MEDIUM'"
-                          [class.low]="flag.severity === 'LOW'">
+                          [class.critical]="getSeverityLevel(flag.severity) === 'CRITICAL'"
+                          [class.high]="getSeverityLevel(flag.severity) === 'HIGH'"
+                          [class.medium]="getSeverityLevel(flag.severity) === 'MEDIUM'"
+                          [class.low]="getSeverityLevel(flag.severity) === 'LOW'"
+                          [title]="'Severity Level: ' + getSeverityLevel(flag.severity)"
+                          data-bs-toggle="tooltip" 
+                          data-bs-placement="top">
                       <i class="fas fa-exclamation-triangle me-1"></i>
-                      {{ flag.severity }}
+                      {{ getSeverityLevel(flag.severity) }}
                     </span>
                   </div>
                 </div>
                 
                 <div class="flag-body">
-                  <p class="flag-description mb-2">{{ flag.description || flag.details }}</p>
+                  <p class="flag-description mb-2">{{ flag.flagNotes || flag.description || flag.details || 'No additional details available' }}</p>
                   
                   <!-- Additional Details -->
                   <div class="flag-details" *ngIf="flag.details && flag.details !== flag.description">

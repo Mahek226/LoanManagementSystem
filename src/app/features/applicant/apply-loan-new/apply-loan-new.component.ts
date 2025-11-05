@@ -57,6 +57,12 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   error: string = '';
   success: string = '';
   
+  // Draft functionality
+  isDraftSaving: boolean = false;
+  draftSaved: boolean = false;
+  draftKey: string = '';
+  autoSaveInterval: any;
+  
   // Subscriptions
   private subscriptions: Subscription[] = [];
   
@@ -80,10 +86,14 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.loadProfile();
     this.loadLoanType();
     this.subscribeToApplicationState();
+    this.initializeDraftFunctionality();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+    }
   }
 
   // ==================== Initialization ====================
@@ -94,7 +104,6 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       loanType: ['', Validators.required],
       loanAmount: [0, [Validators.required, Validators.min(1000)]],
       tenure: [12, [Validators.required, Validators.min(6)]],
-      purpose: ['', [Validators.required, Validators.minLength(10)]],
       hasCoApplicant: [false],
       coApplicantName: [''],
       coApplicantRelation: [''],
@@ -578,7 +587,6 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       loanType: 'Loan Type',
       loanAmount: 'Loan Amount',
       tenure: 'Tenure',
-      purpose: 'Purpose',
       
       // Applicant Information
       firstName: 'First Name',
@@ -918,6 +926,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.error = '';
   }
 
+  getFormattedError(): string {
+    if (!this.error) return '';
+    
+    // Convert newlines to HTML line breaks for proper display
+    return this.error.replace(/\n/g, '<br>');
+  }
+
   clearSuccess(): void {
     this.success = '';
   }
@@ -980,5 +995,243 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.jpe'];
     
     return validExtensions.some(ext => lowerFilename.endsWith(ext));
+  }
+
+  // ==================== Draft Functionality ====================
+
+  initializeDraftFunctionality(): void {
+    // Generate unique draft key for this user and session
+    this.draftKey = `loan_draft_${this.applicantId}_${Date.now()}`;
+    
+    // Load existing draft if available
+    this.loadDraft();
+    
+    // Set up auto-save every 30 seconds
+    this.autoSaveInterval = setInterval(() => {
+      this.autoSaveDraft();
+    }, 30000);
+
+    // Subscribe to form changes for auto-save
+    this.subscribeToFormChanges();
+  }
+
+  subscribeToFormChanges(): void {
+    // Subscribe to all form changes
+    const forms = [
+      this.basicDetailsForm,
+      this.applicantDetailsForm,
+      this.financialDetailsForm,
+      this.declarationsForm
+    ];
+
+    forms.forEach(form => {
+      if (form) {
+        const subscription = form.valueChanges.subscribe(() => {
+          // Reset draft saved status when form changes
+          this.draftSaved = false;
+          
+          // Auto-save after 2 seconds of inactivity
+          setTimeout(() => {
+            if (!this.draftSaved && !this.isDraftSaving) {
+              this.autoSaveDraft();
+            }
+          }, 2000);
+        });
+        this.subscriptions.push(subscription);
+      }
+    });
+  }
+
+  saveDraft(): void {
+    if (this.isDraftSaving) return;
+    
+    this.isDraftSaving = true;
+    
+    try {
+      const draftData = this.collectDraftData();
+      
+      // Save to localStorage
+      localStorage.setItem(this.draftKey, JSON.stringify(draftData));
+      
+      this.draftSaved = true;
+      this.success = 'Draft saved successfully!';
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        this.success = '';
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      this.error = 'Failed to save draft. Please try again.';
+      setTimeout(() => {
+        this.error = '';
+      }, 5000);
+    } finally {
+      this.isDraftSaving = false;
+    }
+  }
+
+  autoSaveDraft(): void {
+    if (this.isDraftSaving || this.submitting) return;
+    
+    // Only auto-save if there's meaningful data
+    if (this.hasFormData()) {
+      this.isDraftSaving = true;
+      
+      try {
+        const draftData = this.collectDraftData();
+        localStorage.setItem(this.draftKey, JSON.stringify(draftData));
+        this.draftSaved = true;
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        this.isDraftSaving = false;
+      }
+    }
+  }
+
+  loadDraft(): void {
+    try {
+      // Try to load from current session first
+      const savedDraft = localStorage.getItem(this.draftKey);
+      
+      if (savedDraft) {
+        const draftData = JSON.parse(savedDraft);
+        this.restoreDraftData(draftData);
+        return;
+      }
+
+      // Try to load any existing draft for this user
+      const allKeys = Object.keys(localStorage);
+      const userDraftKeys = allKeys.filter(key => 
+        key.startsWith(`loan_draft_${this.applicantId}_`)
+      );
+
+      if (userDraftKeys.length > 0) {
+        // Load the most recent draft
+        const mostRecentKey = userDraftKeys.sort().reverse()[0];
+        const draftData = JSON.parse(localStorage.getItem(mostRecentKey) || '{}');
+        this.draftKey = mostRecentKey;
+        this.restoreDraftData(draftData);
+      }
+    } catch (error) {
+      console.error('Error loading draft:', error);
+    }
+  }
+
+  collectDraftData(): any {
+    return {
+      currentStep: this.currentStep,
+      basicDetails: this.basicDetailsForm?.value || {},
+      applicantDetails: this.applicantDetailsForm?.value || {},
+      financialDetails: this.financialDetailsForm?.value || {},
+      declarations: this.declarationsForm?.value || {},
+      selectedLoanType: this.selectedLoanType,
+      uploadedDocuments: this.uploadedDocuments.map(doc => ({
+        documentType: doc.documentType,
+        fileName: doc.fileName,
+        fileSize: doc.fileSize,
+        uploadedAt: doc.uploadedAt
+      })),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  restoreDraftData(draftData: any): void {
+    if (!draftData) return;
+
+    try {
+      // Restore current step
+      if (draftData.currentStep) {
+        this.currentStep = draftData.currentStep;
+      }
+
+      // Restore selected loan type
+      if (draftData.selectedLoanType) {
+        this.selectedLoanType = draftData.selectedLoanType;
+      }
+
+      // Restore form data
+      if (draftData.basicDetails && this.basicDetailsForm) {
+        this.basicDetailsForm.patchValue(draftData.basicDetails);
+      }
+
+      if (draftData.applicantDetails && this.applicantDetailsForm) {
+        this.applicantDetailsForm.patchValue(draftData.applicantDetails);
+      }
+
+      if (draftData.financialDetails && this.financialDetailsForm) {
+        this.financialDetailsForm.patchValue(draftData.financialDetails);
+      }
+
+      if (draftData.declarations && this.declarationsForm) {
+        this.declarationsForm.patchValue(draftData.declarations);
+      }
+
+      // Restore uploaded documents info (files themselves can't be restored)
+      if (draftData.uploadedDocuments) {
+        // Show info about previously uploaded documents
+        this.showDraftDocumentsInfo(draftData.uploadedDocuments);
+      }
+
+      this.success = 'Draft loaded successfully!';
+      setTimeout(() => {
+        this.success = '';
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error restoring draft data:', error);
+    }
+  }
+
+  showDraftDocumentsInfo(documents: any[]): void {
+    if (documents && documents.length > 0) {
+      const docInfo = documents.map(doc => doc.fileName).join(', ');
+      this.success = `Draft loaded with ${documents.length} document(s): ${docInfo}`;
+    }
+  }
+
+  hasFormData(): boolean {
+    // Check if any form has meaningful data
+    const basicData = this.basicDetailsForm?.value || {};
+    const applicantData = this.applicantDetailsForm?.value || {};
+    const financialData = this.financialDetailsForm?.value || {};
+
+    return (
+      basicData.loanAmount > 0 ||
+      basicData.loanType ||
+      applicantData.firstName ||
+      applicantData.emailAddress ||
+      financialData.monthlyIncome > 0 ||
+      this.uploadedDocuments.length > 0
+    );
+  }
+
+  clearDraft(): void {
+    try {
+      localStorage.removeItem(this.draftKey);
+      this.draftSaved = false;
+      this.success = 'Draft cleared successfully!';
+      setTimeout(() => {
+        this.success = '';
+      }, 3000);
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  }
+
+  getDraftInfo(): string {
+    try {
+      const savedDraft = localStorage.getItem(this.draftKey);
+      if (savedDraft) {
+        const draftData = JSON.parse(savedDraft);
+        const timestamp = new Date(draftData.timestamp);
+        return `Last saved: ${timestamp.toLocaleString()}`;
+      }
+    } catch (error) {
+      console.error('Error getting draft info:', error);
+    }
+    return '';
   }
 }
