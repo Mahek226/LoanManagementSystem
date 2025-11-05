@@ -1,7 +1,7 @@
 package com.tss.springsecurity.controller;
 
+import com.tss.springsecurity.dto.FraudFlagResponse;
 import com.tss.springsecurity.entity.FraudFlag;
-import com.tss.springsecurity.fraud.FraudDetectionResult;
 import com.tss.springsecurity.fraud.FraudDetectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -175,18 +175,24 @@ public class FraudDetectionController {
      * Get fraud flags for an applicant
      */
     @GetMapping("/flags/applicant/{applicantId}")
-    public ResponseEntity<List<FraudFlag>> getApplicantFraudFlags(@PathVariable Long applicantId) {
+    public ResponseEntity<List<FraudFlagResponse>> getApplicantFraudFlags(@PathVariable Long applicantId) {
         List<FraudFlag> flags = fraudDetectionService.getFraudFlags(applicantId);
-        return new ResponseEntity<>(flags, HttpStatus.OK);
+        List<FraudFlagResponse> response = flags.stream()
+                .map(this::mapToFraudFlagResponse)
+                .toList();
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
     
     /**
      * Get fraud flags for a loan
      */
     @GetMapping("/flags/loan/{loanId}")
-    public ResponseEntity<List<FraudFlag>> getLoanFraudFlags(@PathVariable Long loanId) {
+    public ResponseEntity<List<FraudFlagResponse>> getLoanFraudFlags(@PathVariable Long loanId) {
         List<FraudFlag> flags = fraudDetectionService.getLoanFraudFlags(loanId);
-        return new ResponseEntity<>(flags, HttpStatus.OK);
+        List<FraudFlagResponse> response = flags.stream()
+                .map(this::mapToFraudFlagResponse)
+                .toList();
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
     
     /**
@@ -215,5 +221,20 @@ public class FraudDetectionController {
         response.put("flags", flags);
         
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    
+    /**
+     * Map FraudFlag entity to FraudFlagResponse DTO
+     */
+    private FraudFlagResponse mapToFraudFlagResponse(FraudFlag flag) {
+        return FraudFlagResponse.builder()
+                .id(flag.getId())
+                .ruleName(flag.getRuleName())
+                .severity(flag.getSeverity())
+                .flagNotes(flag.getFlagNotes())
+                .createdAt(flag.getCreatedAt())
+                .applicantId(flag.getApplicant() != null ? flag.getApplicant().getApplicantId() : null)
+                .loanId(flag.getLoan() != null ? flag.getLoan().getLoanId() : null)
+                .build();
     }
 }

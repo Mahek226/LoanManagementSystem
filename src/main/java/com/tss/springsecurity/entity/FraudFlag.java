@@ -1,5 +1,6 @@
 package com.tss.springsecurity.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,10 +26,12 @@ public class FraudFlag {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_id", referencedColumnName = "applicant_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Applicant applicant;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loan_id", referencedColumnName = "loan_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ApplicantLoanDetails loan;
     
     @Column(name = "rule_name", length = 100)

@@ -123,6 +123,11 @@ public interface ComplianceOfficerService {
     Map<String, Object> getExternalFraudData(Long applicantId);
     
     /**
+     * Get external fraud data by loan ID
+     */
+    Map<String, Object> getExternalFraudDataByLoanId(Long loanId);
+    
+    /**
      * Get enhanced screening details for compliance assignment
      */
     Map<String, Object> getEnhancedScreeningDetails(Long assignmentId);

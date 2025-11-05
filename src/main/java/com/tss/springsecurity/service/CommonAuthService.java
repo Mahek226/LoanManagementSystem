@@ -286,10 +286,16 @@ public class CommonAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final CaptchaService captchaService;
 
     public CommonAuthResponse login(CommonLoginRequest request) {
         String usernameOrEmail = request.getUsername();
         String password = request.getPassword();
+        
+        // Verify CAPTCHA first
+        if (!captchaService.verifyCaptcha(request.getCaptchaToken())) {
+            throw new RuntimeException("CAPTCHA verification failed. Please try again.");
+        }
 
         // Try Admin login first
         Optional<Admin> admin = adminRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);

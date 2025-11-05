@@ -370,6 +370,21 @@ public class ComplianceOfficerController {
     }
     
     /**
+     * Get external fraud data for a loan
+     */
+    @GetMapping("/loan/{loanId}/external-fraud-data")
+    public ResponseEntity<?> getExternalFraudDataByLoan(@PathVariable Long loanId) {
+        try {
+            Map<String, Object> externalData = complianceOfficerService.getExternalFraudDataByLoanId(loanId);
+            return ResponseEntity.ok(externalData);
+        } catch (Exception e) {
+//            log.error("Error fetching external fraud data for loan ID: {}", loanId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch external fraud data: " + e.getMessage()));
+        }
+    }
+    
+    /**
      * Get external person details by person ID from external database
      */
     @GetMapping("/external-person/{personId}")

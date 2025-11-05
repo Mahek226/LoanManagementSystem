@@ -845,6 +845,42 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     }
     
     @Override
+    public Map<String, Object> getExternalFraudDataByLoanId(Long loanId) {
+        log.info("Fetching external fraud data for loan ID: {}", loanId);
+        
+        try {
+            // Get loan details to find the applicant
+            ApplicantLoanDetails loan = loanDetailsRepository.findById(loanId)
+                    .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+            
+            // Get the applicant from the loan
+            Applicant applicant = loan.getApplicant();
+            if (applicant == null) {
+                throw new RuntimeException("No applicant found for loan ID: " + loanId);
+            }
+            
+            log.info("Found applicant ID: {} for loan ID: {}", applicant.getApplicantId(), loanId);
+            
+            // Delegate to the existing getExternalFraudData method
+            Map<String, Object> externalData = getExternalFraudData(applicant.getApplicantId());
+            
+            // Add loan-specific information
+            externalData.put("loanId", loanId);
+            externalData.put("loanAmount", loan.getLoanAmount());
+            externalData.put("loanType", loan.getLoanType());
+            externalData.put("loanStatus", loan.getLoanStatus());
+            
+            log.info("Successfully fetched external fraud data for loan ID: {}", loanId);
+            
+            return externalData;
+            
+        } catch (Exception e) {
+            log.error("Error fetching external fraud data for loan ID: {}", loanId, e);
+            throw new RuntimeException("Failed to fetch external fraud data for loan: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public Map<String, Object> getExternalPersonDetails(Long personId) {
         log.info("Fetching external person details for person ID: {}", personId);
         
