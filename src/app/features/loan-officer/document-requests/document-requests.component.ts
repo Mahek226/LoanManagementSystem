@@ -77,13 +77,24 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
     const sub = this.loanOfficerService.getDocumentResubmissionRequests(officerId).subscribe({
       next: (requests) => {
         console.log('Received document requests:', requests);
-        this.documentRequests = requests;
+        console.log('Number of requests:', requests.length);
+        this.documentRequests = requests || [];
         this.applyFilters();
         this.loading = false;
+        
+        // Show success message if requests are found
+        if (requests && requests.length > 0) {
+          this.success = `Loaded ${requests.length} document resubmission request(s)`;
+          setTimeout(() => this.success = null, 3000);
+        }
       },
       error: (error) => {
         console.error('Error loading document requests:', error);
-        this.error = 'Failed to load document requests. Please try again.';
+        console.error('Error details:', error.error);
+        console.error('Status:', error.status);
+        this.error = `Failed to load document requests. ${error.error?.message || 'Please try again.'}`;
+        this.documentRequests = [];
+        this.applyFilters();
         this.loading = false;
       }
     });

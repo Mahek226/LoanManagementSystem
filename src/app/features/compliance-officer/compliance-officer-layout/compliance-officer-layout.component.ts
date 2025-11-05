@@ -25,7 +25,17 @@ export class ComplianceOfficerLayoutComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
     if (user) {
-      this.officerName = user.firstName + ' ' + user.lastName;
+      // Handle cases where firstName/lastName might be null
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      
+      if (firstName || lastName) {
+        this.officerName = `${firstName} ${lastName}`.trim();
+      } else if (user.username) {
+        this.officerName = user.username;
+      } else {
+        this.officerName = 'Compliance Officer';
+      }
     }
 
     // Set active tab based on current route
