@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, of, throwError, forkJoin } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { EmailService, DocumentResubmissionEmailRequest } from './email.service';
+import { ToastService } from './toast.service';
 
 // ==================== Interfaces ====================
 
@@ -444,7 +446,11 @@ export class ComplianceOfficerService {
   private apiUrl = `${environment.apiUrl}/compliance-officer`;
   private profileUrl = `${environment.apiUrl}/profile`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private emailService: EmailService,
+    private toastService: ToastService
+  ) {}
 
   // ==================== API Methods ====================
 
@@ -691,6 +697,73 @@ export class ComplianceOfficerService {
     console.log('Calling document resubmission endpoint:', `${this.apiUrl}/document/${request.documentId}/request-resubmission`);
     console.log('Request payload:', request);
     return this.http.post(`${this.apiUrl}/document/${request.documentId}/request-resubmission`, request);
+  }
+
+  /**
+   * Request document resubmission with email notification to applicant
+   */
+  requestDocumentResubmissionWithEmail(
+    request: DocumentResubmissionRequestDTO,
+    applicantEmail: string,
+    applicantName: string,
+    documentType: string
+  ): Observable<any> {
+    console.log('Sending document resubmission request with email notification');
+    
+    // First send the resubmission request to backend
+    return this.requestDocumentResubmissionDTO(request).pipe(
+      switchMap((backendResponse) => {
+        // If backend request succeeds, send email notification
+        console.log('Backend resubmission request successful, sending email notification');
+        
+        const emailRequest: DocumentResubmissionEmailRequest = {
+          applicantEmail: applicantEmail,
+          applicantName: applicantName,
+          documentType: documentType,
+          reason: request.resubmissionReason,
+          instructions: request.specificInstructions,
+          loanId: request.loanId.toString(),
+          complianceOfficerName: 'Compliance Officer'
+        };
+        
+        // Send email notification and return combined result
+        return this.emailService.sendDocumentResubmissionEmail(emailRequest).pipe(
+          map((emailResponse) => {
+            // Show success toast for email notification
+            this.toastService.showSuccess(
+              'Email Sent!',
+              `Document resubmission notification sent to ${applicantName} at ${applicantEmail}`
+            );
+            
+            return {
+              backendResponse,
+              emailResponse,
+              message: 'Document resubmission request sent to applicant with email notification!'
+            };
+          }),
+          catchError((emailError) => {
+            console.warn('Email notification failed, but backend request succeeded:', emailError);
+            
+            // Show warning toast for email failure
+            this.toastService.showWarning(
+              'Email Failed',
+              'Document resubmission request sent, but email notification failed.'
+            );
+            
+            // Return success even if email fails, as the main request succeeded
+            return of({
+              backendResponse,
+              emailError,
+              message: 'Document resubmission request sent successfully, but email notification failed.'
+            });
+          })
+        );
+      }),
+      catchError((backendError) => {
+        console.error('Backend resubmission request failed:', backendError);
+        return throwError(backendError);
+      })
+    );
   }
 
   /**

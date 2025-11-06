@@ -55,6 +55,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
+        path: 'predictive-analytics',
+        loadComponent: () => import('./features/admin/predictive-analytics/predictive-analytics.component').then(m => m.PredictiveAnalyticsComponent)
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'

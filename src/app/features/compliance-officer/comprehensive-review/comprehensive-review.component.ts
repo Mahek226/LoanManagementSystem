@@ -421,12 +421,22 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
         complianceOfficerId: complianceOfficerId,
         resubmissionReason: this.resubmissionForm.value.reason,
         specificInstructions: this.resubmissionForm.value.instructions,
-        directToApplicant: false // Send to loan officer first
+        directToApplicant: true // Send directly to applicant with email notification
       };
       
       console.log('Sending document resubmission request:', request);
       
-      const resubSub = this.complianceService.requestDocumentResubmissionDTO(request).subscribe({
+      // Use the new email-enabled method
+      const applicantEmail = this.escalation.applicantName.toLowerCase().replace(' ', '.') + '@example.com'; // This should come from actual applicant data
+      const applicantName = this.escalation.applicantName;
+      const documentType = this.selectedDocument.documentType || 'Document';
+      
+      const resubSub = this.complianceService.requestDocumentResubmissionWithEmail(
+        request, 
+        applicantEmail, 
+        applicantName, 
+        documentType
+      ).subscribe({
         next: (response: any) => {
           console.log('Resubmission request response:', response);
           this.showResubmissionModal = false;
@@ -436,7 +446,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
           this.loadLoanDocuments(this.escalation!.loanId);
           // Show success message
           this.error = null;
-          this.successMessage = 'Document resubmission request sent to loan officer successfully!';
+          this.successMessage = 'Document resubmission request sent directly to applicant with email notification!';
           setTimeout(() => this.successMessage = '', 5000);
         },
         error: (err: any) => {

@@ -170,6 +170,15 @@
             Fraud Rules
           </button>
         </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'predictive-analytics'"
+                  (click)="setActiveTab('predictive-analytics')">
+            <i class="fas fa-brain me-2"></i>
+            Predictive Analytics
+            <span class="badge bg-success text-white ms-2">AI</span>
+          </button>
+        </li>
       </ul>
     </div>
   </nav>
@@ -397,6 +406,11 @@
     <!-- Fraud Rules Tab -->
     <div *ngIf="activeTab === 'fraud-rules'">
       <app-fraud-rules></app-fraud-rules>
+    </div>
+
+    <!-- Predictive Analytics Tab -->
+    <div *ngIf="activeTab === 'predictive-analytics'">
+      <app-predictive-analytics></app-predictive-analytics>
     </div>
 
   </main>

@@ -1,0 +1,341 @@
+<!-- Enhanced Data Table Component -->
+<div class="enhanced-data-table">
+  
+  <!-- Table Header Controls -->
+  <div class="table-header">
+    <div class="table-title">
+      <h3 *ngIf="config.columns.length > 0">
+        {{ totalRecords }} Records
+        <span *ngIf="tableState.selectedRows.length > 0" class="selected-count">
+          ({{ tableState.selectedRows.length }} selected)
+        </span>
+      </h3>
+    </div>
+
+    <div class="table-controls">
+      <!-- Search -->
+      <div *ngIf="config.searchable" class="search-container">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" 
+               class="table-search-input"
+               placeholder="Search records..."
+               (input)="onSearchInput($event)">
+      </div>
+
+      <!-- Filter Toggle -->
+      <button *ngIf="config.filterable" 
+              class="control-btn filter-btn"
+              [class.active]="showFilters"
+              (click)="showFilters = !showFilters"
+              title="Toggle Filters">
+        <i class="fas fa-filter"></i>
+      </button>
+
+      <!-- Refresh -->
+      <button class="control-btn refresh-btn" 
+              (click)="refreshData()"
+              [disabled]="loading"
+              title="Refresh Data">
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+      </button>
+
+      <!-- Export -->
+      <div *ngIf="config.exportable" class="export-dropdown">
+        <button class="control-btn export-btn" title="Export Data">
+          <i class="fas fa-download"></i>
+        </button>
+        <div class="export-menu">
+          <button *ngFor="let format of exportFormats"
+                  class="export-option"
+                  (click)="exportData(format.value)">
+            <i [class]="format.icon"></i>
+            <span>{{ format.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Clear Filters -->
+      <button *ngIf="config.filterable" 
+              class="control-btn clear-btn"
+              (click)="clearFilters()"
+              title="Clear All Filters">
+        <i class="fas fa-eraser"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters Panel -->
+  <div *ngIf="config.filterable && showFilters" class="filters-panel">
+    <div class="filters-grid">
+      <div *ngFor="let column of config.columns; trackBy: trackByColumnKey" 
+           class="filter-group">
+        <label *ngIf="column.filterable" class="filter-label">{{ column.label }}</label>
+        
+        <!-- Text Filter -->
+        <input *ngIf="column.filterable && (column.type === 'text' || column.type === 'number')"
+               type="text"
+               class="filter-input"
+               [placeholder]="'Filter by ' + column.label.toLowerCase()"
+               [value]="tableState.filters[column.key]"
+               (input)="onFilterChange(column.key, $event.target.value)">
+
+        <!-- Date Filter -->
+        <input *ngIf="column.filterable && column.type === 'date'"
+               type="date"
+               class="filter-input"
+               [value]="tableState.filters[column.key]"
+               (change)="onFilterChange(column.key, $event.target.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="table-loading">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <p>Loading data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="table-error">
+    <i class="fas fa-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+    <button class="retry-btn" (click)="refreshData()">
+      <i class="fas fa-redo"></i> Retry
+    </button>
+  </div>
+
+  <!-- Table Content -->
+  <div *ngIf="!loading && !error" class="table-container">
+    <table class="data-table"
+           [class.striped]="config.styling?.striped"
+           [class.bordered]="config.styling?.bordered"
+           [class.hover]="config.styling?.hover"
+           [class.compact]="config.styling?.compact">
+      
+      <!-- Table Header -->
+      <thead>
+        <tr class="table-header-row">
+          <!-- Select All Checkbox -->
+          <th *ngIf="config.selectable" class="select-column">
+            <input type="checkbox"
+                   [checked]="selectAll"
+                   (change)="onSelectAll($event.target.checked)">
+          </th>
+
+          <!-- Expand Column -->
+          <th *ngIf="config.expandable" class="expand-column">
+            <i class="fas fa-chevron-right"></i>
+          </th>
+
+          <!-- Data Columns -->
+          <th *ngFor="let column of config.columns; trackBy: trackByColumnKey"
+              class="table-header-cell"
+              [class.sortable]="column.sortable"
+              [class.sorted]="tableState.sortColumn === column.key"
+              [style.width]="column.width"
+              [style.text-align]="column.align || 'left'"
+              (click)="onSort(column)">
+            
+            <div class="header-content">
+              <span class="header-label">{{ column.label }}</span>
+              <i *ngIf="column.sortable" 
+                 [class]="getSortIcon(column)"
+                 class="sort-icon"></i>
+            </div>
+          </th>
+
+          <!-- Actions Column -->
+          <th *ngIf="config.actions && config.actions.length > 0" 
+              class="actions-column">
+            Actions
+          </th>
+        </tr>
+      </thead>
+
+      <!-- Table Body -->
+      <tbody>
+        <!-- Empty State -->
+        <tr *ngIf="paginatedData.length === 0" class="empty-row">
+          <td [attr.colspan]="getColumnCount()" class="empty-cell">
+            <div class="empty-state">
+              <i class="fas fa-inbox"></i>
+              <p>{{ emptyMessage }}</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Data Rows -->
+        <ng-container *ngFor="let row of paginatedData; trackBy: trackByRowId">
+          <!-- Main Row -->
+          <tr class="table-row"
+              [class.selected]="isRowSelected(row)"
+              [class.expanded]="isRowExpanded(row)"
+              (click)="onRowClick(row)">
+            
+            <!-- Select Checkbox -->
+            <td *ngIf="config.selectable" class="select-cell">
+              <input type="checkbox"
+                     [checked]="isRowSelected(row)"
+                     (change)="onRowSelect(row, $event.target.checked)"
+                     (click)="$event.stopPropagation()">
+            </td>
+
+            <!-- Expand Button -->
+            <td *ngIf="config.expandable" class="expand-cell">
+              <button class="expand-btn"
+                      (click)="onRowExpand(row); $event.stopPropagation()">
+                <i class="fas fa-chevron-right"
+                   [class.rotated]="isRowExpanded(row)"></i>
+              </button>
+            </td>
+
+            <!-- Data Cells -->
+            <td *ngFor="let column of config.columns; trackBy: trackByColumnKey"
+                class="table-cell"
+                [style.text-align]="column.align || 'left'">
+              
+              <!-- Status Cell -->
+              <span *ngIf="column.type === 'status'" 
+                    class="status-badge"
+                    [style.background-color]="getStatusColor(getCellValue(row, column.key), column)">
+                {{ formatCellValue(row, column) }}
+              </span>
+
+              <!-- Currency Cell -->
+              <span *ngIf="column.type === 'currency'" class="currency-value">
+                {{ formatCellValue(row, column) }}
+              </span>
+
+              <!-- Date Cell -->
+              <span *ngIf="column.type === 'date'" class="date-value">
+                {{ formatCellValue(row, column) }}
+              </span>
+
+              <!-- Number Cell -->
+              <span *ngIf="column.type === 'number'" class="number-value">
+                {{ formatCellValue(row, column) }}
+              </span>
+
+              <!-- Custom Template Cell -->
+              <ng-container *ngIf="column.type === 'custom' && column.customTemplate">
+                <ng-container *ngTemplateOutlet="column.customTemplate; context: { $implicit: row, column: column }">
+                </ng-container>
+              </ng-container>
+
+              <!-- Default Text Cell -->
+              <span *ngIf="column.type === 'text' || (!column.type && column.type !== 'actions')" 
+                    class="text-value">
+                {{ formatCellValue(row, column) }}
+              </span>
+            </td>
+
+            <!-- Actions Cell -->
+            <td *ngIf="config.actions && config.actions.length > 0" 
+                class="actions-cell">
+              <div class="actions-container">
+                <button *ngFor="let action of config.actions"
+                        class="action-btn"
+                        [class]="'action-' + action.id"
+                        [style.color]="action.color"
+                        [title]="action.label"
+                        [hidden]="!shouldShowAction(action, row)"
+                        (click)="onActionClick(action, row); $event.stopPropagation()">
+                  <i [class]="action.icon"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Expanded Row -->
+          <tr *ngIf="config.expandable && isRowExpanded(row)" class="expanded-row">
+            <td [attr.colspan]="getColumnCount()" class="expanded-cell">
+              <div class="expanded-content">
+                <ng-container *ngIf="expandedRowTemplate">
+                  <ng-container *ngTemplateOutlet="expandedRowTemplate; context: { $implicit: row }">
+                  </ng-container>
+                </ng-container>
+                <div *ngIf="!expandedRowTemplate" class="default-expanded-content">
+                  <h4>Row Details</h4>
+                  <div class="details-grid">
+                    <div *ngFor="let column of config.columns" class="detail-item">
+                      <strong>{{ column.label }}:</strong>
+                      <span>{{ formatCellValue(row, column) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="config.pagination?.enabled && !loading && !error" class="pagination-container">
+    <div class="pagination-info">
+      <span>
+        Showing {{ ((tableState.currentPage - 1) * tableState.pageSize) + 1 }} to 
+        {{ Math.min(tableState.currentPage * tableState.pageSize, totalRecords) }} of 
+        {{ totalRecords }} entries
+      </span>
+    </div>
+
+    <div class="pagination-controls">
+      <!-- Page Size Selector -->
+      <div class="page-size-selector">
+        <label>Show:</label>
+        <select [value]="tableState.pageSize" 
+                (change)="onPageSizeChange($event.target.value)">
+          <option *ngFor="let size of config.pagination?.pageSizeOptions" 
+                  [value]="size">{{ size }}</option>
+        </select>
+      </div>
+
+      <!-- Page Navigation -->
+      <div class="page-navigation">
+        <!-- First Page -->
+        <button class="page-btn"
+                [disabled]="tableState.currentPage === 1"
+                (click)="onPageChange(1)"
+                title="First Page">
+          <i class="fas fa-angle-double-left"></i>
+        </button>
+
+        <!-- Previous Page -->
+        <button class="page-btn"
+                [disabled]="tableState.currentPage === 1"
+                (click)="onPageChange(tableState.currentPage - 1)"
+                title="Previous Page">
+          <i class="fas fa-angle-left"></i>
+        </button>
+
+        <!-- Page Numbers -->
+        <button *ngFor="let page of getPaginationPages()"
+                class="page-btn page-number"
+                [class.active]="page === tableState.currentPage"
+                (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+
+        <!-- Next Page -->
+        <button class="page-btn"
+                [disabled]="tableState.currentPage === totalPages"
+                (click)="onPageChange(tableState.currentPage + 1)"
+                title="Next Page">
+          <i class="fas fa-angle-right"></i>
+        </button>
+
+        <!-- Last Page -->
+        <button class="page-btn"
+                [disabled]="tableState.currentPage === totalPages"
+                (click)="onPageChange(totalPages)"
+                title="Last Page">
+          <i class="fas fa-angle-double-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

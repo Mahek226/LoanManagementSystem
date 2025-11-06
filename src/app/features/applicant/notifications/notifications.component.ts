@@ -10,7 +10,7 @@ export interface Notification {
   assignmentId: number;
   title: string;
   message: string;
-  type: 'INFO_REQUEST' | 'DOCUMENT_REQUEST' | 'STATUS_UPDATE' | 'APPROVAL' | 'REJECTION';
+  type: 'INFO_REQUEST' | 'DOCUMENT_REQUEST' | 'DOCUMENT_RESUBMISSION' | 'STATUS_UPDATE' | 'APPROVAL' | 'REJECTION';
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'UNREAD' | 'READ' | 'RESOLVED';
   requestedBy: string;
@@ -42,7 +42,7 @@ export class NotificationsComponent implements OnInit {
   priorityFilter = '';
   
   statusOptions = ['UNREAD', 'READ', 'RESOLVED'];
-  typeOptions = ['INFO_REQUEST', 'DOCUMENT_REQUEST', 'STATUS_UPDATE', 'APPROVAL', 'REJECTION'];
+  typeOptions = ['INFO_REQUEST', 'DOCUMENT_REQUEST', 'DOCUMENT_RESUBMISSION', 'STATUS_UPDATE', 'APPROVAL', 'REJECTION'];
   priorityOptions = ['HIGH', 'MEDIUM', 'LOW'];
   
   // Selected notification for detail view
@@ -97,6 +97,20 @@ export class NotificationsComponent implements OnInit {
         },
         {
           notificationId: 3,
+          loanId: 1001,
+          assignmentId: 501,
+          title: 'Document Resubmission Required - Compliance Review',
+          message: 'The compliance officer has requested resubmission of your income proof document due to quality issues. Please upload a clearer version.',
+          type: 'DOCUMENT_RESUBMISSION',
+          priority: 'HIGH',
+          status: 'UNREAD',
+          requestedBy: 'Compliance Officer',
+          requestedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+          requestedDocuments: ['Income Certificate']
+        },
+        {
+          notificationId: 4,
           loanId: 1002,
           assignmentId: 502,
           title: 'Application Status Updated',
@@ -170,6 +184,7 @@ export class NotificationsComponent implements OnInit {
     const iconMap: { [key: string]: string } = {
       'INFO_REQUEST': 'fa-info-circle',
       'DOCUMENT_REQUEST': 'fa-file-upload',
+      'DOCUMENT_RESUBMISSION': 'fa-redo-alt',
       'STATUS_UPDATE': 'fa-sync-alt',
       'APPROVAL': 'fa-check-circle',
       'REJECTION': 'fa-times-circle'
@@ -181,6 +196,7 @@ export class NotificationsComponent implements OnInit {
     const colorMap: { [key: string]: string } = {
       'INFO_REQUEST': 'info',
       'DOCUMENT_REQUEST': 'warning',
+      'DOCUMENT_RESUBMISSION': 'danger',
       'STATUS_UPDATE': 'primary',
       'APPROVAL': 'success',
       'REJECTION': 'danger'

@@ -1,0 +1,264 @@
+<!-- Advanced Search Component -->
+<div class="advanced-search-container">
+  <!-- Main Search Bar -->
+  <div class="search-bar">
+    <div class="search-input-container">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" 
+             class="search-input"
+             [placeholder]="placeholder"
+             (input)="onSearchInput($event)"
+             [value]="searchQuery">
+      
+      <!-- Clear Search Button -->
+      <button *ngIf="searchQuery" 
+              class="clear-search-btn"
+              (click)="clearAllFilters()"
+              title="Clear search">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="search-actions">
+      <!-- Advanced Filters Toggle -->
+      <button class="action-btn filters-btn"
+              [class.active]="showAdvancedFilters"
+              (click)="toggleAdvancedFilters()"
+              title="Advanced Filters">
+        <i class="fas fa-filter"></i>
+        <span *ngIf="activeFilterCount > 0" class="filter-badge">{{ activeFilterCount }}</span>
+      </button>
+
+      <!-- Sort Options -->
+      <div *ngIf="showSortOptions" class="sort-dropdown">
+        <button class="action-btn sort-btn" 
+                [class.active]="sortBy"
+                title="Sort Options">
+          <i class="fas fa-sort"></i>
+        </button>
+        <div class="sort-menu">
+          <div class="sort-header">
+            <span>Sort By</span>
+          </div>
+          <div *ngFor="let option of sortOptions; trackBy: trackByOptionValue" 
+               class="sort-option"
+               [class.active]="sortBy === option.value"
+               (click)="sortBy = option.value; onSortChange()">
+            <span>{{ option.label }}</span>
+            <div class="sort-direction">
+              <button class="direction-btn"
+                      [class.active]="sortBy === option.value && sortOrder === 'asc'"
+                      (click)="sortOrder = 'asc'; onSortChange(); $event.stopPropagation()">
+                <i class="fas fa-sort-up"></i>
+              </button>
+              <button class="direction-btn"
+                      [class.active]="sortBy === option.value && sortOrder === 'desc'"
+                      (click)="sortOrder = 'desc'; onSortChange(); $event.stopPropagation()">
+                <i class="fas fa-sort-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Options -->
+      <div *ngIf="showExportOptions" class="export-dropdown">
+        <button class="action-btn export-btn" title="Export Data">
+          <i class="fas fa-download"></i>
+        </button>
+        <div class="export-menu">
+          <div class="export-header">
+            <span>Export As</span>
+          </div>
+          <button *ngFor="let format of exportFormats; trackBy: trackByOptionValue"
+                  class="export-option"
+                  (click)="exportData(format.value)">
+            <i [class]="format.icon"></i>
+            <span>{{ format.label }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Filters Display -->
+  <div *ngIf="activeFilterCount > 0" class="active-filters">
+    <div class="active-filters-header">
+      <span class="filters-title">
+        <i class="fas fa-filter"></i>
+        Active Filters ({{ activeFilterCount }})
+      </span>
+      <button class="clear-all-btn" 
+              (click)="clearAllFilters()"
+              title="Clear all filters">
+        <i class="fas fa-times"></i>
+        Clear All
+      </button>
+    </div>
+    
+    <div class="filter-tags">
+      <div *ngFor="let filter of filters; trackBy: trackByFilterKey"
+           class="filter-tag"
+           [class.active]="isFilterActive(filter.key)">
+        <span *ngIf="isFilterActive(filter.key)" class="tag-content">
+          <strong>{{ filter.label }}:</strong>
+          <span class="tag-value">{{ getActiveFilterLabel(filter.key) }}</span>
+          <button class="remove-tag-btn" 
+                  (click)="removeFilter(filter.key)"
+                  title="Remove filter">
+            <i class="fas fa-times"></i>
+          </button>
+        </span>
+      </div>
+      
+      <!-- Date Range Tag -->
+      <div *ngIf="dateRange.start || dateRange.end" class="filter-tag active">
+        <span class="tag-content">
+          <strong>Date Range:</strong>
+          <span class="tag-value">
+            {{ dateRange.start || 'Any' }} - {{ dateRange.end || 'Any' }}
+          </span>
+          <button class="remove-tag-btn" 
+                  (click)="dateRange = { start: '', end: '' }; onDateRangeChange()"
+                  title="Remove date range">
+            <i class="fas fa-times"></i>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Filters Panel -->
+  <div class="advanced-filters" [class.expanded]="showAdvancedFilters">
+    <div class="filters-grid">
+      <!-- Dynamic Filters -->
+      <div *ngFor="let filter of filters; trackBy: trackByFilterKey" 
+           class="filter-group">
+        <label class="filter-label">
+          <i *ngIf="filter.icon" [class]="filter.icon"></i>
+          {{ filter.label }}
+        </label>
+
+        <!-- Text Input -->
+        <input *ngIf="filter.type === 'text'"
+               type="text"
+               class="filter-input"
+               [placeholder]="filter.placeholder || 'Enter ' + filter.label.toLowerCase()"
+               [value]="getFilterValue(filter)"
+               (input)="onFilterChange(filter.key, $event.target.value)">
+
+        <!-- Number Input -->
+        <input *ngIf="filter.type === 'number'"
+               type="number"
+               class="filter-input"
+               [placeholder]="filter.placeholder || 'Enter ' + filter.label.toLowerCase()"
+               [value]="getFilterValue(filter)"
+               [min]="filter.validation?.min"
+               [max]="filter.validation?.max"
+               (input)="onFilterChange(filter.key, $event.target.value)">
+
+        <!-- Date Input -->
+        <input *ngIf="filter.type === 'date'"
+               type="date"
+               class="filter-input"
+               [value]="getFilterValue(filter)"
+               (change)="onFilterChange(filter.key, $event.target.value)">
+
+        <!-- Select Dropdown -->
+        <select *ngIf="filter.type === 'select'"
+                class="filter-select"
+                [value]="getFilterValue(filter)"
+                (change)="onFilterChange(filter.key, $event.target.value)">
+          <option value="">All {{ filter.label }}</option>
+          <option *ngFor="let option of filter.options; trackBy: trackByOptionValue"
+                  [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+
+        <!-- Multi-select -->
+        <div *ngIf="filter.type === 'multiselect'" class="multiselect-container">
+          <div class="multiselect-header">
+            <span>Select {{ filter.label }}</span>
+            <span class="selected-count" *ngIf="getFilterValue(filter).length > 0">
+              ({{ getFilterValue(filter).length }} selected)
+            </span>
+          </div>
+          <div class="multiselect-options">
+            <label *ngFor="let option of filter.options; trackBy: trackByOptionValue"
+                   class="multiselect-option">
+              <input type="checkbox"
+                     [checked]="isMultiselectOptionSelected(filter, option.value)"
+                     (change)="toggleMultiselectOption(filter, option.value)">
+              <span class="checkmark"></span>
+              <span class="option-label">{{ option.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Range Input -->
+        <div *ngIf="filter.type === 'range'" class="range-container">
+          <input type="number"
+                 class="range-input"
+                 placeholder="Min"
+                 [value]="getFilterValue(filter)?.min || ''"
+                 [min]="filter.validation?.min"
+                 [max]="filter.validation?.max"
+                 (input)="onFilterChange(filter.key, { 
+                   ...getFilterValue(filter), 
+                   min: $event.target.value 
+                 })">
+          <span class="range-separator">to</span>
+          <input type="number"
+                 class="range-input"
+                 placeholder="Max"
+                 [value]="getFilterValue(filter)?.max || ''"
+                 [min]="filter.validation?.min"
+                 [max]="filter.validation?.max"
+                 (input)="onFilterChange(filter.key, { 
+                   ...getFilterValue(filter), 
+                   max: $event.target.value 
+                 })">
+        </div>
+      </div>
+
+      <!-- Date Range Filter -->
+      <div *ngIf="showDateRange" class="filter-group date-range-group">
+        <label class="filter-label">
+          <i class="fas fa-calendar-alt"></i>
+          Date Range
+        </label>
+        <div class="date-range-container">
+          <input type="date"
+                 class="filter-input date-input"
+                 placeholder="Start Date"
+                 [value]="dateRange.start"
+                 (change)="dateRange.start = $event.target.value; onDateRangeChange()">
+          <span class="date-separator">to</span>
+          <input type="date"
+                 class="filter-input date-input"
+                 placeholder="End Date"
+                 [value]="dateRange.end"
+                 (change)="dateRange.end = $event.target.value; onDateRangeChange()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Actions -->
+    <div class="filter-actions">
+      <button class="filter-action-btn clear-btn" 
+              (click)="clearAllFilters()"
+              [disabled]="activeFilterCount === 0">
+        <i class="fas fa-eraser"></i>
+        Clear All Filters
+      </button>
+      
+      <button class="filter-action-btn apply-btn" 
+              (click)="toggleAdvancedFilters()">
+        <i class="fas fa-check"></i>
+        Apply Filters
+      </button>
+    </div>
+  </div>
+</div>

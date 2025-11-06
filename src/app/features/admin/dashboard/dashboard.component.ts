@@ -12,6 +12,7 @@ import { ComplianceOfficersComponent } from '../compliance-officers/compliance-o
 import { ReportsComponent } from '../reports/reports.component';
 import { ActivityLogsComponent } from '../activity-logs/activity-logs.component';
 import { FraudRulesComponent } from '../fraud-rules/fraud-rules.component';
+import { PredictiveAnalyticsComponent } from '../predictive-analytics/predictive-analytics.component';
 import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
@@ -28,7 +29,7 @@ interface Activity {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ApplicantsComponent, LoansComponent, LoanOfficersComponent, ComplianceOfficersComponent, ReportsComponent, ActivityLogsComponent, FraudRulesComponent],
+  imports: [CommonModule, ApplicantsComponent, LoansComponent, LoanOfficersComponent, ComplianceOfficersComponent, ReportsComponent, ActivityLogsComponent, FraudRulesComponent, PredictiveAnalyticsComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
