@@ -8,6 +8,7 @@ import com.tss.springsecurity.repository.ApplicantLoanDetailsRepository;
 import com.tss.springsecurity.repository.UploadedDocumentRepository;
 import com.tss.springsecurity.service.CloudinaryService;
 import com.tss.springsecurity.service.DocumentUploadService;
+import com.tss.springsecurity.service.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,9 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
     
     @Autowired
     private CloudinaryService cloudinaryService;
+    
+    @Autowired
+    private EmailService emailService;
     
     @Override
     public List<UploadedDocument> uploadDocuments(Long applicantId, Long loanId, 
@@ -212,7 +216,25 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
         document.setVerifiedBy(verifiedBy);
         document.setVerifiedAt(LocalDateTime.now());
         
-        return uploadedDocumentRepository.save(document);
+        UploadedDocument savedDocument = uploadedDocumentRepository.save(document);
+        
+        // Send email notification to applicant about document verification status
+        try {
+            Applicant applicant = document.getApplicant();
+            String applicantName = applicant.getFirstName() + " " + applicant.getLastName();
+            emailService.sendDocumentVerificationEmail(
+                applicant.getEmail(),
+                applicantName,
+                document.getDocumentType(),
+                status.toString()
+            );
+            log.info("Document verification email sent to: {} for document type: {}", 
+                    applicant.getEmail(), document.getDocumentType());
+        } catch (Exception e) {
+            log.error("Failed to send document verification email for document ID: {}", documentId, e);
+        }
+        
+        return savedDocument;
     }
     
     @Override

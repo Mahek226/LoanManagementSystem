@@ -6,6 +6,7 @@ import com.tss.springsecurity.dto.*;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
 import com.tss.springsecurity.service.ComplianceOfficerService;
+import com.tss.springsecurity.service.EmailService;
 import com.tss.springsecurity.externalfraud.repository.*;
 import com.tss.springsecurity.externalfraud.entity.*;
 import com.tss.springsecurity.externalfraud.service.ExternalFraudScreeningService;
@@ -75,6 +76,9 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     
     @Autowired
     private EnhancedLoanScreeningService enhancedLoanScreeningService;
+    
+    @Autowired
+    private EmailService emailService;
     
     @Override
     public LoanScreeningResponse getLoanScreeningDetails(Long assignmentId) {
@@ -171,6 +175,24 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         assignmentRepository.save(assignment);
         applicantRepository.save(applicant);
         
+        // Send email notification to applicant about compliance approval
+        try {
+            String applicantName = applicant.getFirstName() + " " + applicant.getLastName();
+            String loanId = applicant.getLoanDetails() != null && !applicant.getLoanDetails().isEmpty() 
+                ? applicant.getLoanDetails().get(0).getLoanId().toString() 
+                : "N/A";
+            emailService.sendComplianceVerdictEmail(
+                applicant.getEmail(),
+                applicantName,
+                loanId,
+                "APPROVED",
+                remarks != null ? remarks : "Approved by compliance officer"
+            );
+            log.info("Compliance approval email sent to: {}", applicant.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send compliance approval email for assignment ID: {}", assignmentId, e);
+        }
+        
         log.info("Loan approved successfully for assignment ID: {}", assignmentId);
         return mapToLoanScreeningResponse(assignment);
     }
@@ -213,6 +235,24 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
         
         assignmentRepository.save(assignment);
         applicantRepository.save(applicant);
+        
+        // Send email notification to applicant about compliance rejection
+        try {
+            String applicantName = applicant.getFirstName() + " " + applicant.getLastName();
+            String loanId = applicant.getLoanDetails() != null && !applicant.getLoanDetails().isEmpty() 
+                ? applicant.getLoanDetails().get(0).getLoanId().toString() 
+                : "N/A";
+            emailService.sendComplianceVerdictEmail(
+                applicant.getEmail(),
+                applicantName,
+                loanId,
+                "REJECTED",
+                String.format("Rejected: %s. %s", rejectionReason, remarks != null ? remarks : "")
+            );
+            log.info("Compliance rejection email sent to: {}", applicant.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send compliance rejection email for assignment ID: {}", assignmentId, e);
+        }
         
         log.info("Loan rejected successfully for assignment ID: {}", assignmentId);
         return mapToLoanScreeningResponse(assignment);

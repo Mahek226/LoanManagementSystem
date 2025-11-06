@@ -7,14 +7,17 @@ import com.tss.springsecurity.dto.LoanApplicationForExistingApplicantDTO;
 import com.tss.springsecurity.entity.*;
 import com.tss.springsecurity.repository.*;
 import com.tss.springsecurity.service.LoanApplicationService;
+import com.tss.springsecurity.service.EmailService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class LoanApplicationServiceImpl implements LoanApplicationService {
     
     private final ApplicantRepository applicantRepository;
@@ -27,6 +30,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final CompleteLoanApplicationServiceImpl completeLoanApplicationService;
     private final com.tss.springsecurity.service.DocumentExtractionService documentExtractionService;
     private final UploadedDocumentRepository uploadedDocumentRepository;
+    private final EmailService emailService;
     
     public LoanApplicationServiceImpl(
             ApplicantRepository applicantRepository,
@@ -38,7 +42,8 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
             ApplicantLoanDetailsRepository loanDetailsRepository,
             CompleteLoanApplicationServiceImpl completeLoanApplicationService,
             com.tss.springsecurity.service.DocumentExtractionService documentExtractionService,
-            UploadedDocumentRepository uploadedDocumentRepository) {
+            UploadedDocumentRepository uploadedDocumentRepository,
+            EmailService emailService) {
         this.applicantRepository = applicantRepository;
         this.basicDetailsRepository = basicDetailsRepository;
         this.employmentRepository = employmentRepository;
@@ -49,6 +54,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         this.completeLoanApplicationService = completeLoanApplicationService;
         this.documentExtractionService = documentExtractionService;
         this.uploadedDocumentRepository = uploadedDocumentRepository;
+        this.emailService = emailService;
     }
     
     @Override
@@ -147,6 +153,21 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         
         // Link all previously uploaded documents (with null loan_id) to this loan
         linkDocumentsToLoan(applicant.getApplicantId(), loanDetails.getLoanId());
+        
+        // Send loan application submission confirmation email
+        try {
+            String applicantName = applicant.getFirstName() + " " + applicant.getLastName();
+            emailService.sendLoanApplicationSubmittedEmail(
+                applicant.getEmail(),
+                applicantName,
+                loanDetails.getLoanType(),
+                loanDetails.getLoanAmount().toString(),
+                loanDetails.getLoanId().toString()
+            );
+            log.info("Loan application submission email sent to: {}", applicant.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send loan application submission email to: {}", applicant.getEmail(), e);
+        }
         
         return applicant;
     }
@@ -266,6 +287,21 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         // Save Collaterals if provided
         if (dto.getCollaterals() != null && !dto.getCollaterals().isEmpty()) {
             saveCollaterals(loanDetails, dto.getCollaterals());
+        }
+        
+        // Send loan application submission confirmation email
+        try {
+            String applicantName = applicant.getFirstName() + " " + applicant.getLastName();
+            emailService.sendLoanApplicationSubmittedEmail(
+                applicant.getEmail(),
+                applicantName,
+                loanDetails.getLoanType(),
+                loanDetails.getLoanAmount().toString(),
+                loanDetails.getLoanId().toString()
+            );
+            log.info("Loan application submission email sent to existing applicant: {}", applicant.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send loan application submission email to existing applicant: {}", applicant.getEmail(), e);
         }
         
         return loanDetails;
