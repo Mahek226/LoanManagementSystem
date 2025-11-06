@@ -1,5 +1,6 @@
 package com.tss.springsecurity.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -45,6 +46,7 @@ public class ComplianceOfficer {
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "complianceOfficer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<ComplianceOfficerApplicationAssignment> applicationAssignments;
     
     @PrePersist

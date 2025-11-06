@@ -1,5 +1,6 @@
 package com.tss.springsecurity.controller;
 
+import com.tss.springsecurity.dto.ComplianceOfficerProfileResponse;
 import com.tss.springsecurity.dto.ProfileUpdateRequest;
 import com.tss.springsecurity.entity.Applicant;
 import com.tss.springsecurity.entity.ComplianceOfficer;
@@ -70,7 +71,20 @@ public class ProfileManagementController {
     @PreAuthorize("hasRole('COMPLIANCE_OFFICER')")
     public ResponseEntity<?> getComplianceOfficerProfile(@PathVariable Long officerId) {
         ComplianceOfficer officer = profileManagementService.getComplianceOfficerById(officerId);
-        return ResponseEntity.ok(officer);
+        
+        // Convert to DTO to avoid circular reference
+        ComplianceOfficerProfileResponse response = ComplianceOfficerProfileResponse.builder()
+                .officerId(officer.getOfficerId())
+                .username(officer.getUsername())
+                .email(officer.getEmail())
+                .firstName(officer.getFirstName())
+                .lastName(officer.getLastName())
+                .loanType(officer.getLoanType())
+                .createdAt(officer.getCreatedAt())
+                .updatedAt(officer.getUpdatedAt())
+                .build();
+        
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/compliance-officer/{officerId}")
