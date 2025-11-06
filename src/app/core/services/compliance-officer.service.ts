@@ -559,6 +559,13 @@ export class ComplianceOfficerService {
   }
 
   /**
+   * Change compliance officer password
+   */
+  changePassword(officerId: number, passwordData: { currentPassword: string; newPassword: string }): Observable<any> {
+    return this.http.put(`${this.profileUrl}/compliance-officer/${officerId}/change-password`, passwordData);
+  }
+
+  /**
    * Perform KYC reverification
    */
   verifyKYC(request: KYCVerificationRequest): Observable<KYCVerificationResponse> {

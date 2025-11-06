@@ -18,6 +18,16 @@ export class ComplianceProfileComponent implements OnInit {
   successMessage: string = '';
   errorMessage: string = '';
 
+  // Password change properties
+  changingPassword: boolean = false;
+  passwordChangeSuccess: string = '';
+  passwordChangeError: string = '';
+  passwordData = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+
   // Form data
   profileData = {
     firstName: '',
@@ -43,6 +53,10 @@ export class ComplianceProfileComponent implements OnInit {
         .subscribe({
           next: (profile: any) => {
             this.officer = profile;
+            // Ensure officerId is set in the profile object
+            if (!this.officer.officerId && user.officerId) {
+              this.officer.officerId = user.officerId;
+            }
             this.profileData = {
               firstName: profile.firstName || '',
               lastName: profile.lastName || '',
@@ -59,7 +73,11 @@ export class ComplianceProfileComponent implements OnInit {
         });
     } else if (user) {
       // Fallback to cached user data
-      this.officer = user;
+      this.officer = {
+        ...user,
+        officerId: user.officerId,
+        id: user.officerId || user.id
+      };
       this.profileData = {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
@@ -122,11 +140,116 @@ export class ComplianceProfileComponent implements OnInit {
   }
 
   getMemberSince(): string {
-    // Simulate member since date
-    return 'January 2024';
+    if (this.officer?.createdAt) {
+      const date = new Date(this.officer.createdAt);
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long'
+      }).format(date);
+    }
+    if (this.officer?.joinedDate) {
+      const date = new Date(this.officer.joinedDate);
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long'
+      }).format(date);
+    }
+    // Fallback to current user data if available
+    const user = this.authService.currentUserValue;
+    if (user?.officerId) {
+      // For now, use a default since we don't have join date in user object
+      return 'January 2024';
+    }
+    return 'N/A';
   }
 
   getOfficerId(): string {
-    return this.officer?.id?.toString() || 'N/A';
+    // First try to get from loaded officer profile
+    if (this.officer?.officerId) {
+      return this.officer.officerId.toString();
+    }
+    if (this.officer?.id) {
+      return this.officer.id.toString();
+    }
+    // Fallback to current user data
+    const user = this.authService.currentUserValue;
+    if (user?.officerId) {
+      return user.officerId.toString();
+    }
+    return 'N/A';
+  }
+
+  openChangePasswordModal(): void {
+    // Reset password form data and messages
+    this.passwordData = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+    this.passwordChangeSuccess = '';
+    this.passwordChangeError = '';
+    this.changingPassword = false;
+
+    // Open the modal using Bootstrap's modal API
+    const modalElement = document.getElementById('changePasswordModal');
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  changePassword(): void {
+    if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
+      this.passwordChangeError = 'Passwords do not match';
+      return;
+    }
+
+    this.changingPassword = true;
+    this.passwordChangeError = '';
+    this.passwordChangeSuccess = '';
+
+    const user = this.authService.currentUserValue;
+    if (!user || !user.officerId) {
+      this.passwordChangeError = 'Unable to change password. Please login again.';
+      this.changingPassword = false;
+      return;
+    }
+
+    const changePasswordRequest = {
+      currentPassword: this.passwordData.currentPassword,
+      newPassword: this.passwordData.newPassword
+    };
+
+    // Call the change password API
+    this.complianceOfficerService.changePassword(user.officerId, changePasswordRequest)
+      .subscribe({
+        next: (response: any) => {
+          this.changingPassword = false;
+          this.passwordChangeSuccess = 'Password changed successfully!';
+          
+          // Clear the form
+          this.passwordData = {
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          };
+
+          // Auto-close modal after 2 seconds
+          setTimeout(() => {
+            const modalElement = document.getElementById('changePasswordModal');
+            if (modalElement) {
+              const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+              if (modal) {
+                modal.hide();
+              }
+            }
+          }, 2000);
+        },
+        error: (err: any) => {
+          this.changingPassword = false;
+          this.passwordChangeError = err.error?.message || 'Failed to change password. Please try again.';
+          console.error('Error changing password:', err);
+        }
+      });
   }
 }

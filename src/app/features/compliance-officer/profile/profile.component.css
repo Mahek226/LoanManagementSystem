@@ -395,3 +395,46 @@
 .dark-theme .form-control-plaintext {
   color: var(--text-primary);
 }
+
+/* Coming Soon Button Styles */
+.btn-outline-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.btn-outline-secondary:disabled small {
+  font-size: 0.7rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.btn-outline-secondary:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-outline-secondary:disabled::before {
+  display: none;
+}
+
+/* Modal Styles */
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+}
