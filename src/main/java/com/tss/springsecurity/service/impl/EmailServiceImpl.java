@@ -479,6 +479,103 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    public void sendLoanOfficerWelcomeEmail(String to, String officerName, String username, String password) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Welcome to Loan Management System - Loan Officer Account Created");
+            
+            message.setText(
+                "Dear " + officerName + ",\n\n" +
+                "Welcome to the Loan Management System! Your Loan Officer account has been successfully created.\n\n" +
+                "Your Account Details:\n" +
+                "- Username: " + username + "\n" +
+                "- Email: " + to + "\n" +
+                "- Temporary Password: " + password + "\n\n" +
+                "🔒 IMPORTANT SECURITY NOTICE:\n" +
+                "For your account security, please change your password immediately after your first login.\n\n" +
+                "How to get started:\n" +
+                "1. Visit: http://localhost:4200/auth/login\n" +
+                "2. Login with your username and temporary password\n" +
+                "3. Change your password in the profile section\n" +
+                "4. Complete your profile information\n" +
+                "5. Start reviewing assigned loan applications\n\n" +
+                "Your Responsibilities:\n" +
+                "- Review loan applications assigned to you\n" +
+                "- Evaluate applicant creditworthiness\n" +
+                "- Make approval/rejection decisions\n" +
+                "- Escalate high-risk cases to compliance\n" +
+                "- Maintain accurate records and documentation\n\n" +
+                "If you have any questions or need assistance, please contact the system administrator.\n\n" +
+                "Best regards,\n" +
+                "Loan Management System Administration Team"
+            );
+            
+            mailSender.send(message);
+            log.info("Loan Officer welcome email sent successfully to: {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send Loan Officer welcome email to: {}", to, e);
+            // Log to console as fallback
+            log.info("=================================================");
+            log.info("FALLBACK - Loan Officer Account Created for {}", to);
+            log.info("Username: {}", username);
+            log.info("Password: {}", password);
+            log.info("Please change password after first login");
+            log.info("=================================================");
+        }
+    }
+
+    @Override
+    public void sendComplianceOfficerWelcomeEmail(String to, String officerName, String username, String password) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Welcome to Loan Management System - Compliance Officer Account Created");
+            
+            message.setText(
+                "Dear " + officerName + ",\n\n" +
+                "Welcome to the Loan Management System! Your Compliance Officer account has been successfully created.\n\n" +
+                "Your Account Details:\n" +
+                "- Username: " + username + "\n" +
+                "- Email: " + to + "\n" +
+                "- Temporary Password: " + password + "\n\n" +
+                "🔒 IMPORTANT SECURITY NOTICE:\n" +
+                "For your account security, please change your password immediately after your first login.\n\n" +
+                "How to get started:\n" +
+                "1. Visit: http://localhost:4200/auth/login\n" +
+                "2. Login with your username and temporary password\n" +
+                "3. Change your password in the profile section\n" +
+                "4. Complete your profile information\n" +
+                "5. Start reviewing escalated compliance cases\n\n" +
+                "Your Responsibilities:\n" +
+                "- Review high-risk loan applications escalated by loan officers\n" +
+                "- Conduct comprehensive compliance checks\n" +
+                "- Analyze fraud indicators and external data\n" +
+                "- Provide compliance verdicts and recommendations\n" +
+                "- Ensure regulatory compliance and risk management\n" +
+                "- Request document resubmissions when necessary\n\n" +
+                "Access Level:\n" +
+                "You have access to enhanced screening data, external fraud databases, and comprehensive review tools.\n\n" +
+                "If you have any questions or need assistance, please contact the system administrator.\n\n" +
+                "Best regards,\n" +
+                "Loan Management System Administration Team"
+            );
+            
+            mailSender.send(message);
+            log.info("Compliance Officer welcome email sent successfully to: {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send Compliance Officer welcome email to: {}", to, e);
+            // Log to console as fallback
+            log.info("=================================================");
+            log.info("FALLBACK - Compliance Officer Account Created for {}", to);
+            log.info("Username: {}", username);
+            log.info("Password: {}", password);
+            log.info("Please change password after first login");
+            log.info("=================================================");
+        }
+    }
+
+    @Override
     public void sendSystemMaintenanceEmail(String to, String userName, String maintenanceDate, String duration) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

@@ -7,6 +7,7 @@ import com.tss.springsecurity.entity.ComplianceOfficer;
 import com.tss.springsecurity.entity.LoanOfficer;
 import com.tss.springsecurity.repository.ComplianceOfficerRepository;
 import com.tss.springsecurity.repository.LoanOfficerRepository;
+import com.tss.springsecurity.service.EmailService;
 import com.tss.springsecurity.service.OfficerManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,7 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
     private final LoanOfficerRepository loanOfficerRepository;
     private final ComplianceOfficerRepository complianceOfficerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -49,6 +51,15 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
         // Save loan officer
         LoanOfficer savedOfficer = loanOfficerRepository.save(officer);
 
+        // Send welcome email with credentials
+        String officerFullName = savedOfficer.getFirstName() + " " + savedOfficer.getLastName();
+        emailService.sendLoanOfficerWelcomeEmail(
+                savedOfficer.getEmail(),
+                officerFullName,
+                savedOfficer.getUsername(),
+                request.getPassword()
+        );
+
         // Return response
         OfficerResponse response = new OfficerResponse(
                 savedOfficer.getOfficerId(),
@@ -57,7 +68,7 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
                 savedOfficer.getLoanType(),
                 savedOfficer.getCreatedAt()
         );
-        response.setMessage("Loan Officer created successfully");
+        response.setMessage("Loan Officer created successfully and welcome email sent");
         return response;
     }
 
@@ -86,6 +97,15 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
         // Save compliance officer
         ComplianceOfficer savedOfficer = complianceOfficerRepository.save(officer);
 
+        // Send welcome email with credentials
+        String officerFullName = savedOfficer.getFirstName() + " " + savedOfficer.getLastName();
+        emailService.sendComplianceOfficerWelcomeEmail(
+                savedOfficer.getEmail(),
+                officerFullName,
+                savedOfficer.getUsername(),
+                request.getPassword()
+        );
+
         // Return response
         OfficerResponse response = new OfficerResponse(
                 savedOfficer.getOfficerId(),
@@ -94,7 +114,7 @@ public class OfficerManagementServiceImpl implements OfficerManagementService {
                 savedOfficer.getLoanType(),
                 savedOfficer.getCreatedAt()
         );
-        response.setMessage("Compliance Officer created successfully");
+        response.setMessage("Compliance Officer created successfully and welcome email sent");
         return response;
     }
 

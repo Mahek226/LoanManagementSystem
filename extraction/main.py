@@ -379,7 +379,7 @@ async def extract_document(
 
     # Step 7: Print result summary
     print(f"\n📄 Document Type: {document_type}")
-    for k, v in extracted_with_conf.items():
+    for k, v in extracted_with_confidence.items():
         print(f"  • {k}: {v['value']}  (Confidence: {v['confidence']*100:.1f}%)")
 
     # Step 8: Skip visualization to avoid image errors
@@ -393,7 +393,7 @@ async def extract_document(
         "document_id": doc_record.document_id,
         "applicant_id": applicant_id,
         "document_type": document_type,
-        "extracted": extracted_with_conf,
+        "extracted": extracted_with_confidence,
         "annotated_image": annotated_path or "Bounding boxes not available"
     })
 

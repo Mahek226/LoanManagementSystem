@@ -25,6 +25,10 @@ public interface EmailService {
     void sendComplianceEscalationEmail(String to, String officerName, String loanId, String applicantName, String escalationReason);
     void sendComplianceVerdictEmail(String to, String officerName, String loanId, String verdict, String remarks);
     
+    // Officer Account Management
+    void sendLoanOfficerWelcomeEmail(String to, String officerName, String username, String password);
+    void sendComplianceOfficerWelcomeEmail(String to, String officerName, String username, String password);
+    
     // System Notifications
     void sendSystemMaintenanceEmail(String to, String userName, String maintenanceDate, String duration);
     void sendSecurityAlertEmail(String to, String userName, String alertType, String details);
