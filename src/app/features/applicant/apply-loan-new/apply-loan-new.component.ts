@@ -5,6 +5,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, ApplicantProfile } from '@core/services/applicant.service';
+import { ToastService } from '@core/services/toast.service';
+import { FormValidators } from '@core/validators/form-validators';
 import { 
   LoanApplicationService, 
   LoanApplicationForm, 
@@ -69,13 +71,18 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // Applicant ID
   applicantId: number = 0;
 
+  // Select All functionality for declarations
+  selectAllDeclarations: boolean = false;
+  private isTogglingAll: boolean = false;
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
     private authService: AuthService,
     private applicantService: ApplicantService,
-    private loanApplicationService: LoanApplicationService
+    private loanApplicationService: LoanApplicationService,
+    private toastService: ToastService
   ) {
     const user = this.authService.currentUserValue;
     this.applicantId = user?.id || 0;
@@ -87,6 +94,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.loadLoanType();
     this.subscribeToApplicationState();
     this.initializeDraftFunctionality();
+    
+    // Make debug method accessible from browser console
+    (window as any).debugDeclarationForm = () => this.debugDeclarationForm();
+    (window as any).testSelectAll = () => {
+      this.selectAllDeclarations = true;
+      this.toggleAllDeclarations();
+    };
   }
 
   ngOnDestroy(): void {
@@ -102,89 +116,100 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     // Step 1: Basic Details Form
     this.basicDetailsForm = this.fb.group({
       loanType: ['', Validators.required],
-      loanAmount: [0, [Validators.required, Validators.min(1000)]],
-      tenure: [12, [Validators.required, Validators.min(6)]],
+      loanAmount: [0, [Validators.required, Validators.min(1000), Validators.max(10000000), FormValidators.positiveNumberValidator()]],
+      tenure: [12, [Validators.required, Validators.min(6), Validators.max(360)]],
       hasCoApplicant: [false],
-      coApplicantName: [''],
-      coApplicantRelation: [''],
+      coApplicantName: ['', [FormValidators.fullNameValidator()]],
+      coApplicantRelation: ['', [FormValidators.nameValidator()]],
       hasCollateral: [false],
-      collateralType: [''],
-      collateralValue: [0]
+      collateralType: ['', [FormValidators.nameValidator()]],
+      collateralValue: [0, [FormValidators.positiveNumberValidator()]]
     });
 
     // Step 2: Applicant Details Form
     this.applicantDetailsForm = this.fb.group({
       // Applicant Information
-      firstName: ['', [Validators.required, Validators.minLength(2)]],
-      middleName: [''],
-      lastName: ['', [Validators.required, Validators.minLength(2)]],
-      dateOfBirth: ['', Validators.required],
+      firstName: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      middleName: ['', [FormValidators.nameValidator(), Validators.maxLength(50)]],
+      lastName: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      dateOfBirth: ['', [Validators.required, FormValidators.birthDateValidator()]],
       gender: ['', Validators.required],
       maritalStatus: ['', Validators.required],
       
       // Contact Information
-      emailAddress: ['', [Validators.required, Validators.email]],
-      mobileNumber: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
-      alternateNumber: ['', [Validators.pattern(/^[6-9]\d{9}$/)]],
+      emailAddress: ['', [Validators.required, FormValidators.emailValidator()]],
+      mobileNumber: ['', [Validators.required, FormValidators.mobileNumberValidator()]],
+      alternateNumber: ['', [FormValidators.mobileNumberValidator()]],
       
       // Current Address
-      currentAddress: ['', Validators.required],
-      currentCity: ['', Validators.required],
-      currentState: ['', Validators.required],
-      currentPincode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+      currentAddress: ['', [Validators.required, FormValidators.addressValidator(), Validators.minLength(10), Validators.maxLength(200)]],
+      currentCity: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      currentState: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      currentPincode: ['', [Validators.required, FormValidators.pincodeValidator()]],
       residenceType: ['', Validators.required],
-      yearsAtCurrentAddress: ['', [Validators.required, Validators.min(0)]],
+      yearsAtCurrentAddress: ['', [Validators.required, Validators.min(0), Validators.max(100)]],
       
       // Permanent Address
       permanentAddressSame: [false],
-      permanentAddress: [''],
-      permanentCity: [''],
-      permanentState: [''],
-      permanentPincode: [''],
+      permanentAddress: ['', [FormValidators.addressValidator(), Validators.maxLength(200)]],
+      permanentCity: ['', [FormValidators.nameValidator(), Validators.maxLength(50)]],
+      permanentState: ['', [FormValidators.nameValidator(), Validators.maxLength(50)]],
+      permanentPincode: ['', [FormValidators.pincodeValidator()]],
       
       // Identity Details
-      panNumber: ['', [Validators.required, Validators.pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)]],
-      aadharNumber: ['', [Validators.required, Validators.pattern(/^\d{12}$/)]],
+      panNumber: ['', [Validators.required, FormValidators.panValidator()]],
+      aadharNumber: ['', [Validators.required, FormValidators.aadharValidator()]],
       
       // Co-applicant Details
       hasCoApplicant: [false],
-      coApplicantName: [''],
-      coApplicantRelation: [''],
-      coApplicantPan: [''],
-      coApplicantAadhar: ['']
+      coApplicantName: ['', [FormValidators.fullNameValidator()]],
+      coApplicantRelation: ['', [FormValidators.nameValidator()]],
+      coApplicantPan: ['', [FormValidators.panValidator()]],
+      coApplicantAadhar: ['', [FormValidators.aadharValidator()]]
     });
 
     // Step 3: Financial Details Form
     this.financialDetailsForm = this.fb.group({
       employmentType: ['SALARIED', Validators.required],
-      employerName: [''],
-      designation: [''],
-      workExperience: [0],
-      monthlyGrossSalary: [0],
-      monthlyNetSalary: [0],
-      businessName: [''],
-      businessType: [''],
-      annualTurnover: [0],
-      otherIncomeSources: [''],
-      otherIncomeAmount: [0],
-      existingLoanEMI: [0],
-      creditCardPayment: [0],
-      otherObligations: [0],
-      bankName: ['', Validators.required],
-      accountNumber: ['', Validators.required],
-      ifscCode: ['', [Validators.required, Validators.pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)]],
+      employerName: ['', [FormValidators.nameValidator(), Validators.maxLength(100)]],
+      designation: ['', [FormValidators.nameValidator(), Validators.maxLength(50)]],
+      workExperience: [0, [Validators.min(0), Validators.max(50)]],
+      monthlyGrossSalary: [0, [FormValidators.positiveNumberValidator(), Validators.max(10000000)]],
+      monthlyNetSalary: [0, [FormValidators.positiveNumberValidator(), Validators.max(10000000)]],
+      businessName: ['', [FormValidators.nameValidator(), Validators.maxLength(100)]],
+      businessType: ['', [FormValidators.nameValidator(), Validators.maxLength(50)]],
+      annualTurnover: [0, [FormValidators.positiveNumberValidator(), Validators.max(1000000000)]],
+      otherIncomeSources: ['', [FormValidators.addressValidator(), Validators.maxLength(200)]],
+      otherIncomeAmount: [0, [FormValidators.positiveNumberValidator(), Validators.max(10000000)]],
+      existingLoanEMI: [0, [Validators.min(0), Validators.max(1000000)]],
+      creditCardPayment: [0, [Validators.min(0), Validators.max(1000000)]],
+      otherObligations: [0, [Validators.min(0), Validators.max(1000000)]],
+      bankName: ['', [Validators.required, FormValidators.nameValidator(), Validators.maxLength(100)]],
+      accountNumber: ['', [Validators.required, Validators.minLength(9), Validators.maxLength(18), Validators.pattern(/^\d+$/)]],
+      ifscCode: ['', [Validators.required, FormValidators.ifscValidator()]],
       accountType: ['SAVINGS', Validators.required],
       bankStatementConsent: [false, Validators.requiredTrue]
     });
 
     // Step 4: Declarations Form
     this.declarationsForm = this.fb.group({
-      kycConsent: [false, Validators.requiredTrue],
-      creditBureauConsent: [false, Validators.requiredTrue],
-      bankStatementConsent: [false, Validators.requiredTrue],
-      termsAccepted: [false, Validators.requiredTrue],
-      privacyPolicyAccepted: [false, Validators.requiredTrue],
+      kycConsent: [false, this.requiredTrueValidator],
+      creditBureauConsent: [false, this.requiredTrueValidator],
+      bankStatementConsent: [false, this.requiredTrueValidator],
+      termsAccepted: [false, this.requiredTrueValidator],
+      privacyPolicyAccepted: [false, this.requiredTrueValidator],
       eSignConsent: [false]
+    });
+
+    // Watch for changes in declaration checkboxes to update select all state
+    const declarationFields = ['kycConsent', 'creditBureauConsent', 'bankStatementConsent', 'termsAccepted', 'privacyPolicyAccepted'];
+    declarationFields.forEach(field => {
+      const subscription = this.declarationsForm.get(field)?.valueChanges.subscribe(() => {
+        this.updateSelectAllState();
+      });
+      if (subscription) {
+        this.subscriptions.push(subscription);
+      }
     });
 
     // Watch for loan type changes - reinitialize application if needed
@@ -706,7 +731,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       const isValidExtension = this.isValidFileExtension(file.name);
       
       if (!isValidMimeType && !isValidExtension) {
-        this.error = `Invalid file format for ${docReq.displayName}. Please upload PDF, JPG, JPEG, or PNG files only. File: ${file.name}`;
+        this.toastService.showError(
+          'Invalid File Format', 
+          `Please upload PDF, JPG, JPEG, or PNG files only for ${docReq.displayName}. File: ${file.name}`,
+          4000
+        );
         console.error('File validation failed:', {
           fileName: file.name,
           mimeType: file.type,
@@ -716,7 +745,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       }
 
       if (file.size > docReq.maxSize) {
-        this.error = `File size exceeds maximum limit of ${(docReq.maxSize / (1024 * 1024)).toFixed(0)}MB`;
+        this.toastService.showError(
+          'File Too Large', 
+          `File size exceeds maximum limit of ${(docReq.maxSize / (1024 * 1024)).toFixed(0)}MB for ${docReq.displayName}`,
+          4000
+        );
         return;
       }
 
@@ -769,11 +802,15 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
               console.log('Added directly to local array:', this.uploadedDocuments);
             }
             
-            this.success = `${file.name} uploaded successfully!`;
+            // Show document upload success toast
+            this.toastService.showSuccess(
+              '📄 Document Uploaded', 
+              `Your ${docReq.displayName} has been uploaded successfully. File: ${file.name}`,
+              4000
+            );
             
             setTimeout(() => {
               delete this.uploadProgress[file.name];
-              this.success = '';
             }, 3000);
           }
         },
@@ -785,7 +822,12 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
             status: 'error',
             error: error.error?.message || 'Upload failed'
           };
-          this.error = error.error?.message || `Failed to upload ${file.name}`;
+          // Show document upload error toast
+          this.toastService.showError(
+            'Upload Failed', 
+            error.error?.message || `Failed to upload ${file.name}. Please try again.`,
+            5000
+          );
           
           setTimeout(() => {
             delete this.uploadProgress[file.name];
@@ -815,7 +857,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   submitApplication(): void {
     if (!this.application) {
-      this.error = 'No application data found';
+      this.toastService.showError('Error', 'No application data found');
       return;
     }
 
@@ -826,28 +868,42 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       next: (response) => {
         console.log('Loan submission response:', response);
         
-        // Check if loan was assigned to an officer
+        // Show loan submission success toast
+        const loanId = response.loanId || response.applicationId || 'N/A';
+        this.toastService.showSuccess(
+          '🎉 Application Submitted!', 
+          `Your loan application #${loanId} has been submitted successfully. You will receive updates via email.`,
+          5000
+        );
+        
+        // Check if loan was assigned to an officer and show additional toast
         if (response.assignmentId && response.assignedOfficerName) {
-          this.success = `Application submitted and assigned to ${response.assignedOfficerName} successfully!`;
+          this.toastService.showSuccess(
+            '👨‍💼 Loan Officer Assigned!', 
+            `Your application has been assigned to ${response.assignedOfficerName} for review.`,
+            6000
+          );
         } else if (response.assignmentError) {
-          this.success = `Application submitted successfully! ${response.assignmentError}`;
-        } else {
-          this.success = 'Application submitted successfully!';
+          this.toastService.showWarning(
+            'Assignment Pending', 
+            'Your application was submitted successfully but assignment to a loan officer is pending.',
+            6000
+          );
         }
         
         this.submitting = false;
         
-        // Clear draft
-        this.loanApplicationService.clearDraft();
+        // Clear all form data and drafts
+        this.clearApplicationData();
         
-        // Redirect to dashboard after 3 seconds to show assignment message
+        // Redirect to dashboard after 4 seconds to allow users to see the toasts
         setTimeout(() => {
           this.router.navigate(['/applicant/dashboard']);
-        }, 3000);
+        }, 4000);
       },
       error: (error) => {
         console.error('Submission error:', error);
-        this.error = error.error?.message || 'Failed to submit application. Please try again.';
+        this.toastService.showHttpError(error, 'Submission Failed');
         this.submitting = false;
       }
     });
@@ -1233,5 +1289,305 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       console.error('Error getting draft info:', error);
     }
     return '';
+  }
+
+  clearApplicationData(): void {
+    // Clear all form data
+    this.basicDetailsForm.reset({
+      loanType: '',
+      loanAmount: 0,
+      tenure: 12,
+      hasCoApplicant: false,
+      coApplicantName: '',
+      coApplicantRelation: '',
+      hasCollateral: false,
+      collateralType: '',
+      collateralValue: 0
+    });
+
+    this.applicantDetailsForm.reset({
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      dateOfBirth: '',
+      gender: '',
+      maritalStatus: '',
+      emailAddress: '',
+      mobileNumber: '',
+      alternateNumber: '',
+      currentAddress: '',
+      currentCity: '',
+      currentState: '',
+      currentPincode: '',
+      residenceType: '',
+      yearsAtCurrentAddress: '',
+      permanentAddressSame: false,
+      permanentAddress: '',
+      permanentCity: '',
+      permanentState: '',
+      permanentPincode: '',
+      panNumber: '',
+      aadharNumber: '',
+      hasCoApplicant: false,
+      coApplicantName: '',
+      coApplicantRelation: '',
+      coApplicantPan: '',
+      coApplicantAadhar: ''
+    });
+
+    this.financialDetailsForm.reset({
+      employmentType: 'SALARIED',
+      employerName: '',
+      designation: '',
+      workExperience: 0,
+      monthlyGrossSalary: 0,
+      monthlyNetSalary: 0,
+      businessName: '',
+      businessType: '',
+      annualTurnover: 0,
+      otherIncomeSources: '',
+      otherIncomeAmount: 0,
+      existingLoanEMI: 0,
+      creditCardPayment: 0,
+      otherObligations: 0,
+      bankName: '',
+      accountNumber: '',
+      ifscCode: '',
+      accountType: 'SAVINGS',
+      bankStatementConsent: false
+    });
+
+    this.declarationsForm.reset({
+      kycConsent: false,
+      creditBureauConsent: false,
+      bankStatementConsent: false,
+      termsAccepted: false,
+      privacyPolicyAccepted: false,
+      eSignConsent: false
+    });
+
+    // Clear component state
+    this.currentStep = 1;
+    this.application = null;
+    this.selectedLoanType = '';
+    this.emiCalculation = null;
+    this.uploadedDocuments = [];
+    this.uploadProgress = {};
+    this.selectAllDeclarations = false;
+    this.error = '';
+    this.success = '';
+
+    // Clear drafts and service state
+    this.loanApplicationService.clearDraft();
+    this.clearDraft();
+    
+    // Clear localStorage drafts for this user
+    this.clearAllUserDrafts();
+  }
+
+  clearAllUserDrafts(): void {
+    try {
+      const allKeys = Object.keys(localStorage);
+      const userDraftKeys = allKeys.filter(key => 
+        key.startsWith(`loan_draft_${this.applicantId}_`)
+      );
+      
+      userDraftKeys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      console.log(`Cleared ${userDraftKeys.length} draft(s) for user ${this.applicantId}`);
+    } catch (error) {
+      console.error('Error clearing user drafts:', error);
+    }
+  }
+
+  // ==================== Select All Declarations ====================
+
+  onSelectAllChange(event: any): void {
+    this.selectAllDeclarations = event.target.checked;
+    this.toggleAllDeclarations();
+  }
+
+  toggleAllDeclarations(): void {
+    // Set flag to prevent interference from updateSelectAllState
+    this.isTogglingAll = true;
+    
+    try {
+      // Update all required declaration fields
+      const updateValues: any = {
+        kycConsent: this.selectAllDeclarations,
+        creditBureauConsent: this.selectAllDeclarations,
+        bankStatementConsent: this.selectAllDeclarations,
+        termsAccepted: this.selectAllDeclarations,
+        privacyPolicyAccepted: this.selectAllDeclarations
+      };
+      
+      // Optional field - only set if selectAll is true
+      if (this.selectAllDeclarations) {
+        updateValues.eSignConsent = true;
+      }
+      
+      this.declarationsForm.patchValue(updateValues);
+      
+      // Mark all controls as touched for validation
+      Object.keys(updateValues).forEach(key => {
+        this.declarationsForm.get(key)?.markAsTouched();
+      });
+      
+    } finally {
+      // Reset flag after a short delay to allow change detection
+      setTimeout(() => {
+        this.isTogglingAll = false;
+      }, 100);
+    }
+  }
+
+  updateSelectAllState(): void {
+    // Don't update during toggle operation to prevent interference
+    if (this.isTogglingAll) {
+      return;
+    }
+    
+    const requiredFields = ['kycConsent', 'creditBureauConsent', 'bankStatementConsent', 'termsAccepted', 'privacyPolicyAccepted'];
+    const allSelected = requiredFields.every(field => this.declarationsForm.get(field)?.value === true);
+    this.selectAllDeclarations = allSelected;
+  }
+
+  // Custom validator for required true checkboxes
+  requiredTrueValidator(control: any) {
+    return control.value === true ? null : { requiredTrue: true };
+  }
+
+  // ==================== Validation Utilities ====================
+
+  // Get today's date for max date validation
+  get maxDate(): string {
+    return FormValidators.getTodayDate();
+  }
+
+  // Get max birth date (18 years ago)
+  get maxBirthDate(): string {
+    return FormValidators.getMaxBirthDate();
+  }
+
+  // Get validation error message for a field
+  getFieldError(formName: string, fieldName: string): string {
+    let form: FormGroup;
+    
+    switch (formName) {
+      case 'basic':
+        form = this.basicDetailsForm;
+        break;
+      case 'applicant':
+        form = this.applicantDetailsForm;
+        break;
+      case 'financial':
+        form = this.financialDetailsForm;
+        break;
+      case 'declarations':
+        form = this.declarationsForm;
+        break;
+      default:
+        return '';
+    }
+
+    const field = form.get(fieldName);
+    if (field && field.errors && (field.dirty || field.touched)) {
+      if (field.errors['required']) return `${this.getFieldDisplayName(fieldName)} is required`;
+      if (field.errors['min']) return `${this.getFieldDisplayName(fieldName)} must be at least ${field.errors['min'].min}`;
+      if (field.errors['max']) return `${this.getFieldDisplayName(fieldName)} must not exceed ${field.errors['max'].max}`;
+      if (field.errors['minlength']) return `${this.getFieldDisplayName(fieldName)} must be at least ${field.errors['minlength'].requiredLength} characters`;
+      if (field.errors['maxlength']) return `${this.getFieldDisplayName(fieldName)} must not exceed ${field.errors['maxlength'].requiredLength} characters`;
+      if (field.errors['pattern']) return `${this.getFieldDisplayName(fieldName)} format is invalid`;
+      if (field.errors['invalidName']) return field.errors['invalidName'].message;
+      if (field.errors['invalidFullName']) return field.errors['invalidFullName'].message;
+      if (field.errors['invalidEmail']) return field.errors['invalidEmail'].message;
+      if (field.errors['invalidMobile']) return field.errors['invalidMobile'].message;
+      if (field.errors['invalidAddress']) return field.errors['invalidAddress'].message;
+      if (field.errors['invalidPan']) return field.errors['invalidPan'].message;
+      if (field.errors['invalidAadhar']) return field.errors['invalidAadhar'].message;
+      if (field.errors['invalidIfsc']) return field.errors['invalidIfsc'].message;
+      if (field.errors['invalidPincode']) return field.errors['invalidPincode'].message;
+      if (field.errors['invalidAmount']) return field.errors['invalidAmount'].message;
+      if (field.errors['futureDate']) return field.errors['futureDate'].message;
+      if (field.errors['underAge']) return field.errors['underAge'].message;
+      if (field.errors['tooOld']) return field.errors['tooOld'].message;
+    }
+    return '';
+  }
+
+  private getFieldDisplayName(fieldName: string): string {
+    const displayNames: { [key: string]: string } = {
+      loanType: 'Loan Type',
+      loanAmount: 'Loan Amount',
+      tenure: 'Tenure',
+      coApplicantName: 'Co-applicant Name',
+      coApplicantRelation: 'Co-applicant Relation',
+      collateralType: 'Collateral Type',
+      collateralValue: 'Collateral Value',
+      firstName: 'First Name',
+      middleName: 'Middle Name',
+      lastName: 'Last Name',
+      dateOfBirth: 'Date of Birth',
+      gender: 'Gender',
+      maritalStatus: 'Marital Status',
+      emailAddress: 'Email Address',
+      mobileNumber: 'Mobile Number',
+      alternateNumber: 'Alternate Number',
+      currentAddress: 'Current Address',
+      currentCity: 'Current City',
+      currentState: 'Current State',
+      currentPincode: 'Current Pincode',
+      residenceType: 'Residence Type',
+      yearsAtCurrentAddress: 'Years at Current Address',
+      permanentAddress: 'Permanent Address',
+      permanentCity: 'Permanent City',
+      permanentState: 'Permanent State',
+      permanentPincode: 'Permanent Pincode',
+      panNumber: 'PAN Number',
+      aadharNumber: 'Aadhar Number',
+      coApplicantPan: 'Co-applicant PAN',
+      coApplicantAadhar: 'Co-applicant Aadhar',
+      employmentType: 'Employment Type',
+      employerName: 'Employer Name',
+      designation: 'Designation',
+      workExperience: 'Work Experience',
+      monthlyGrossSalary: 'Monthly Gross Salary',
+      monthlyNetSalary: 'Monthly Net Salary',
+      businessName: 'Business Name',
+      businessType: 'Business Type',
+      annualTurnover: 'Annual Turnover',
+      otherIncomeSources: 'Other Income Sources',
+      otherIncomeAmount: 'Other Income Amount',
+      existingLoanEMI: 'Existing Loan EMI',
+      creditCardPayment: 'Credit Card Payment',
+      otherObligations: 'Other Obligations',
+      bankName: 'Bank Name',
+      accountNumber: 'Account Number',
+      ifscCode: 'IFSC Code',
+      accountType: 'Account Type'
+    };
+    return displayNames[fieldName] || fieldName;
+  }
+
+  // Debug method - can be called from browser console
+  debugDeclarationForm(): void {
+    console.log('=== Declaration Form Debug ===');
+    console.log('Form exists:', !!this.declarationsForm);
+    console.log('Form value:', this.declarationsForm?.value);
+    console.log('Form valid:', this.declarationsForm?.valid);
+    console.log('Select all state:', this.selectAllDeclarations);
+    
+    const fields = ['kycConsent', 'creditBureauConsent', 'bankStatementConsent', 'termsAccepted', 'privacyPolicyAccepted', 'eSignConsent'];
+    fields.forEach(field => {
+      const control = this.declarationsForm.get(field);
+      console.log(`${field}:`, {
+        exists: !!control,
+        value: control?.value,
+        valid: control?.valid,
+        errors: control?.errors
+      });
+    });
   }
 }

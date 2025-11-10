@@ -137,10 +137,14 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   loadExternalFraudData(applicantId: number): void {
     const fraudSub = this.complianceService.getExternalFraudData(applicantId).subscribe({
       next: (fraudData) => {
-        this.externalFraudData = fraudData;
+        this.externalFraudData = fraudData; // Can be null if no data available
+        if (fraudData === null) {
+          console.log('No external fraud data available for applicant:', applicantId);
+        }
       },
       error: (error) => {
         console.error('Error loading external fraud data:', error);
+        this.externalFraudData = null;
         // Don't stop loading for this - it's optional data
       }
     });

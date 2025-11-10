@@ -307,7 +307,7 @@ export class ToastComponent implements OnInit, OnDestroy {
           this.enteringToasts.add(toast.id);
           setTimeout(() => {
             this.enteringToasts.delete(toast.id);
-          }, 50);
+          }, 300);
         });
 
         // Animate removed toasts out
@@ -315,7 +315,7 @@ export class ToastComponent implements OnInit, OnDestroy {
           this.leavingToasts.add(toast.id);
           setTimeout(() => {
             this.leavingToasts.delete(toast.id);
-          }, 300);
+          }, 500);
         });
 
         this.toasts = toasts;

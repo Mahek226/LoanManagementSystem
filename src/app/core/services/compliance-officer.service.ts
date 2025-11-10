@@ -646,11 +646,27 @@ export class ComplianceOfficerService {
   /**
    * Get external fraud data for an applicant (dynamic applicant ID)
    */
-  getExternalFraudData(applicantId: number): Observable<ExternalFraudData> {
+  getExternalFraudData(applicantId: number): Observable<ExternalFraudData | null> {
     return this.http.get<ExternalFraudData>(`${this.apiUrl}/loan/${applicantId}/external-fraud-data`).pipe(
       catchError((error: any) => {
-        console.warn('External fraud data endpoint not available, using mock data');
-        return of(this.getMockExternalFraudData(applicantId));
+        console.error('External fraud data error:', error);
+        
+        // Check if it's a "Loan not found" error
+        if (error.error && typeof error.error === 'string' && 
+            (error.error.includes('Loan not found') || error.error.includes('Failed to fetch external fraud data for loan'))) {
+          console.log('Loan not found - returning null instead of mock data');
+          return of(null);
+        }
+        
+        // For other errors (like network issues), still return mock data
+        if (error.status === 0 || error.status >= 500) {
+          console.warn('Network or server error - using mock data as fallback');
+          return of(this.getMockExternalFraudData(applicantId));
+        }
+        
+        // For 404 or other client errors, return null
+        console.log('Client error - no external fraud data available');
+        return of(null);
       })
     );
   }

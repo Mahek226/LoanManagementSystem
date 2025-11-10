@@ -25,28 +25,28 @@ export class ToastService {
    * Show a success toast
    */
   showSuccess(title: string, message: string, duration: number = 5000): void {
-    this.addToast('success', title, message, duration);
+    this.addToast('success', title, message, Math.max(duration, 3000));
   }
 
   /**
    * Show an error toast
    */
   showError(title: string, message: string, duration: number = 8000): void {
-    this.addToast('error', title, message, duration);
+    this.addToast('error', title, message, Math.max(duration, 3000));
   }
 
   /**
    * Show a warning toast
    */
   showWarning(title: string, message: string, duration: number = 6000): void {
-    this.addToast('warning', title, message, duration);
+    this.addToast('warning', title, message, Math.max(duration, 3000));
   }
 
   /**
    * Show an info toast
    */
   showInfo(title: string, message: string, duration: number = 5000): void {
-    this.addToast('info', title, message, duration);
+    this.addToast('info', title, message, Math.max(duration, 3000));
   }
 
   /**

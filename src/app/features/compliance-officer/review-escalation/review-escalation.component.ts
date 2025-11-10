@@ -593,11 +593,15 @@ export class ReviewEscalationComponent implements OnInit {
     this.externalFraudLoading = true;
     this.complianceService.getExternalFraudData(this.escalation.applicantId).subscribe({
       next: (data) => {
-        this.externalFraudData = data;
+        this.externalFraudData = data; // Can be null if no data available
         this.externalFraudLoading = false;
+        if (data === null) {
+          console.log('No external fraud data available for applicant:', this.escalation?.applicantId);
+        }
       },
       error: (err) => {
         console.error('Error loading external fraud data:', err);
+        this.externalFraudData = null;
         this.externalFraudLoading = false;
       }
     });

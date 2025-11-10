@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { FormValidators } from '@core/validators/form-validators';
 
 @Component({
   selector: 'app-register',
@@ -33,20 +34,20 @@ export class RegisterComponent implements OnInit {
 
   private initializeForm(): void {
     this.registerForm = this.formBuilder.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]],
+      email: ['', [Validators.required, FormValidators.emailValidator()]],
+      password: ['', [Validators.required, FormValidators.strongPasswordValidator()]],
       confirmPassword: ['', [Validators.required]],
-      firstName: ['', [Validators.required]],
-      lastName: ['', [Validators.required]],
-      phone: ['', [Validators.required]], // Changed from phoneNumber to phone
-      dob: ['', [Validators.required]], // Added date of birth
-      address: ['', [Validators.required]],
-      city: ['', [Validators.required]],
-      state: ['', [Validators.required]],
-      country: ['', [Validators.required]],
+      firstName: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      lastName: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      phone: ['', [Validators.required, FormValidators.mobileNumberValidator()]],
+      dob: ['', [Validators.required, FormValidators.birthDateValidator()]],
+      address: ['', [Validators.required, FormValidators.addressValidator(), Validators.minLength(10), Validators.maxLength(200)]],
+      city: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      state: ['', [Validators.required, FormValidators.nameValidator(), Validators.minLength(2), Validators.maxLength(50)]],
+      country: ['India', [Validators.required, FormValidators.nameValidator()]],
       gender: ['', [Validators.required]],
-      termsAccepted: [false, [Validators.requiredTrue]] // Terms and conditions checkbox
+      termsAccepted: [false, [Validators.requiredTrue]]
     }, { validators: this.passwordMatchValidator });
   }
 
@@ -71,6 +72,59 @@ export class RegisterComponent implements OnInit {
 
   get f() {
     return this.registerForm.controls;
+  }
+
+  // Get today's date for max date validation
+  get maxDate(): string {
+    return FormValidators.getTodayDate();
+  }
+
+  // Get max birth date (18 years ago)
+  get maxBirthDate(): string {
+    return FormValidators.getMaxBirthDate();
+  }
+
+  // Get validation error message for a field
+  getFieldError(fieldName: string): string {
+    const field = this.registerForm.get(fieldName);
+    if (field && field.errors && (field.dirty || field.touched || this.submitted)) {
+      if (field.errors['required']) return `${this.getFieldDisplayName(fieldName)} is required`;
+      if (field.errors['minlength']) return `${this.getFieldDisplayName(fieldName)} must be at least ${field.errors['minlength'].requiredLength} characters`;
+      if (field.errors['maxlength']) return `${this.getFieldDisplayName(fieldName)} must not exceed ${field.errors['maxlength'].requiredLength} characters`;
+      if (field.errors['invalidName']) return field.errors['invalidName'].message;
+      if (field.errors['invalidFullName']) return field.errors['invalidFullName'].message;
+      if (field.errors['invalidEmail']) return field.errors['invalidEmail'].message;
+      if (field.errors['invalidMobile']) return field.errors['invalidMobile'].message;
+      if (field.errors['invalidAddress']) return field.errors['invalidAddress'].message;
+      if (field.errors['futureDate']) return field.errors['futureDate'].message;
+      if (field.errors['underAge']) return field.errors['underAge'].message;
+      if (field.errors['tooOld']) return field.errors['tooOld'].message;
+      if (field.errors['weakPassword']) {
+        const errors = field.errors['weakPassword'];
+        return Object.values(errors).join(', ');
+      }
+      if (field.errors['passwordMismatch']) return 'Passwords do not match';
+    }
+    return '';
+  }
+
+  private getFieldDisplayName(fieldName: string): string {
+    const displayNames: { [key: string]: string } = {
+      username: 'Username',
+      email: 'Email',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      phone: 'Phone Number',
+      dob: 'Date of Birth',
+      address: 'Address',
+      city: 'City',
+      state: 'State',
+      country: 'Country',
+      gender: 'Gender'
+    };
+    return displayNames[fieldName] || fieldName;
   }
 
   onSubmit(): void {
