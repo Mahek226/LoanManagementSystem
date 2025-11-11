@@ -1196,4 +1196,38 @@ export class ComplianceOfficerService {
       }
     };
   }
+
+  // ==================== Document Resubmission Review (Forwarded by Loan Officer) ====================
+
+  // Get documents forwarded by loan officers for compliance review
+  getForwardedDocuments(complianceOfficerId: number): Observable<any[]> {
+    const url = `${this.apiUrl}/compliance-officer/${complianceOfficerId}/forwarded-documents`;
+    console.log('Fetching forwarded documents:', url);
+    return this.http.get<any[]>(url);
+  }
+
+  // Process forwarded document (approve/reject)
+  processForwardedDocument(request: {
+    documentId: number;
+    complianceOfficerId: number;
+    action: 'APPROVE' | 'REJECT';
+    remarks: string;
+    sendBackToLoanOfficer: boolean;
+  }): Observable<any> {
+    const url = `${this.apiUrl}/compliance-officer/process-forwarded-document`;
+    console.log('Processing forwarded document:', request);
+    return this.http.post<any>(url, request);
+  }
+
+  // Send document back to loan officer with feedback
+  sendDocumentBackToLoanOfficer(request: {
+    documentId: number;
+    complianceOfficerId: number;
+    feedback: string;
+    requiresAction: string; // APPROVE, REJECT, REQUEST_RESUBMISSION
+  }): Observable<any> {
+    const url = `${this.apiUrl}/compliance-officer/send-back-to-loan-officer`;
+    console.log('Sending document back to loan officer:', request);
+    return this.http.post<any>(url, request);
+  }
 }

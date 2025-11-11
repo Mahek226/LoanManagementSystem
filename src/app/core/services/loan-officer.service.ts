@@ -29,6 +29,12 @@ export interface LoanScreeningResponse {
   complianceVerdictTimestamp?: string;
   nextAction?: string; // What the loan officer should do next
   hasComplianceVerdict?: boolean; // Flag to indicate if compliance review is complete
+  // Document verification status
+  documentsVerified?: boolean; // Flag to indicate if all required documents are verified
+  documentVerificationStatus?: string; // PENDING, VERIFIED, REJECTED, PARTIAL
+  totalDocuments?: number; // Total number of required documents
+  verifiedDocuments?: number; // Number of verified documents
+  rejectedDocuments?: number; // Number of rejected documents
 }
 
 export interface LoanScreeningRequest {
@@ -417,6 +423,18 @@ export class LoanOfficerService {
     return this.http.get<LoanDocument[]>(`${this.apiUrl}/loan/${loanId}/documents`);
   }
 
+  // Check document verification status for a loan
+  getDocumentVerificationStatus(loanId: number): Observable<{
+    documentsVerified: boolean;
+    documentVerificationStatus: string;
+    totalDocuments: number;
+    verifiedDocuments: number;
+    rejectedDocuments: number;
+    pendingDocuments: number;
+  }> {
+    return this.http.get<any>(`${this.apiUrl}/loan/${loanId}/document-verification-status`);
+  }
+
   // Verify document
   verifyDocument(officerId: number, request: DocumentVerificationRequest): Observable<LoanDocument> {
     return this.http.post<LoanDocument>(`${this.apiUrl}/${officerId}/verify-document`, request);
@@ -750,5 +768,24 @@ export class LoanOfficerService {
       case 'UNDER_REVIEW': return 'primary';
       default: return 'secondary';
     }
+  }
+
+  // Document Resubmission Methods (Applicant Resubmissions)
+  getResubmittedDocuments(officerId: number): Observable<any[]> {
+    const url = `${this.apiUrl}/${officerId}/resubmitted-documents`;
+    console.log('Fetching resubmitted documents:', url);
+    return this.http.get<any[]>(url);
+  }
+
+  processResubmittedDocument(request: any): Observable<any> {
+    const url = `${this.apiUrl}/process-resubmission`;
+    console.log('Processing resubmitted document:', request);
+    return this.http.post<any>(url, request);
+  }
+
+  forwardDocumentToCompliance(request: any): Observable<any> {
+    const url = `${this.apiUrl}/forward-to-compliance`;
+    console.log('Forwarding document to compliance:', request);
+    return this.http.post<any>(url, request);
   }
 }

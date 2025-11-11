@@ -98,6 +98,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/loan-officer/profile/lo-profile.component').then(m => m.LoProfileComponent)
       },
       {
+        path: 'applicant-resubmissions',
+        loadComponent: () => import('./features/loan-officer/applicant-resubmissions/applicant-resubmissions.component').then(m => m.ApplicantResubmissionsComponent)
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'
@@ -127,6 +131,10 @@ export const routes: Routes = [
       {
         path: 'profile',
         loadComponent: () => import('./features/compliance-officer/profile/profile.component').then(m => m.ComplianceProfileComponent)
+      },
+      {
+        path: 'forwarded-documents',
+        loadComponent: () => import('./features/compliance-officer/forwarded-documents/forwarded-documents.component').then(m => m.ForwardedDocumentsComponent)
       },
       {
         path: '',

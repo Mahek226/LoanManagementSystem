@@ -22,9 +22,9 @@
   <div class="d-flex justify-content-between align-items-center mb-4 animate-fade-in">
     <div>
       <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
-        <i class="fas fa-tasks me-2 text-primary"></i>Assigned Loans
+        <i class="fas fa-tasks me-2 text-primary"></i>Loan Management
       </h2>
-      <p class="text-muted mb-0">Review and process your assigned loan applications</p>
+      <p class="text-muted mb-0">Review and process your loan applications</p>
     </div>
     <div class="d-flex gap-2">
       <!-- View Toggle -->
@@ -46,10 +46,36 @@
           <i class="fas fa-th-large me-1"></i>Cards
         </button>
       </div>
-      <button class="btn btn-success" (click)="exportToCSV()" *ngIf="filteredLoans.length > 0">
+      <button class="btn btn-success" (click)="exportToCSV()" *ngIf="totalItems > 0">
         <i class="fas fa-download me-2"></i>Export to CSV
       </button>
     </div>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="mb-4">
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" 
+                [class.active]="activeTab === 'assigned'" 
+                (click)="switchTab('assigned')" 
+                type="button" 
+                role="tab">
+          <i class="fas fa-clock me-2"></i>Assigned Loans
+          <span class="badge bg-primary ms-2">{{ assignedLoans.length }}</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" 
+                [class.active]="activeTab === 'past'" 
+                (click)="switchTab('past')" 
+                type="button" 
+                role="tab">
+          <i class="fas fa-history me-2"></i>Past Loans
+          <span class="badge bg-secondary ms-2">{{ pastLoans.length }}</span>
+        </button>
+      </li>
+    </ul>
   </div>
 
   <!-- Filters Section -->
@@ -75,7 +101,7 @@
                   (ngModelChange)="applyFilters()"
                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
             <option value="">All Status</option>
-            <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+            <option *ngFor="let status of getStatusOptions()" [value]="status">{{ status }}</option>
           </select>
         </div>
 
@@ -112,7 +138,8 @@
       </div>
       
       <div class="mt-3 text-muted small">
-        Showing <strong>{{ filteredLoans.length }}</strong> of <strong>{{ loans.length }}</strong> loans
+        Showing <strong>{{ paginatedLoans.length }}</strong> of <strong>{{ totalItems }}</strong> loans
+        <span *ngIf="totalPages > 1"> (Page {{ currentPage }} of {{ totalPages }})</span>
       </div>
     </div>
   </div>
@@ -134,7 +161,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let loan of filteredLoans" 
+            <tr *ngFor="let loan of paginatedLoans" 
                 class="loan-row"
                 [class.table-warning]="loan.riskLevel === 'HIGH'"
                 style="cursor: pointer;">
@@ -171,11 +198,6 @@
                           title="View Complete Loan Details">
                     <i class="fas fa-eye me-1"></i>View
                   </button>
-                  <button class="btn btn-sm btn-warning" 
-                          (click)="verifyDocuments(loan.assignmentId, loan.loanId)"
-                          title="Verify Documents">
-                    <i class="fas fa-file-check me-1"></i>Docs
-                  </button>
                   <button class="btn btn-sm" 
                           [class.btn-primary]="!isLoanScreened(loan)"
                           [class.btn-info]="isLoanScreened(loan)"
@@ -198,7 +220,7 @@
 
   <!-- Card View -->
   <div class="row g-4" *ngIf="viewMode === 'card'">
-    <div class="col-lg-6" *ngFor="let loan of filteredLoans; let i = index">
+    <div class="col-lg-6" *ngFor="let loan of paginatedLoans; let i = index">
       <div class="loan-card card border-0 shadow-sm h-100 animate-slide-up" 
            [style.animation-delay.s]="(i * 0.1) + 0.2"
            style="background-color: var(--bg-primary);">
@@ -261,13 +283,7 @@
                 <small>View</small>
               </button>
             </div>
-            <div class="col-4">
-              <button class="btn btn-warning w-100" (click)="verifyDocuments(loan.assignmentId, loan.loanId)" title="Verify Documents">
-                <i class="fas fa-file-check d-block mb-1"></i>
-                <small>Docs</small>
-              </button>
-            </div>
-            <div class="col-4">
+            <div class="col-6">
               <button class="btn w-100" 
                       [class.btn-primary]="!isLoanScreened(loan)"
                       [class.btn-info]="isLoanScreened(loan)"
@@ -292,7 +308,7 @@
   </div>
 
   <!-- Empty State -->
-  <div class="text-center py-5" *ngIf="filteredLoans.length === 0">
+  <div class="text-center py-5" *ngIf="paginatedLoans.length === 0 && !loading">
     <div class="empty-state">
       <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
       <h4 class="mt-3 text-muted">No Loans Found</h4>
@@ -300,6 +316,49 @@
       <button class="btn btn-primary mt-2" (click)="clearFilters()" *ngIf="searchQuery || statusFilter || riskFilter || loanTypeFilter">
         <i class="fas fa-refresh me-2"></i>Clear All Filters
       </button>
+    </div>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div class="d-flex justify-content-between align-items-center mt-4" *ngIf="totalItems > 0">
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-muted small">Items per page:</span>
+      <select class="form-select form-select-sm" 
+              style="width: auto; background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"
+              [(ngModel)]="itemsPerPage" 
+              (ngModelChange)="changeItemsPerPage($event)">
+        <option [value]="5" [selected]="itemsPerPage === 5">5</option>
+        <option [value]="10" [selected]="itemsPerPage === 10">10</option>
+        <option [value]="25" [selected]="itemsPerPage === 25">25</option>
+        <option [value]="50" [selected]="itemsPerPage === 50">50</option>
+      </select>
+    </div>
+    
+    <nav aria-label="Pagination" *ngIf="totalPages > 1">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="prevPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+        </li>
+        
+        <li class="page-item" *ngFor="let page of getPageNumbers()" [class.active]="page === currentPage">
+          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+        </li>
+        
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    <div *ngIf="totalPages <= 1" class="text-center">
+      <span class="text-muted small">All items shown on one page</span>
+    </div>
+    
+    <div class="text-muted small">
+      Showing {{ ((currentPage - 1) * itemsPerPage) + 1 }} to {{ Math.min(currentPage * itemsPerPage, totalItems) }} of {{ totalItems }} entries
     </div>
   </div>
 
@@ -689,9 +748,6 @@
         <button type="button" class="btn btn-secondary" (click)="closeLoanDetailsModal()">
           <i class="fas fa-times me-2"></i>Close
         </button>
-        <button type="button" class="btn btn-warning" (click)="verifyDocuments(selectedLoan.assignmentId, selectedLoan.loanId); closeLoanDetailsModal()">
-          <i class="fas fa-file-check me-2"></i>Verify Documents
-        </button>
         <button type="button" 
                 class="btn" 
                 [class.btn-primary]="!isLoanScreened(selectedLoan)"
@@ -701,6 +757,136 @@
              [class.fa-search]="!isLoanScreened(selectedLoan)"
              [class.fa-eye]="isLoanScreened(selectedLoan)"></i>
           {{ isLoanScreened(selectedLoan) ? 'View Results' : 'Start Screening' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Verification Modal -->
+<div class="modal fade show d-block" *ngIf="showDocVerificationModal && selectedLoanForVerification" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeDocumentVerificationModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="fas fa-file-check me-2"></i>Document Verification Required
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentVerificationModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <div class="text-center mb-4">
+          <div class="alert alert-warning border-0 shadow-sm" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);">
+            <i class="fas fa-exclamation-triangle text-warning fs-2 mb-2"></i>
+            <h6 class="fw-bold mb-2" style="color: var(--text-primary);">Documents Not Verified</h6>
+            <p class="mb-0 text-muted">All required documents must be verified before proceeding to loan screening.</p>
+          </div>
+        </div>
+
+        <!-- Loan Information -->
+        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+          <div class="card-header border-0 bg-primary bg-opacity-10">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-info-circle me-2 text-primary"></i>Loan Information
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="small text-muted">Applicant Name</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">{{ selectedLoanForVerification.applicantName }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Loan ID</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">#{{ selectedLoanForVerification.loanId }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Loan Type</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">
+                  <span class="badge bg-info">{{ selectedLoanForVerification.loanType }}</span>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Loan Amount</label>
+                <p class="fw-semibold mb-0 text-success">{{ formatCurrency(selectedLoanForVerification.loanAmount) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Document Status -->
+        <div class="card border-0 shadow-sm" style="background-color: var(--bg-secondary);" *ngIf="documentVerificationStatus">
+          <div class="card-header border-0 bg-warning bg-opacity-10">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-file-alt me-2 text-warning"></i>Document Status
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-file-alt text-primary fs-4"></i>
+                  </div>
+                  <h5 class="fw-bold mt-2 mb-1" style="color: var(--text-primary);">{{ documentVerificationStatus.totalDocuments || 0 }}</h5>
+                  <small class="text-muted">Total Documents</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-check-circle text-success fs-4"></i>
+                  </div>
+                  <h5 class="fw-bold mt-2 mb-1 text-success">{{ documentVerificationStatus.verifiedDocuments || 0 }}</h5>
+                  <small class="text-muted">Verified</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-clock text-warning fs-4"></i>
+                  </div>
+                  <h5 class="fw-bold mt-2 mb-1 text-warning">{{ documentVerificationStatus.pendingDocuments || 0 }}</h5>
+                  <small class="text-muted">Pending</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="text-center">
+                  <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-times-circle text-danger fs-4"></i>
+                  </div>
+                  <h5 class="fw-bold mt-2 mb-1 text-danger">{{ documentVerificationStatus.rejectedDocuments || 0 }}</h5>
+                  <small class="text-muted">Rejected</small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mt-4">
+              <label class="small text-muted mb-2">Verification Progress</label>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar bg-success" 
+                     [style.width.%]="documentVerificationStatus.totalDocuments > 0 ? (documentVerificationStatus.verifiedDocuments / documentVerificationStatus.totalDocuments) * 100 : 0"
+                     role="progressbar">
+                  {{ documentVerificationStatus.totalDocuments > 0 ? ((documentVerificationStatus.verifiedDocuments / documentVerificationStatus.totalDocuments) * 100).toFixed(0) : 0 }}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentVerificationModal()">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" (click)="proceedToDocumentVerification()">
+          <i class="fas fa-file-check me-2"></i>Verify Documents
         </button>
       </div>
     </div>
