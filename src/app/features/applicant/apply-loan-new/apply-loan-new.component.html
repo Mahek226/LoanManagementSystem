@@ -73,7 +73,7 @@
           </button>
           <button type="button" 
                   class="btn btn-outline-secondary btn-sm" 
-                  (click)="clearDraft()" 
+                  (click)="clearSavedData()" 
                   [disabled]="isDraftSaving">
             <i class="fas fa-trash me-1"></i>Clear Draft
           </button>
@@ -844,6 +844,21 @@
         </div>
 
         <form [formGroup]="declarationsForm" class="loan-form">
+          <!-- Select All Checkbox -->
+          <div class="select-all-section mb-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" 
+                     [checked]="selectAllDeclarations" 
+                     (change)="onSelectAllChange($event)" 
+                     id="selectAllDeclarations">
+              <label class="form-check-label" for="selectAllDeclarations">
+                <strong>Select All Required Declarations</strong>
+                <p class="mb-0 text-muted small">Check this to accept all required declarations at once</p>
+              </label>
+            </div>
+            <hr class="my-3">
+          </div>
+
           <div class="declarations-list">
             <div class="declaration-item">
               <div class="form-check">
@@ -1058,23 +1073,51 @@
       </div>
     </div>
 
+    <!-- Auto-save Indicator -->
+    <div class="auto-save-indicator mb-3 text-center" *ngIf="currentDraftId">
+      <small class="text-muted">
+        <i class="fas fa-save me-1 text-success"></i>
+        Auto-saving enabled - Your progress is being saved automatically
+      </small>
+    </div>
+
     <!-- Navigation Buttons -->
     <div class="form-actions mt-4">
-      <button type="button" class="btn btn-secondary" (click)="previousStep()" *ngIf="currentStep > 1">
-        <i class="fas fa-arrow-left me-2"></i>Previous
-      </button>
-      <button type="button" class="btn btn-outline-danger" (click)="cancelApplication()">
-        Cancel
-      </button>
-      <button type="button" class="btn btn-primary" (click)="nextStep()" *ngIf="currentStep < 6">
-        Next<i class="fas fa-arrow-right ms-2"></i>
-      </button>
-      <button type="button" class="btn btn-success" (click)="submitApplication()" 
-              *ngIf="currentStep === 6" [disabled]="submitting">
-        <i class="fas fa-check me-2"></i>
-        <span *ngIf="submitting">Submitting...</span>
-        <span *ngIf="!submitting">Submit Application</span>
-      </button>
+      <div class="d-flex justify-content-between align-items-center w-100">
+        <!-- Left side buttons -->
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary" (click)="previousStep()" *ngIf="currentStep > 1">
+            <i class="fas fa-arrow-left me-2"></i>Previous
+          </button>
+        </div>
+        
+        <!-- Center buttons -->
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-warning" (click)="saveAsDraft()" 
+                  [disabled]="isDraftSaving" title="Save your progress and continue later">
+            <i class="fas fa-save me-1" *ngIf="!isDraftSaving"></i>
+            <i class="fas fa-spinner fa-spin me-1" *ngIf="isDraftSaving"></i>
+            <span *ngIf="!isDraftSaving">Save as Draft</span>
+            <span *ngIf="isDraftSaving">Saving...</span>
+          </button>
+          <button type="button" class="btn btn-outline-danger" (click)="cancelApplication()">
+            <i class="fas fa-times me-1"></i>Cancel
+          </button>
+        </div>
+        
+        <!-- Right side buttons -->
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary" (click)="nextStep()" *ngIf="currentStep < 6">
+            Next<i class="fas fa-arrow-right ms-2"></i>
+          </button>
+          <button type="button" class="btn btn-success" (click)="submitApplication()" 
+                  *ngIf="currentStep === 6" [disabled]="submitting">
+            <i class="fas fa-check me-2"></i>
+            <span *ngIf="submitting">Submitting...</span>
+            <span *ngIf="!submitting">Submit Application</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

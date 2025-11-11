@@ -114,11 +114,11 @@
                   <div class="document-container position-relative">
                     <!-- Original Image -->
                     <img *ngIf="!showAnnotatedImage"
-                         [src]="document.documentUrl || document.cloudinaryUrl || document.fileUrl" 
+                         [src]="getDocumentImageUrl()" 
                          [alt]="document.documentName || document.originalFilename"
                          class="img-fluid shadow-lg rounded"
                          style="max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #fff;"
-                         onerror="this.src='assets/images/document-placeholder.png'">
+                         (error)="onImageError($event)">
                     
                     <!-- Annotated Image -->
                     <img *ngIf="showAnnotatedImage && annotatedImageUrl"
@@ -126,7 +126,7 @@
                          [alt]="'Annotated ' + (document.documentName || document.originalFilename)"
                          class="img-fluid shadow-lg rounded"
                          style="max-width: 100%; max-height: 100%; object-fit: contain; border: 2px solid #28a745;"
-                         onerror="this.src='assets/images/document-placeholder.png'">
+                         (error)="onImageError($event)">
                   </div>
                 </div>
               </div>

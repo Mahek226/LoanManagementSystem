@@ -796,9 +796,18 @@ export class LoanApplicationService {
         return !!(
           application.basicDetails?.loanAmount > 0 &&
           application.basicDetails?.tenure > 0 &&
-          application.basicDetails?.purpose?.trim()
+          application.basicDetails?.loanType
         );
-      case 2: // Financial Details
+      case 2: // Applicant Information
+        return !!(
+          application.applicantDetails?.firstName?.trim() &&
+          application.applicantDetails?.lastName?.trim() &&
+          application.applicantDetails?.emailAddress?.trim() &&
+          application.applicantDetails?.mobileNumber?.trim() &&
+          application.applicantDetails?.panNumber?.trim() &&
+          application.applicantDetails?.aadharNumber?.trim()
+        );
+      case 3: // Financial Details
         return !!(
           application.financialDetails?.employmentType &&
           application.financialDetails?.monthlyGrossSalary &&
@@ -806,18 +815,21 @@ export class LoanApplicationService {
           application.financialDetails?.accountNumber &&
           application.financialDetails?.ifscCode
         );
-      case 3: // Documents
+      case 4: // Documents
         const requiredDocs = this.getRequiredDocuments(application.basicDetails?.loanType || '');
         const requiredTypes = requiredDocs.filter(d => d.required).map(d => d.documentType);
         const uploadedTypes = application.documents?.map(d => d.documentType) || [];
         return requiredTypes.every(type => uploadedTypes.includes(type));
-      case 4: // Declarations
+      case 5: // Declarations
         return !!(
           application.declarations?.kycConsent &&
           application.declarations?.creditBureauConsent &&
+          application.declarations?.bankStatementConsent &&
           application.declarations?.termsAccepted &&
           application.declarations?.privacyPolicyAccepted
         );
+      case 6: // Review & Submit - always valid if we reach here
+        return true;
       default:
         return false;
     }
@@ -828,7 +840,9 @@ export class LoanApplicationService {
       1: this.validateStep(1),
       2: this.validateStep(2),
       3: this.validateStep(3),
-      4: this.validateStep(4)
+      4: this.validateStep(4),
+      5: this.validateStep(5),
+      6: this.validateStep(6)
     };
   }
 
@@ -846,15 +860,33 @@ export class LoanApplicationService {
         if (!application.basicDetails?.tenure || application.basicDetails.tenure <= 0) {
           errors.push('Loan tenure is required and must be greater than 0');
         }
-        if (!application.basicDetails?.purpose?.trim()) {
-          errors.push('Loan purpose is required');
-        }
         if (!application.basicDetails?.loanType) {
           errors.push('Loan type is required');
         }
         break;
 
-      case 2: // Financial Details
+      case 2: // Applicant Information
+        if (!application.applicantDetails?.firstName?.trim()) {
+          errors.push('First name is required');
+        }
+        if (!application.applicantDetails?.lastName?.trim()) {
+          errors.push('Last name is required');
+        }
+        if (!application.applicantDetails?.emailAddress?.trim()) {
+          errors.push('Email address is required');
+        }
+        if (!application.applicantDetails?.mobileNumber?.trim()) {
+          errors.push('Mobile number is required');
+        }
+        if (!application.applicantDetails?.panNumber?.trim()) {
+          errors.push('PAN number is required');
+        }
+        if (!application.applicantDetails?.aadharNumber?.trim()) {
+          errors.push('Aadhar number is required');
+        }
+        break;
+
+      case 3: // Financial Details
         if (!application.financialDetails?.employmentType) {
           errors.push('Employment type is required');
         }
@@ -872,7 +904,7 @@ export class LoanApplicationService {
         }
         break;
 
-      case 3: // Documents
+      case 4: // Documents
         const requiredDocs = this.getRequiredDocuments(application.basicDetails?.loanType || '');
         const requiredTypes = requiredDocs.filter(d => d.required).map(d => d.documentType);
         const uploadedTypes = application.documents?.map(d => d.documentType) || [];
@@ -885,12 +917,15 @@ export class LoanApplicationService {
         });
         break;
 
-      case 4: // Declarations
+      case 5: // Declarations
         if (!application.declarations?.kycConsent) {
           errors.push('KYC consent is required');
         }
         if (!application.declarations?.creditBureauConsent) {
           errors.push('Credit bureau consent is required');
+        }
+        if (!application.declarations?.bankStatementConsent) {
+          errors.push('Bank statement consent is required');
         }
         if (!application.declarations?.termsAccepted) {
           errors.push('Terms and conditions must be accepted');
@@ -898,6 +933,10 @@ export class LoanApplicationService {
         if (!application.declarations?.privacyPolicyAccepted) {
           errors.push('Privacy policy must be accepted');
         }
+        break;
+
+      case 6: // Review & Submit
+        // No validation errors for review step
         break;
     }
 

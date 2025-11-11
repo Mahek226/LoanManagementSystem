@@ -34,16 +34,6 @@
           </div>
         </div>
 
-        <!-- Priority Filter -->
-        <div class="col-md-2">
-          <select class="form-select" [(ngModel)]="selectedPriority" (ngModelChange)="onFilterChange()">
-            <option value="all">All Priorities</option>
-            <option value="URGENT">Urgent</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
-        </div>
 
         <!-- Risk Level Filter -->
         <div class="col-md-2">
@@ -96,14 +86,19 @@
             <select class="form-select" [(ngModel)]="sortBy" (ngModelChange)="onSortChange()">
               <option value="assignedAt">Date</option>
               <option value="loanAmount">Amount</option>
-              <option value="riskScore">Risk Score</option>
-              <option value="priority">Priority</option>
             </select>
             <button class="btn btn-outline-secondary" (click)="toggleSortOrder()">
               <i class="fas" [class.fa-sort-amount-down]="sortOrder === 'desc'" 
                  [class.fa-sort-amount-up]="sortOrder === 'asc'"></i>
             </button>
           </div>
+        </div>
+        
+        <!-- Page Size -->
+        <div class="col-md-2">
+          <select class="form-select" [(ngModel)]="itemsPerPage" (ngModelChange)="onPageSizeChange()">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} per page</option>
+          </select>
         </div>
       </div>
 
@@ -113,9 +108,6 @@
         <span class="badge bg-secondary" *ngIf="searchQuery">
           Search: {{ searchQuery }}
           <i class="fas fa-times ms-1" (click)="searchQuery = ''; onSearchChange()" style="cursor: pointer;"></i>
-        </span>
-        <span class="badge bg-secondary" *ngIf="selectedPriority !== 'all'">
-          Priority: {{ selectedPriority }}
         </span>
         <span class="badge bg-secondary" *ngIf="selectedRiskLevel !== 'all'">
           Risk: {{ selectedRiskLevel }}
@@ -130,7 +122,7 @@
           Fraud Flag: {{ selectedFraudFlag }}
         </span>
         <button class="btn btn-sm btn-link text-danger" 
-                *ngIf="searchQuery || selectedPriority !== 'all' || selectedRiskLevel !== 'all' || selectedStatus !== 'all' || selectedLoanType !== 'all' || selectedFraudFlag !== 'all'"
+                *ngIf="searchQuery || selectedRiskLevel !== 'all' || selectedStatus !== 'all' || selectedLoanType !== 'all' || selectedFraudFlag !== 'all'"
                 (click)="clearFilters()">
           Clear All
         </button>
@@ -141,7 +133,7 @@
   <!-- View Toggle and Results Count -->
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
-      <span class="text-muted">Showing {{ filteredEscalations.length }} of {{ escalations.length }} escalations</span>
+      <span class="text-muted">{{ getPaginationInfo() }}</span>
     </div>
     <div class="btn-group" role="group">
       <button class="btn btn-sm" 
@@ -185,18 +177,13 @@
   </div>
 
   <!-- Grid View -->
-  <div *ngIf="!loading && !errorMessage && filteredEscalations.length > 0 && viewMode === 'grid'" 
+  <div *ngIf="!loading && !errorMessage && paginatedEscalations.length > 0 && viewMode === 'grid'" 
        class="row g-4">
-    <div class="col-lg-6 col-xl-4" *ngFor="let escalation of filteredEscalations">
+    <div class="col-lg-6 col-xl-4" *ngFor="let escalation of paginatedEscalations">
       <div class="card card-custom escalation-card">
         <div class="card-body">
-          <!-- Priority Badge -->
-          <div class="d-flex align-items-start justify-content-between mb-3">
-            <span class="priority-badge" 
-                  [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
-              <i class="fas fa-exclamation-circle me-1"></i>
-              {{ getPriorityLevel(escalation) }}
-            </span>
+          <!-- Risk Level Badge -->
+          <div class="d-flex align-items-start justify-content-end mb-3">
             <span [class]="getRiskBadgeClass(escalation.riskLevel)">
               {{ escalation.riskLevel }}
             </span>
@@ -218,42 +205,6 @@
             <div class="d-flex justify-content-between mb-2">
               <span class="text-muted">Amount:</span>
               <span class="fw-semibold text-danger">{{ formatCurrency(escalation.loanAmount) }}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Risk Score:</span>
-              <span class="fw-semibold">{{ escalation.riskScore }}/100</span>
-            </div>
-          </div>
-
-          <!-- Risk Progress Bar -->
-          <div class="mb-3">
-            <div class="d-flex justify-content-between small mb-1">
-              <span class="text-muted">Risk Level</span>
-              <span class="fw-semibold">{{ escalation.riskScore }}%</span>
-            </div>
-            <div class="progress" style="height: 8px;">
-              <div class="progress-bar" 
-                   [class.bg-success]="escalation.riskLevel === 'LOW'"
-                   [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
-                   [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
-                   [style.width.%]="escalation.riskScore"
-                   role="progressbar"></div>
-            </div>
-          </div>
-
-          <!-- Fraud Flags -->
-          <div class="mb-3" *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0">
-            <h6 class="text-danger mb-2">
-              <i class="fas fa-flag me-1"></i>
-              Fraud Flags ({{ escalation.fraudIndicators.length }})
-            </h6>
-            <div class="d-flex flex-wrap gap-1">
-              <span class="badge bg-danger-subtle text-danger border border-danger" 
-                    *ngFor="let flag of escalation.fraudIndicators" 
-                    [title]="flag">
-                <i class="fas fa-exclamation-triangle me-1"></i>
-                {{ flag }}
-              </span>
             </div>
           </div>
 
@@ -280,32 +231,23 @@
   </div>
 
   <!-- List View -->
-  <div *ngIf="!loading && !errorMessage && filteredEscalations.length > 0 && viewMode === 'list'" 
+  <div *ngIf="!loading && !errorMessage && paginatedEscalations.length > 0 && viewMode === 'list'" 
        class="card card-custom">
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead>
           <tr>
-            <th>Priority</th>
             <th>Applicant</th>
             <th>Loan Type</th>
             <th>Amount</th>
             <th>Risk Level</th>
-            <th>Risk Score</th>
-            <th>Fraud Flags</th>
             <th>Status</th>
             <th>Escalated At</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let escalation of filteredEscalations" class="escalation-row">
-            <td>
-              <span class="priority-badge" 
-                    [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
-                {{ getPriorityLevel(escalation) }}
-              </span>
-            </td>
+          <tr *ngFor="let escalation of paginatedEscalations" class="escalation-row">
             <td>
               <div class="fw-semibold">{{ escalation.applicantName }}</div>
               <small class="text-muted">ID: {{ escalation.applicantId }}</small>
@@ -316,38 +258,6 @@
               <span [class]="getRiskBadgeClass(escalation.riskLevel)">
                 {{ escalation.riskLevel }}
               </span>
-            </td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <span class="fw-semibold">{{ escalation.riskScore }}</span>
-                <div class="progress flex-grow-1" style="height: 6px; min-width: 60px;">
-                  <div class="progress-bar" 
-                       [class.bg-success]="escalation.riskLevel === 'LOW'"
-                       [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
-                       [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
-                       [style.width.%]="escalation.riskScore"></div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0; else noFlags">
-                <div class="d-flex flex-wrap gap-1" style="max-width: 200px;">
-                  <span class="badge bg-danger-subtle text-danger border border-danger small" 
-                        *ngFor="let flag of escalation.fraudIndicators.slice(0, 2)" 
-                        [title]="flag">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    {{ flag.length > 15 ? (flag | slice:0:15) + '...' : flag }}
-                  </span>
-                  <span class="badge bg-secondary small" 
-                        *ngIf="escalation.fraudIndicators.length > 2"
-                        [title]="'Total ' + escalation.fraudIndicators.length + ' flags'">
-                    +{{ escalation.fraudIndicators.length - 2 }} more
-                  </span>
-                </div>
-              </div>
-              <ng-template #noFlags>
-                <span class="text-muted small">No flags</span>
-              </ng-template>
             </td>
             <td>
               <span [class]="getStatusBadgeClass(escalation.status)">
@@ -368,5 +278,31 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && !errorMessage && filteredEscalations.length > 0" class="d-flex justify-content-between align-items-center mt-4">
+    <div class="text-muted small">
+      {{ getPaginationInfo() }}
+    </div>
+    <nav aria-label="Escalations pagination">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="previousPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+        </li>
+        <li class="page-item" 
+            *ngFor="let page of getPageNumbers()" 
+            [class.active]="page === currentPage">
+          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
   </div>
 </div>

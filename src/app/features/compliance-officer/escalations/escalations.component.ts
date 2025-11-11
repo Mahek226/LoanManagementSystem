@@ -14,11 +14,18 @@ import { ComplianceOfficerService, ComplianceEscalation } from '../../../core/se
 export class EscalationsComponent implements OnInit {
   escalations: ComplianceEscalation[] = [];
   filteredEscalations: ComplianceEscalation[] = [];
+  paginatedEscalations: ComplianceEscalation[] = [];
   loading: boolean = true;
   errorMessage: string = '';
 
   // View mode
   viewMode: 'grid' | 'list' = 'grid';
+
+  // Pagination
+  currentPage: number = 1;
+  itemsPerPage: number = 10;
+  totalPages: number = 0;
+  pageSizeOptions: number[] = [5, 10, 15, 20, 25];
 
   // Filters
   searchQuery: string = '';
@@ -134,6 +141,7 @@ export class EscalationsComponent implements OnInit {
     });
 
     this.filteredEscalations = filtered;
+    this.updatePagination();
   }
 
   onSearchChange(): void {
@@ -166,7 +174,71 @@ export class EscalationsComponent implements OnInit {
     this.selectedFraudFlag = 'all';
     this.sortBy = 'assignedAt';
     this.sortOrder = 'desc';
+    this.currentPage = 1;
     this.applyFilters();
+  }
+
+  // Pagination methods
+  updatePagination(): void {
+    this.totalPages = Math.ceil(this.filteredEscalations.length / this.itemsPerPage);
+    if (this.currentPage > this.totalPages && this.totalPages > 0) {
+      this.currentPage = this.totalPages;
+    }
+    this.updatePaginatedData();
+  }
+
+  updatePaginatedData(): void {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    this.paginatedEscalations = this.filteredEscalations.slice(startIndex, endIndex);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePaginatedData();
+    }
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePaginatedData();
+    }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updatePaginatedData();
+    }
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  getPaginationInfo(): string {
+    const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.currentPage * this.itemsPerPage, this.filteredEscalations.length);
+    return `Showing ${start}-${end} of ${this.filteredEscalations.length} escalations`;
   }
 
   exportToCSV(): void {
@@ -174,7 +246,12 @@ export class EscalationsComponent implements OnInit {
   }
 
   formatCurrency(amount: number): string {
-    return this.complianceService.formatCurrency(amount);
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   }
 
   formatDate(dateString: string): string {

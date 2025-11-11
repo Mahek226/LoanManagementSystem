@@ -6,6 +6,9 @@
 /* Import Bootstrap CSS */
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
+/* Import Micro-interactions */
+@import './styles/micro-interactions.css';
+
 /* Theme Variables */
 :root {
   /* Light Theme */
