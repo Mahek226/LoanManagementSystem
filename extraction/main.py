@@ -386,7 +386,7 @@ async def extract_document(
     annotated_path = None
 
     # Step 9: ❌ Skip DB save of extracted fields for now
-    print("⚠️ Skipping extracted field database save — returning JSON only")
+    # print("⚠️ Skipping extracted field database save — returning JSON only")
 
     # Step 10: Return JSON
     return JSONResponse({
