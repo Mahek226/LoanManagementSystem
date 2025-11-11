@@ -29,6 +29,12 @@ export interface LoanScreeningResponse {
   complianceVerdictTimestamp?: string;
   nextAction?: string; // What the loan officer should do next
   hasComplianceVerdict?: boolean; // Flag to indicate if compliance review is complete
+  // Document verification status
+  documentsVerified?: boolean; // Flag to indicate if all required documents are verified
+  documentVerificationStatus?: string; // PENDING, VERIFIED, REJECTED, PARTIAL
+  totalDocuments?: number; // Total number of required documents
+  verifiedDocuments?: number; // Number of verified documents
+  rejectedDocuments?: number; // Number of rejected documents
 }
 
 export interface LoanScreeningRequest {
@@ -415,6 +421,18 @@ export class LoanOfficerService {
   // Get loan documents for verification
   getLoanDocuments(loanId: number): Observable<LoanDocument[]> {
     return this.http.get<LoanDocument[]>(`${this.apiUrl}/loan/${loanId}/documents`);
+  }
+
+  // Check document verification status for a loan
+  getDocumentVerificationStatus(loanId: number): Observable<{
+    documentsVerified: boolean;
+    documentVerificationStatus: string;
+    totalDocuments: number;
+    verifiedDocuments: number;
+    rejectedDocuments: number;
+    pendingDocuments: number;
+  }> {
+    return this.http.get<any>(`${this.apiUrl}/loan/${loanId}/document-verification-status`);
   }
 
   // Verify document

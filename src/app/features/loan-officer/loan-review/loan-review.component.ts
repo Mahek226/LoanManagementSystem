@@ -90,9 +90,10 @@ export class LoanReviewComponent implements OnInit {
       }
     });
     
-    // Check for viewMode query parameter
+    // Check for viewMode and tab query parameters
     this.route.queryParams.subscribe(params => {
       this.viewMode = params['viewMode'] || 'screening';
+      this.activeTab = params['tab'] || 'overview';
     });
   }
 
