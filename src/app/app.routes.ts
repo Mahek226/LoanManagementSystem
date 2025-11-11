@@ -5,11 +5,14 @@ import { guestGuard } from '@core/guards/guest.guard';
 import { APP_CONSTANTS } from '@core/constants/app.constants';
 
 export const routes: Routes = [
-  // Default route - redirect to login
+  // Landing page route
   {
     path: '',
-    redirectTo: 'auth/login',
-    pathMatch: 'full'
+    loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent)
+  },
+  {
+    path: 'home',
+    loadComponent: () => import('./features/landing/landing.component').then(m => m.LandingComponent)
   },
 
   // Auth routes (accessible only to guests)

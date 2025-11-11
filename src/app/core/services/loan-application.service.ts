@@ -604,8 +604,16 @@ export class LoanApplicationService {
     
     return this.http.post(`${this.API_URL}/loan-applications/submit-for-existing-applicant`, comprehensiveDTO).pipe(
       tap((response: any) => {
+        console.log('Backend response:', response);
+        
+        // Validate loan ID is present
+        const loanId = response?.loanId || response?.data?.loanId;
+        if (!loanId) {
+          console.error('ERROR: Backend did not return loan ID:', response);
+          throw new Error('Loan ID missing from backend response');
+        }
+        
         // Show success toast
-        const loanId = response?.loanId || response?.data?.loanId || 'N/A';
         this.toastService.showLoanToast('submitted', loanId.toString(), 'We will review your application and get back to you soon.');
         
         // Clear draft after successful submission

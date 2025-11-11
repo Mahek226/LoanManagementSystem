@@ -868,8 +868,19 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       next: (response) => {
         console.log('Loan submission response:', response);
         
+        // Validate loan ID is present
+        const loanId = response.loanId || response.applicationId;
+        if (!loanId) {
+          console.error('ERROR: Loan ID is missing from response:', response);
+          this.toastService.showError(
+            'Submission Error', 
+            'Loan application was processed but loan ID is missing. Please contact support with this error.'
+          );
+          this.submitting = false;
+          return;
+        }
+        
         // Show loan submission success toast
-        const loanId = response.loanId || response.applicationId || 'N/A';
         this.toastService.showSuccess(
           '🎉 Application Submitted!', 
           `Your loan application #${loanId} has been submitted successfully. You will receive updates via email.`,
