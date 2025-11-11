@@ -1345,35 +1345,63 @@
         </div>
       </div>
 
+      <!-- Auto-save Indicator -->
+      <div class="auto-save-indicator mb-3 text-center" *ngIf="currentDraftId">
+        <small class="text-muted">
+          <i class="fas fa-save me-1 text-success"></i>
+          Auto-saving enabled - Your progress is being saved automatically
+        </small>
+      </div>
+
       <!-- Navigation Buttons -->
       <div class="form-navigation">
-        <button 
-          *ngIf="currentStep > 1" 
-          type="button" 
-          class="btn btn-secondary" 
-          (click)="previousStep()"
-        >
-          ← Back
-        </button>
-        
-        <button 
-          *ngIf="currentStep < totalSteps" 
-          type="button" 
-          class="btn btn-primary" 
-          (click)="nextStep()"
-        >
-          Next →
-        </button>
-        
-        <button 
-          *ngIf="currentStep === totalSteps" 
-          type="button" 
-          class="btn btn-success" 
-          (click)="submitApplication()"
-          [disabled]="!isAllFormsValid()"
-        >
-          Submit Application
-        </button>
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <!-- Left side buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              *ngIf="currentStep > 1" 
+              type="button" 
+              class="btn btn-secondary" 
+              (click)="previousStep()"
+            >
+              <i class="fas fa-arrow-left me-1"></i> Back
+            </button>
+          </div>
+          
+          <!-- Center - Save as Draft button -->
+          <div>
+            <button 
+              type="button" 
+              class="btn btn-outline-warning" 
+              (click)="saveAsDraft()"
+              title="Save your progress and continue later"
+            >
+              <i class="fas fa-save me-1"></i> Save as Draft
+            </button>
+          </div>
+          
+          <!-- Right side buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              *ngIf="currentStep < totalSteps" 
+              type="button" 
+              class="btn btn-primary" 
+              (click)="nextStep()"
+            >
+              Next <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+            
+            <button 
+              *ngIf="currentStep === totalSteps" 
+              type="button" 
+              class="btn btn-success" 
+              (click)="submitApplication()"
+              [disabled]="!isAllFormsValid()"
+            >
+              <i class="fas fa-paper-plane me-1"></i> Submit Application
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, LoanApplication, DashboardStats } from '@core/services/applicant.service';
+import { DraftService, DraftApplication } from '@core/services/draft.service';
 
 Chart.register(...registerables);
 
@@ -26,6 +27,8 @@ export class EnhancedDashboardComponent implements OnInit, AfterViewInit, OnDest
   stats: DashboardStats | null = null;
   applications: LoanApplication[] = [];
   recentApplications: LoanApplication[] = [];
+  draftApplications: DraftApplication[] = [];
+  showDrafts = true;
   
   private statusChart: Chart | null = null;
   private amountChart: Chart | null = null;
@@ -33,6 +36,7 @@ export class EnhancedDashboardComponent implements OnInit, AfterViewInit, OnDest
   constructor(
     private authService: AuthService,
     private applicantService: ApplicantService,
+    private draftService: DraftService,
     public router: Router
   ) {
     const user = this.authService.currentUserValue;
@@ -44,6 +48,7 @@ export class EnhancedDashboardComponent implements OnInit, AfterViewInit, OnDest
 
   ngOnInit(): void {
     this.loadDashboardData();
+    this.loadDraftApplications();
   }
 
   ngAfterViewInit(): void {
@@ -207,6 +212,14 @@ export class EnhancedDashboardComponent implements OnInit, AfterViewInit, OnDest
   }
 
   applyForLoan(): void {
+    // Check if there are existing drafts
+    if (this.draftApplications.length > 0) {
+      const resume = confirm(`You have ${this.draftApplications.length} incomplete application(s). Would you like to resume the latest one or start a new application?`);
+      if (resume) {
+        this.resumeDraft(this.draftApplications[0].id);
+        return;
+      }
+    }
     this.router.navigate(['/applicant/apply-loan']);
   }
 
@@ -220,5 +233,55 @@ export class EnhancedDashboardComponent implements OnInit, AfterViewInit, OnDest
 
   logout(): void {
     this.authService.logout();
+  }
+
+  // Draft Applications Methods
+  loadDraftApplications(): void {
+    this.draftApplications = this.draftService.getDraftsByApplicant(this.applicantId);
+  }
+
+  resumeDraft(draftId: string): void {
+    this.router.navigate(['/applicant/apply-loan'], { queryParams: { draftId: draftId } });
+  }
+
+  deleteDraft(draftId: string): void {
+    if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
+      this.draftService.deleteDraft(draftId);
+      this.loadDraftApplications();
+    }
+  }
+
+  getTimeSinceLastSaved(lastSaved: string): string {
+    return this.draftService.getTimeSinceLastSaved(lastSaved);
+  }
+
+  getStepName(step: number): string {
+    return this.draftService.getStepName(step);
+  }
+
+  toggleDraftsVisibility(): void {
+    this.showDrafts = !this.showDrafts;
+  }
+
+  clearAllDrafts(): void {
+    if (confirm('Are you sure you want to delete all drafts? This action cannot be undone.')) {
+      this.draftService.clearAllDrafts();
+      this.loadDraftApplications();
+    }
+  }
+
+  // Debug methods
+  checkLocalStorage(): void {
+    const allDrafts = this.draftService.getDrafts();
+    console.log('All drafts in localStorage:', allDrafts);
+    console.log('Current applicant ID:', this.applicantId);
+    console.log('Drafts for this applicant:', this.draftService.getDraftsByApplicant(this.applicantId));
+    
+    // Show alert with debug info
+    alert(`Debug Info:\n` +
+          `Total drafts in storage: ${allDrafts.length}\n` +
+          `Applicant ID: ${this.applicantId}\n` +
+          `Drafts for this applicant: ${this.draftApplications.length}\n` +
+          `Check console for detailed logs`);
   }
 }

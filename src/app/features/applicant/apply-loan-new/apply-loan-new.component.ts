@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, ApplicantProfile } from '@core/services/applicant.service';
+import { DraftService, DraftApplication } from '@core/services/draft.service';
 import { ToastService } from '@core/services/toast.service';
 import { FormValidators } from '@core/validators/form-validators';
 import { 
@@ -62,7 +63,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // Draft functionality
   isDraftSaving: boolean = false;
   draftSaved: boolean = false;
-  draftKey: string = '';
+  currentDraftId: string = '';
   autoSaveInterval: any;
   
   // Subscriptions
@@ -82,6 +83,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private applicantService: ApplicantService,
     private loanApplicationService: LoanApplicationService,
+    private draftService: DraftService,
     private toastService: ToastService
   ) {
     const user = this.authService.currentUserValue;
@@ -105,9 +107,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.autoSaveInterval) {
-      clearInterval(this.autoSaveInterval);
-    }
+    this.clearAutoSave();
   }
 
   // ==================== Initialization ====================
@@ -973,7 +973,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   cancelApplication(): void {
     if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
-      this.loanApplicationService.clearDraft();
+      this.clearSavedData();
       this.router.navigate(['/applicant/dashboard']);
     }
   }
@@ -1056,19 +1056,46 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // ==================== Draft Functionality ====================
 
   initializeDraftFunctionality(): void {
-    // Generate unique draft key for this user and session
-    this.draftKey = `loan_draft_${this.applicantId}_${Date.now()}`;
-    
-    // Load existing draft if available
-    this.loadDraft();
+    // Check for draft to resume from query params
+    this.checkForDraftToResume();
     
     // Set up auto-save every 30 seconds
-    this.autoSaveInterval = setInterval(() => {
-      this.autoSaveDraft();
-    }, 30000);
+    this.setupAutoSave();
 
     // Subscribe to form changes for auto-save
     this.subscribeToFormChanges();
+  }
+
+  checkForDraftToResume(): void {
+    const draftId = this.route.snapshot.queryParams['draftId'];
+    if (draftId) {
+      this.loadDraft(draftId);
+    } else {
+      // Check if user has existing drafts and prompt
+      const existingDrafts = this.draftService.getDraftsByApplicant(this.applicantId);
+      if (existingDrafts.length > 0) {
+        const latestDraft = existingDrafts[0];
+        const resume = confirm(`You have an incomplete application (${latestDraft.completionPercentage}% complete). Would you like to resume it?`);
+        if (resume) {
+          this.loadDraft(latestDraft.id);
+        }
+      }
+    }
+  }
+
+  setupAutoSave(): void {
+    this.autoSaveInterval = setInterval(() => {
+      if (this.hasFormData() && !this.isDraftSaving && !this.submitting) {
+        this.saveDraft();
+      }
+    }, 30000); // Auto-save every 30 seconds
+  }
+
+  clearAutoSave(): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
   }
 
   subscribeToFormChanges(): void {
@@ -1085,13 +1112,6 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         const subscription = form.valueChanges.subscribe(() => {
           // Reset draft saved status when form changes
           this.draftSaved = false;
-          
-          // Auto-save after 2 seconds of inactivity
-          setTimeout(() => {
-            if (!this.draftSaved && !this.isDraftSaving) {
-              this.autoSaveDraft();
-            }
-          }, 2000);
         });
         this.subscriptions.push(subscription);
       }
@@ -1099,15 +1119,25 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   }
 
   saveDraft(): void {
-    if (this.isDraftSaving) return;
+    if (this.isDraftSaving || !this.hasFormData()) return;
     
     this.isDraftSaving = true;
     
     try {
-      const draftData = this.collectDraftData();
+      const formData = this.collectFormData();
+      const completionPercentage = this.calculateCompletionPercentage();
       
-      // Save to localStorage
-      localStorage.setItem(this.draftKey, JSON.stringify(draftData));
+      const draftData = {
+        id: this.currentDraftId || undefined,
+        applicantId: this.applicantId,
+        currentStep: this.currentStep,
+        totalSteps: this.totalSteps,
+        completionPercentage: completionPercentage,
+        selectedLoanType: this.selectedLoanType,
+        formData: formData
+      };
+      
+      this.currentDraftId = this.draftService.saveDraft(draftData);
       
       this.draftSaved = true;
       this.success = 'Draft saved successfully!';
@@ -1128,123 +1158,75 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     }
   }
 
-  autoSaveDraft(): void {
-    if (this.isDraftSaving || this.submitting) return;
-    
-    // Only auto-save if there's meaningful data
-    if (this.hasFormData()) {
-      this.isDraftSaving = true;
-      
-      try {
-        const draftData = this.collectDraftData();
-        localStorage.setItem(this.draftKey, JSON.stringify(draftData));
-        this.draftSaved = true;
-      } catch (error) {
-        console.error('Auto-save failed:', error);
-      } finally {
-        this.isDraftSaving = false;
-      }
-    }
+  saveAsDraft(): void {
+    this.saveDraft();
+    // Use success message instead of toast service
+    this.success = 'Draft saved successfully! You can resume this application later from your dashboard.';
+    setTimeout(() => {
+      this.success = '';
+    }, 5000);
   }
 
-  loadDraft(): void {
+  loadDraft(draftId: string): void {
     try {
-      // Try to load from current session first
-      const savedDraft = localStorage.getItem(this.draftKey);
-      
-      if (savedDraft) {
-        const draftData = JSON.parse(savedDraft);
-        this.restoreDraftData(draftData);
-        return;
-      }
-
-      // Try to load any existing draft for this user
-      const allKeys = Object.keys(localStorage);
-      const userDraftKeys = allKeys.filter(key => 
-        key.startsWith(`loan_draft_${this.applicantId}_`)
-      );
-
-      if (userDraftKeys.length > 0) {
-        // Load the most recent draft
-        const mostRecentKey = userDraftKeys.sort().reverse()[0];
-        const draftData = JSON.parse(localStorage.getItem(mostRecentKey) || '{}');
-        this.draftKey = mostRecentKey;
-        this.restoreDraftData(draftData);
+      const draft = this.draftService.getDraft(draftId);
+      if (draft) {
+        this.currentDraftId = draftId;
+        this.restoreDraftData(draft);
+        this.success = 'Draft loaded successfully!';
+        setTimeout(() => {
+          this.success = '';
+        }, 3000);
       }
     } catch (error) {
       console.error('Error loading draft:', error);
+      this.error = 'Failed to load draft.';
     }
   }
 
-  collectDraftData(): any {
+  collectFormData(): any {
     return {
-      currentStep: this.currentStep,
-      basicDetails: this.basicDetailsForm?.value || {},
-      applicantDetails: this.applicantDetailsForm?.value || {},
-      financialDetails: this.financialDetailsForm?.value || {},
-      declarations: this.declarationsForm?.value || {},
-      selectedLoanType: this.selectedLoanType,
-      uploadedDocuments: this.uploadedDocuments.map(doc => ({
-        documentType: doc.documentType,
-        fileName: doc.fileName,
-        fileSize: doc.fileSize,
-        uploadedAt: doc.uploadedAt
-      })),
-      timestamp: new Date().toISOString()
+      loanTypeForm: { loanType: this.selectedLoanType },
+      personalDetailsForm: this.applicantDetailsForm?.value || {},
+      loanDetailsForm: this.basicDetailsForm?.value || {},
+      financialDetailsForm: this.financialDetailsForm?.value || {},
+      documentsForm: { uploadedDocuments: this.uploadedDocuments || [] }
     };
   }
 
-  restoreDraftData(draftData: any): void {
-    if (!draftData) return;
+  restoreDraftData(draft: DraftApplication): void {
+    if (!draft || !draft.formData) return;
 
     try {
       // Restore current step
-      if (draftData.currentStep) {
-        this.currentStep = draftData.currentStep;
-      }
-
+      this.currentStep = draft.currentStep;
+      
       // Restore selected loan type
-      if (draftData.selectedLoanType) {
-        this.selectedLoanType = draftData.selectedLoanType;
+      if (draft.selectedLoanType) {
+        this.selectedLoanType = draft.selectedLoanType;
       }
 
       // Restore form data
-      if (draftData.basicDetails && this.basicDetailsForm) {
-        this.basicDetailsForm.patchValue(draftData.basicDetails);
+      const formData = draft.formData;
+      
+      if (formData.loanDetailsForm && this.basicDetailsForm) {
+        this.basicDetailsForm.patchValue(formData.loanDetailsForm);
       }
 
-      if (draftData.applicantDetails && this.applicantDetailsForm) {
-        this.applicantDetailsForm.patchValue(draftData.applicantDetails);
+      if (formData.personalDetailsForm && this.applicantDetailsForm) {
+        this.applicantDetailsForm.patchValue(formData.personalDetailsForm);
       }
 
-      if (draftData.financialDetails && this.financialDetailsForm) {
-        this.financialDetailsForm.patchValue(draftData.financialDetails);
+      if (formData.financialDetailsForm && this.financialDetailsForm) {
+        this.financialDetailsForm.patchValue(formData.financialDetailsForm);
       }
 
-      if (draftData.declarations && this.declarationsForm) {
-        this.declarationsForm.patchValue(draftData.declarations);
+      if (formData.documentsForm && formData.documentsForm.uploadedDocuments) {
+        this.uploadedDocuments = formData.documentsForm.uploadedDocuments;
       }
-
-      // Restore uploaded documents info (files themselves can't be restored)
-      if (draftData.uploadedDocuments) {
-        // Show info about previously uploaded documents
-        this.showDraftDocumentsInfo(draftData.uploadedDocuments);
-      }
-
-      this.success = 'Draft loaded successfully!';
-      setTimeout(() => {
-        this.success = '';
-      }, 3000);
 
     } catch (error) {
       console.error('Error restoring draft data:', error);
-    }
-  }
-
-  showDraftDocumentsInfo(documents: any[]): void {
-    if (documents && documents.length > 0) {
-      const docInfo = documents.map(doc => doc.fileName).join(', ');
-      this.success = `Draft loaded with ${documents.length} document(s): ${docInfo}`;
     }
   }
 
@@ -1264,31 +1246,66 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     );
   }
 
-  clearDraft(): void {
-    try {
-      localStorage.removeItem(this.draftKey);
-      this.draftSaved = false;
-      this.success = 'Draft cleared successfully!';
-      setTimeout(() => {
-        this.success = '';
-      }, 3000);
-    } catch (error) {
-      console.error('Error clearing draft:', error);
+  clearSavedData(): void {
+    if (this.currentDraftId) {
+      this.draftService.deleteDraft(this.currentDraftId);
+      this.currentDraftId = '';
     }
+    this.draftSaved = false;
   }
 
   getDraftInfo(): string {
-    try {
-      const savedDraft = localStorage.getItem(this.draftKey);
-      if (savedDraft) {
-        const draftData = JSON.parse(savedDraft);
-        const timestamp = new Date(draftData.timestamp);
-        return `Last saved: ${timestamp.toLocaleString()}`;
+    if (this.currentDraftId) {
+      const draft = this.draftService.getDraft(this.currentDraftId);
+      if (draft) {
+        return `Last saved: ${this.draftService.getTimeSinceLastSaved(draft.lastSaved)}`;
       }
-    } catch (error) {
-      console.error('Error getting draft info:', error);
     }
     return '';
+  }
+
+  calculateCompletionPercentage(): number {
+    let filledFields = 0;
+    let totalFields = 0;
+
+    // Count basic details form fields
+    if (this.basicDetailsForm) {
+      const basicValues = this.basicDetailsForm.value;
+      Object.keys(basicValues).forEach(key => {
+        totalFields++;
+        if (basicValues[key] && basicValues[key] !== '' && basicValues[key] !== 0) {
+          filledFields++;
+        }
+      });
+    }
+
+    // Count applicant details form fields
+    if (this.applicantDetailsForm) {
+      const applicantValues = this.applicantDetailsForm.value;
+      Object.keys(applicantValues).forEach(key => {
+        totalFields++;
+        if (applicantValues[key] && applicantValues[key] !== '' && applicantValues[key] !== 0) {
+          filledFields++;
+        }
+      });
+    }
+
+    // Count financial details form fields
+    if (this.financialDetailsForm) {
+      const financialValues = this.financialDetailsForm.value;
+      Object.keys(financialValues).forEach(key => {
+        totalFields++;
+        if (financialValues[key] && financialValues[key] !== '' && financialValues[key] !== 0) {
+          filledFields++;
+        }
+      });
+    }
+
+    // Add step completion bonus
+    const stepBonus = (this.currentStep - 1) * 10;
+    const fieldPercentage = totalFields > 0 ? (filledFields / totalFields) * 70 : 0;
+    
+    return Math.min(100, Math.round(fieldPercentage + stepBonus));
   }
 
   clearApplicationData(): void {
@@ -1378,8 +1395,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.success = '';
 
     // Clear drafts and service state
-    this.loanApplicationService.clearDraft();
-    this.clearDraft();
+    this.clearSavedData();
     
     // Clear localStorage drafts for this user
     this.clearAllUserDrafts();

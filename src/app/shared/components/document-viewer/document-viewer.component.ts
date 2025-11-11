@@ -402,4 +402,38 @@ export class DocumentViewerComponent implements OnInit {
       };
     });
   }
+
+  /**
+   * Get document image URL from various possible properties
+   */
+  getDocumentImageUrl(): string {
+    if (!this.document) return 'assets/images/document-placeholder.png';
+    
+    // Try different possible URL properties
+    const possibleUrls = [
+      this.document.documentUrl,
+      this.document.cloudinaryUrl,
+      this.document.fileUrl,
+      this.document.url,
+      this.document.filePath,
+      this.document.path,
+      this.document.imageUrl
+    ];
+    
+    for (const url of possibleUrls) {
+      if (url && typeof url === 'string' && url.trim()) {
+        return url;
+      }
+    }
+    
+    return 'assets/images/document-placeholder.svg';
+  }
+
+  /**
+   * Handle image loading errors
+   */
+  onImageError(event: any): void {
+    console.warn('Failed to load document image:', this.document);
+    event.target.src = 'assets/images/document-placeholder.svg';
+  }
 }

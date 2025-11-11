@@ -123,8 +123,8 @@
         <div class="form-group">
           <label class="form-label">Security Verification</label>
           <div class="captcha-container">
-            <div class="math-captcha">
-              <div class="captcha-question">
+            <div class="math-captcha-inline">
+              <div class="captcha-question-inline">
                 <span class="question-text">{{ mathQuestion }}</span>
                 <button type="button" class="refresh-btn" (click)="refreshCaptcha()" title="Generate new question">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -138,7 +138,7 @@
               <input
                 type="number"
                 formControlName="captchaAnswer"
-                class="captcha-input"
+                class="captcha-input-inline"
                 [class.error]="submitted && f['captchaAnswer'].errors"
                 placeholder="Enter answer"
                 min="0"
@@ -152,11 +152,11 @@
 
         <!-- Remember Me & Forgot Password -->
         <div class="form-options">
-          <label class="checkbox-label">
+          <!-- <label class="checkbox-label">
             <input type="checkbox" class="checkbox-input">
             <span class="checkbox-custom"></span>
             Remember me
-          </label>
+          </label> -->
           <a [routerLink]="['/auth/forgot-password']" class="forgot-link">
             Forgot Password?
           </a>
@@ -179,17 +179,17 @@
       </form>
 
       <!-- Divider -->
-      <div class="divider">
+      <div class="divider-compact">
         <span>New to FraudShield?</span>
       </div>
 
       <!-- Register Link -->
       <div class="register-section">
         <a [routerLink]="['/auth/register']" class="register-btn">
-          Apply for Loan Account
+          Create New Account
         </a>
         <p class="register-note">
-          Create your account to start your loan application process
+          Join FraudShield to start your secure loan application journey
         </p>
       </div>
 

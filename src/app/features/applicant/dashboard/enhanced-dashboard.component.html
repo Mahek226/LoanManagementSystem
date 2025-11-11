@@ -193,6 +193,86 @@
     <div class="row">
       <!-- Active Applications & History -->
       <div class="col-lg-8 mb-4">
+        <!-- Draft Applications -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-edit me-2 text-warning"></i>Draft Applications
+              <span class="badge bg-warning text-dark ms-2">{{ draftApplications.length }}</span>
+            </h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-warning" (click)="toggleDraftsVisibility()">
+                <i class="fas" [class.fa-eye]="!showDrafts" [class.fa-eye-slash]="showDrafts"></i>
+                {{ showDrafts ? 'Hide' : 'Show' }}
+              </button>
+              <button class="btn btn-sm btn-outline-danger" (click)="clearAllDrafts()" *ngIf="draftApplications.length > 1">
+                <i class="fas fa-trash me-1"></i>Clear All
+              </button>
+            </div>
+          </div>
+          <div class="card-body" *ngIf="showDrafts">
+            <!-- No Drafts Message -->
+            <div *ngIf="draftApplications.length === 0" class="empty-state">
+              <i class="fas fa-edit"></i>
+              <p>No Draft Applications</p>
+              <small class="text-muted d-block mb-3">Start a new loan application and save it as draft to see it here.</small>
+              <button class="btn btn-warning btn-sm" (click)="navigateToLoanTypes()">
+                <i class="fas fa-plus me-1"></i>Start New Application
+              </button>
+            </div>
+            
+            <!-- Draft Cards -->
+            <div class="row g-3" *ngIf="draftApplications.length > 0">
+              <div class="col-md-6 col-xl-4" *ngFor="let draft of draftApplications">
+                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f39c12 !important;">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <h6 class="card-title mb-0 text-dark fw-bold">{{ draft.title }}</h6>
+                      <button class="btn btn-sm btn-outline-danger" (click)="deleteDraft(draft.id)" title="Delete Draft">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                    <p class="card-text small text-muted mb-2">{{ draft.description }}</p>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Progress</span>
+                        <span class="fw-bold text-warning">{{ draft.completionPercentage }}%</span>
+                      </div>
+                      <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-warning" 
+                             role="progressbar" 
+                             [style.width.%]="draft.completionPercentage"
+                             [attr.aria-valuenow]="draft.completionPercentage"
+                             aria-valuemin="0" 
+                             aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    
+                    <!-- Draft Info -->
+                    <div class="row g-2 mb-3">
+                      <div class="col-6">
+                        <small class="text-muted d-block">Current Step</small>
+                        <strong class="text-dark">{{ getStepName(draft.currentStep) }}</strong>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted d-block">Last Saved</small>
+                        <strong class="text-dark">{{ getTimeSinceLastSaved(draft.lastSaved) }}</strong>
+                      </div>
+                    </div>
+                    
+                    <!-- Action Button -->
+                    <button class="btn btn-warning w-100" (click)="resumeDraft(draft.id)">
+                      <i class="fas fa-play me-2"></i>Resume Application
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Active Applications -->
         <div class="card mb-4">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -228,6 +308,18 @@
                         {{ app.loanStatus }}
                       </span>
                     </div>
+                    
+                    <!-- Loan ID Display -->
+                    <div class="mb-2">
+                      <app-loan-id-display 
+                        [internalLoanId]="app.loanId"
+                        displayType="inline"
+                        size="small"
+                        label="Loan ID"
+                        [showCopyButton]="true">
+                      </app-loan-id-display>
+                    </div>
+                    
                     <h6 class="mb-1">{{ formatCurrency(app.loanAmount) }} for {{ app.loanTenure }} months</h6>
                     <small class="text-muted">
                       <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}

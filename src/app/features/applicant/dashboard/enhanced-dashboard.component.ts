@@ -3,12 +3,41 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, PreQualificationStatus, LoanApplication, ApplicantProfile, Notification } from '@core/services/applicant.service';
+import { DraftService, DraftApplication } from '@core/services/draft.service';
+
+// Document Resubmission Request Interface
+interface DocumentResubmissionRequest {
+  id: number;
+  loanId: number;
+  applicationId: string;
+  loanType: string;
+  documentType: string;
+  documentName: string;
+  rejectionReason: string;
+  requestedAt: string;
+  requestedBy: string; // Loan Officer name
+  status: 'PENDING' | 'RESUBMITTED' | 'APPROVED';
+  dueDate: string;
+}
 import { Subscription } from 'rxjs';
+import { DashboardWidgetComponent } from '../../../shared/components/dashboard-widget/dashboard-widget.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
+import { ProgressStepperComponent, Step } from '../../../shared/components/progress-stepper/progress-stepper.component';
+import { LoanIdDisplayComponent } from '../../../shared/components/loan-id-display/loan-id-display.component';
+import { EnhancedNotificationService } from '../../../core/services/enhanced-notification.service';
+import { LoadingService } from '../../../core/services/loading.service';
 
 @Component({
   selector: 'app-enhanced-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    DashboardWidgetComponent, 
+    SkeletonLoaderComponent, 
+    ProgressStepperComponent,
+    LoanIdDisplayComponent
+  ],
   templateUrl: './enhanced-dashboard.component.html',
   styleUrls: ['./enhanced-dashboard.component.css']
 })
@@ -31,6 +60,14 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   unreadCount: number = 0;
   
+  // Draft Applications
+  draftApplications: DraftApplication[] = [];
+  showDrafts = true;
+  
+  // Document Resubmission Requests
+  documentResubmissionRequests: DocumentResubmissionRequest[] = [];
+  showResubmissionRequests = true;
+  
   // Loading states
   loading = {
     profile: true,
@@ -42,10 +79,19 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
   // Last updated timestamp
   lastUpdated: Date = new Date();
   
+  // Application progress steps
+  applicationSteps: Step[] = [];
+  
+  // Subscriptions
+  private subscriptions: Subscription[] = [];
+  
   constructor(
     private authService: AuthService,
     private applicantService: ApplicantService,
-    private router: Router
+    private draftService: DraftService,
+    private router: Router,
+    private notificationService: EnhancedNotificationService,
+    private loadingService: LoadingService
   ) {
     const user = this.authService.currentUserValue;
     this.userName = user?.firstName && user?.lastName 
@@ -55,11 +101,30 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.initializeApplicationSteps();
     this.loadDashboardData();
+    this.loadDraftApplications();
+    
+    // Show welcome notification for new users
+    setTimeout(() => {
+      if (this.applications.length === 0) {
+        this.notificationService.info(
+          'Welcome to FraudShield!',
+          'Complete your profile and start your loan application journey.',
+          {
+            action: {
+              label: 'Get Started',
+              callback: () => this.router.navigate(['/applicant/apply-loan'])
+            }
+          }
+        );
+      }
+    }, 2000);
   }
 
   ngOnDestroy(): void {
-    // Cleanup if needed
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.loadingService.stopAllLoading();
   }
 
   loadDashboardData(silent: boolean = false): void {
@@ -185,6 +250,42 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
   navigateToApplications(): void {
     this.router.navigate(['/applicant/applications']);
   }
+
+  // Draft Applications Methods
+  loadDraftApplications(): void {
+    this.draftApplications = this.draftService.getDraftsByApplicant(this.applicantId);
+  }
+
+  resumeDraft(draftId: string): void {
+    this.router.navigate(['/applicant/apply-loan'], { queryParams: { draftId: draftId } });
+  }
+
+  deleteDraft(draftId: string): void {
+    if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
+      this.draftService.deleteDraft(draftId);
+      this.loadDraftApplications();
+    }
+  }
+
+  getTimeSinceLastSaved(lastSaved: string): string {
+    return this.draftService.getTimeSinceLastSaved(lastSaved);
+  }
+
+  getStepName(step: number): string {
+    return this.draftService.getStepName(step);
+  }
+
+  toggleDraftsVisibility(): void {
+    this.showDrafts = !this.showDrafts;
+  }
+
+  clearAllDrafts(): void {
+    if (confirm('Are you sure you want to delete all drafts? This action cannot be undone.')) {
+      this.draftService.clearAllDrafts();
+      this.loadDraftApplications();
+    }
+  }
+
 
 
 
@@ -370,5 +471,116 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     link.download = `loan_applications_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  // Initialize application progress steps
+  initializeApplicationSteps(): void {
+    this.applicationSteps = [
+      {
+        id: 'profile',
+        title: 'Complete Profile',
+        description: 'Fill in your personal information',
+        icon: 'fa-user',
+        status: this.profile?.isEmailVerified ? 'completed' : 'active'
+      },
+      {
+        id: 'documents',
+        title: 'Upload Documents',
+        description: 'Submit required documents',
+        icon: 'fa-file-upload',
+        status: 'pending'
+      },
+      {
+        id: 'application',
+        title: 'Loan Application',
+        description: 'Fill out loan application form',
+        icon: 'fa-file-alt',
+        status: 'pending'
+      },
+      {
+        id: 'review',
+        title: 'Under Review',
+        description: 'Application being processed',
+        icon: 'fa-search',
+        status: 'pending'
+      },
+      {
+        id: 'approval',
+        title: 'Approval Decision',
+        description: 'Final decision on your application',
+        icon: 'fa-check-circle',
+        status: 'pending'
+      }
+    ];
+
+    // Update step statuses based on current applications
+    if (this.applications.length > 0) {
+      const latestApp = this.applications[0];
+      this.updateStepStatusBasedOnApplication(latestApp);
+    }
+  }
+
+  // Update step status based on application progress
+  private updateStepStatusBasedOnApplication(application: LoanApplication): void {
+    // Mark profile as completed if we have an application
+    this.applicationSteps[0].status = 'completed';
+    
+    // Update other steps based on application status
+    switch (application.loanStatus) {
+      case 'DRAFT':
+        this.applicationSteps[1].status = 'active';
+        break;
+      case 'SUBMITTED':
+      case 'PENDING':
+        this.applicationSteps[1].status = 'completed';
+        this.applicationSteps[2].status = 'completed';
+        this.applicationSteps[3].status = 'active';
+        break;
+      case 'UNDER_REVIEW':
+        this.applicationSteps[1].status = 'completed';
+        this.applicationSteps[2].status = 'completed';
+        this.applicationSteps[3].status = 'active';
+        break;
+      case 'APPROVED':
+        this.applicationSteps.forEach((step, index) => {
+          if (index < 4) step.status = 'completed';
+        });
+        this.applicationSteps[4].status = 'completed';
+        break;
+      case 'REJECTED':
+        this.applicationSteps.forEach((step, index) => {
+          if (index < 4) step.status = 'completed';
+        });
+        this.applicationSteps[4].status = 'error';
+        break;
+    }
+  }
+
+  // Handle step click for navigation
+  onStepClick(event: { step: Step; index: number }): void {
+    const { step } = event;
+    
+    switch (step.id) {
+      case 'profile':
+        this.router.navigate(['/applicant/profile']);
+        break;
+      case 'documents':
+        this.router.navigate(['/applicant/documents']);
+        break;
+      case 'application':
+        // Check if there are existing drafts
+        if (this.draftApplications.length > 0) {
+          const resume = confirm(`You have ${this.draftApplications.length} incomplete application(s). Would you like to resume the latest one or start a new application?`);
+          if (resume) {
+            this.resumeDraft(this.draftApplications[0].id);
+            return;
+          }
+        }
+        this.router.navigate(['/applicant/apply-loan']);
+        break;
+      case 'review':
+        this.router.navigate(['/applicant/applications']);
+        break;
+    }
   }
 }

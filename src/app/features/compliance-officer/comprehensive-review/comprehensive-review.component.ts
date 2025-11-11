@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { ComplianceOfficerService } from '../../../core/services/compliance-officer.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
+import { LoanIdDisplayComponent } from '../../../shared/components/loan-id-display/loan-id-display.component';
 import { 
   ComplianceEscalation, 
   ExternalFraudData,
@@ -18,7 +19,7 @@ import {
 @Component({
   selector: 'app-comprehensive-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, DocumentViewerComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DocumentViewerComponent, LoanIdDisplayComponent],
   templateUrl: './comprehensive-review.component.html',
   styleUrls: ['./comprehensive-review.component.css']
 })
@@ -42,6 +43,12 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   showScreeningDetailsModal = false;
   selectedDocument: any = null;
   extractedData: any = null;
+  
+  // Action tracking state
+  verdictSubmitted = false;
+  verdictSubmitting = false;
+  resubmissionRequested: Set<number> = new Set(); // Track which documents have resubmission requested
+  resubmissionSubmitting = false;
   
   // Document extraction state
   extracting = false;
@@ -89,7 +96,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
   
-  // ==================== Data Loading ====================
+  // ==================== Data Loading & Status Checking ====================
   
   loadComprehensiveData(): void {
     this.loading = true;
@@ -110,6 +117,9 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
         
         this.escalation = escalation;
         if (this.escalation) {
+          // Check if verdict has already been submitted
+          this.checkVerdictStatus();
+          
           this.loadExternalFraudData(this.escalation.applicantId);
           this.loadLoanDocuments(this.escalation.loanId);
           this.loadFraudFlags(this.escalation.applicantId, this.escalation.loanId);
@@ -156,6 +166,8 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     const docSub = this.complianceService.getLoanDocuments(loanId).subscribe({
       next: (documents) => {
         this.loanDocuments = documents;
+        // Check which documents already have resubmission requested
+        this.checkDocumentResubmissionStatus(documents);
       },
       error: (error) => {
         console.error('Error loading loan documents:', error);
@@ -164,6 +176,36 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     });
     
     this.subscriptions.push(docSub);
+  }
+  
+  /**
+   * Check if verdict has already been submitted for this assignment
+   */
+  checkVerdictStatus(): void {
+    if (this.escalation) {
+      // Check escalation status - if it's not PENDING, verdict has been submitted
+      this.verdictSubmitted = this.escalation.status !== 'PENDING';
+      console.log('Verdict status check:', {
+        assignmentId: this.assignmentId,
+        status: this.escalation.status,
+        verdictSubmitted: this.verdictSubmitted
+      });
+    }
+  }
+  
+  /**
+   * Check which documents already have resubmission requested
+   */
+  checkDocumentResubmissionStatus(documents: any[]): void {
+    documents.forEach(doc => {
+      if (doc.verificationStatus === 'RESUBMISSION_REQUESTED') {
+        this.resubmissionRequested.add(doc.documentId);
+      }
+    });
+    console.log('Document resubmission status check:', {
+      totalDocuments: documents.length,
+      resubmissionRequested: Array.from(this.resubmissionRequested)
+    });
   }
 
   loadFraudFlags(applicantId: number, loanId: number): void {
@@ -322,14 +364,27 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   // ==================== Document Viewing ====================
   
   viewDocument(document: any): void {
+    console.log('Opening document viewer for:', document);
+    console.log('Available document properties:', Object.keys(document));
+    console.log('Document URLs found:', {
+      documentUrl: document.documentUrl,
+      cloudinaryUrl: document.cloudinaryUrl,
+      fileUrl: document.fileUrl,
+      url: document.url,
+      filePath: document.filePath,
+      path: document.path,
+      imageUrl: document.imageUrl
+    });
+    
     this.selectedDocument = document;
     this.showDocumentModal = true;
     
-    // Load cached extraction data if available
-    if (this.extractionCache.has(document.documentId)) {
-      this.extractedData = this.extractionCache.get(document.documentId) || null;
-    } else if (this.hasExtractedData(document)) {
-      this.extractedData = this.parseExtractedData(document);
+    // Check if we already have extracted data for this document
+    if (this.extractedDocumentIds.has(document.documentId)) {
+      const cachedData = this.extractionCache.get(document.documentId);
+      if (cachedData) {
+        this.extractedData = cachedData;
+      }
     } else {
       this.extractedData = null;
     }
@@ -339,6 +394,27 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.showDocumentModal = false;
     this.selectedDocument = null;
     this.extractedData = null;
+  }
+
+  /**
+   * Approve document from document viewer
+   */
+  approveDocument(document: any): void {
+    console.log('Approving document:', document);
+    // For compliance officer, this could update document status or add remarks
+    // Since we removed extract functionality, this is mainly for viewing purposes
+    this.successMessage = 'Document noted as approved for compliance review.';
+    setTimeout(() => this.successMessage = '', 3000);
+  }
+
+  /**
+   * Reject document from document viewer
+   */
+  rejectDocument(document: any): void {
+    console.log('Rejecting document:', document);
+    // For compliance officer, this could trigger resubmission request
+    this.requestDocumentResubmission(document);
+    this.closeDocumentModal();
   }
 
   extractDocumentData(document: any): void {
@@ -414,7 +490,16 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   }
   
   submitResubmissionRequest(): void {
-    if (this.resubmissionForm.valid && this.selectedDocument && this.escalation) {
+    if (this.resubmissionForm.valid && this.selectedDocument && this.escalation && !this.resubmissionSubmitting) {
+      // Check if resubmission already requested for this document
+      if (this.resubmissionRequested.has(this.selectedDocument.documentId)) {
+        this.error = 'Resubmission has already been requested for this document.';
+        setTimeout(() => this.error = '', 3000);
+        return;
+      }
+      
+      this.resubmissionSubmitting = true;
+      
       // Get compliance officer ID from auth service (need to inject AuthService)
       // For now, using a default value - should be updated to use proper auth service
       const complianceOfficerId = 1;
@@ -443,11 +528,18 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (response: any) => {
           console.log('Resubmission request response:', response);
+          
+          // Mark this document as having resubmission requested
+          this.resubmissionRequested.add(this.selectedDocument.documentId);
+          
+          this.resubmissionSubmitting = false;
           this.showResubmissionModal = false;
           this.resubmissionForm.reset();
           this.selectedDocument = null;
+          
           // Reload documents to show updated status
           this.loadLoanDocuments(this.escalation!.loanId);
+          
           // Show success message
           this.error = null;
           this.successMessage = 'Document resubmission request sent directly to applicant with email notification!';
@@ -458,6 +550,8 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
           console.error('Error details:', err.error);
           console.error('Status:', err.status);
           console.error('Full error response:', JSON.stringify(err, null, 2));
+          
+          this.resubmissionSubmitting = false;
           
           let errorMessage = 'Please try again.';
           if (err.error?.message) {
@@ -483,7 +577,9 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   }
   
   submitVerdict(): void {
-    if (this.verdictForm.valid && this.escalation) {
+    if (this.verdictForm.valid && this.escalation && !this.verdictSubmitted && !this.verdictSubmitting) {
+      this.verdictSubmitting = true;
+      
       const verdict: ComplianceVerdict = {
         assignmentId: this.assignmentId,
         complianceOfficerId: 1, // Get from auth service
@@ -496,13 +592,25 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
       
       const verdictSub = this.complianceService.submitComplianceVerdict(verdict).subscribe({
         next: (response) => {
+          this.verdictSubmitted = true;
+          this.verdictSubmitting = false;
           this.showVerdictModal = false;
-          alert('Compliance verdict submitted to loan officer successfully!');
-          this.router.navigate(['/compliance-officer/escalations']);
+          
+          // Update escalation status to reflect verdict submission
+          if (this.escalation) {
+            this.escalation.status = 'VERDICT_SUBMITTED';
+          }
+          
+          this.successMessage = 'Compliance verdict submitted to loan officer successfully! You can now only view the case.';
+          setTimeout(() => {
+            this.router.navigate(['/compliance-officer/escalations']);
+          }, 2000);
         },
         error: (error) => {
           console.error('Error submitting verdict:', error);
-          alert('Failed to submit verdict. Please try again.');
+          this.verdictSubmitting = false;
+          this.error = 'Failed to submit verdict. Please try again.';
+          setTimeout(() => this.error = '', 5000);
         }
       });
       
@@ -581,6 +689,51 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
    */
   objectKeys(obj: any): string[] {
     return Object.keys(obj);
+  }
+  
+  /**
+   * Check if verdict submission is allowed
+   */
+  canSubmitVerdict(): boolean {
+    return !this.verdictSubmitted && !this.verdictSubmitting;
+  }
+  
+  /**
+   * Check if document resubmission is allowed for a specific document
+   */
+  canRequestResubmission(documentId: number): boolean {
+    return !this.verdictSubmitted && 
+           !this.resubmissionRequested.has(documentId) && 
+           !this.resubmissionSubmitting;
+  }
+  
+  /**
+   * Get status message for verdict button
+   */
+  getVerdictButtonMessage(): string {
+    if (this.verdictSubmitting) {
+      return 'Submitting verdict...';
+    }
+    if (this.verdictSubmitted) {
+      return 'Verdict has been submitted. Case is now read-only.';
+    }
+    return 'Submit your compliance verdict to the loan officer.';
+  }
+  
+  /**
+   * Get status message for document resubmission
+   */
+  getResubmissionButtonMessage(documentId: number): string {
+    if (this.verdictSubmitted) {
+      return 'Actions are locked after verdict submission.';
+    }
+    if (this.resubmissionRequested.has(documentId)) {
+      return 'Resubmission has already been requested for this document.';
+    }
+    if (this.resubmissionSubmitting) {
+      return 'Sending resubmission request...';
+    }
+    return 'Request document resubmission from applicant.';
   }
 
   // Fraud Flags Methods

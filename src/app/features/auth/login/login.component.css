@@ -168,14 +168,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 1rem;
   overflow-y: auto;
   max-height: 100vh;
 }
 
 .login-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   animation: fadeIn 0.8s ease-out;
 }
 
@@ -186,31 +186,32 @@
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
-}
-
-.login-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary, #1f2937);
   margin-bottom: 0.5rem;
 }
 
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 0.125rem;
+}
+
 .login-subtitle {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: var(--text-secondary, #6b7280);
   font-weight: 400;
 }
 
 /* Alert Styles */
 .alert {
-  padding: 1rem;
+  padding: 0.75rem;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 500;
+  border: 1px solid transparent;
 }
 
 .alert-error {
@@ -221,11 +222,11 @@
 
 /* Form Styles */
 .login-form {
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.625rem;
 }
 
 .form-label {
@@ -242,7 +243,7 @@
 
 .input-icon {
   position: absolute;
-  left: 1rem;
+  left: 0.875rem;
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
@@ -251,10 +252,10 @@
 
 .form-input {
   width: 100%;
-  padding: 0.875rem 1rem 0.875rem 3rem;
+  padding: 0.5rem 0.875rem 0.5rem 2.75rem;
   border: 2px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--bg-primary, #ffffff);
   color: var(--text-primary, #1f2937);
@@ -288,7 +289,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 0.625rem;
 }
 
 .checkbox-label {
@@ -345,12 +346,12 @@
 /* Login Button */
 .login-btn {
   width: 100%;
-  padding: 0.875rem 1.5rem;
+  padding: 0.5rem 1.25rem;
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -411,7 +412,23 @@
   margin: 2rem 0;
 }
 
+.divider-compact {
+  position: relative;
+  text-align: center;
+  margin: 0.375rem 0;
+}
+
 .divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.divider-compact::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -431,26 +448,37 @@
   z-index: 1;
 }
 
+.divider-compact span {
+  background: var(--bg-primary, white);
+  padding: 0 1rem;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.75rem;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
 /* Register Section */
 .register-section {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .register-btn {
   display: inline-block;
   width: 100%;
-  padding: 0.875rem 1.5rem;
+  padding: 0.5rem 1.25rem;
   background: var(--bg-primary, white);
   color: #3b82f6;
   border: 2px solid #3b82f6;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .register-btn::before {
@@ -479,24 +507,33 @@
 }
 
 .register-note {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
 /* CAPTCHA Styles */
 .captcha-container {
-  margin: 0.5rem 0;
-  padding: 1rem;
+  margin: 0.25rem 0;
+  padding: 0.5rem;
   background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .math-captcha {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.math-captcha-inline {
+  display: flex;
+  align-items: stretch;
+  gap: 0.375rem;
+  width: 100%;
 }
 
 .captcha-question {
@@ -510,24 +547,52 @@
   border: 1px solid #d1d5db;
 }
 
+.captcha-question-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.5rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  width: 60%;
+  flex-shrink: 0;
+  justify-content: center;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
 .question-text {
-  font-size: 1.125rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #374151;
   font-family: 'Courier New', monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .refresh-btn {
   background: #f3f4f6;
   border: 1px solid #d1d5db;
   border-radius: 4px;
-  padding: 0.375rem;
+  padding: 0.25rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
 }
 
 .refresh-btn:hover {
@@ -550,6 +615,19 @@
   transition: all 0.3s ease;
 }
 
+.captcha-input-inline {
+  width: 40%;
+  flex-shrink: 0;
+  padding: 0.5rem 0.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  text-align: center;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
 .captcha-input:focus {
   outline: none;
   border-color: #3b82f6;
@@ -561,10 +639,35 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
+.captcha-input-inline:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.captcha-input-inline.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
 @media (max-width: 480px) {
   .captcha-question {
     flex-direction: column;
     gap: 0.5rem;
+  }
+  
+  .captcha-question-inline {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .math-captcha-inline {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .captcha-input-inline {
+    width: 100%;
   }
   
   .question-text {
@@ -578,11 +681,16 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 0.5rem;
   background: var(--bg-secondary, #f8fafc);
   border-radius: 8px;
   border: 1px solid var(--border-color, #e2e8f0);
   animation: pulse 2s ease-in-out infinite;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
 }
 
 @keyframes pulse {
@@ -596,7 +704,7 @@
 }
 
 .security-notice span {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #475569;
   font-weight: 500;
 }

@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { LoanOfficerService } from '../../../core/services/loan-officer.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DocumentViewerComponent } from '../../../shared/components/document-viewer/document-viewer.component';
+import { LoanIdDisplayComponent } from '../../../shared/components/loan-id-display/loan-id-display.component';
 
 interface ExtractedData {
   [key: string]: any;
@@ -29,7 +30,7 @@ interface LoanDocument {
 @Component({
   selector: 'app-verify-documents',
   standalone: true,
-  imports: [CommonModule, FormsModule, DocumentViewerComponent],
+  imports: [CommonModule, FormsModule, DocumentViewerComponent, LoanIdDisplayComponent],
   templateUrl: './verify-documents.component.html',
   styleUrl: './verify-documents.component.css'
 })
@@ -89,7 +90,15 @@ export class VerifyDocumentsComponent implements OnInit {
     
     this.loanOfficerService.getLoanDocuments(this.loanId).subscribe({
       next: (data) => {
-        this.documents = data;
+        // Filter to show only documents that were actually uploaded
+        // A document is considered uploaded if it has a URL and upload timestamp
+        this.documents = data.filter(doc => 
+          (doc.documentUrl || doc.cloudinaryUrl) && 
+          doc.uploadedAt && 
+          doc.uploadedAt !== null
+        );
+        
+        console.log(`Filtered documents: ${this.documents.length} uploaded out of ${data.length} total document types`);
         this.loading = false;
       },
       error: (err) => {

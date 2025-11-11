@@ -27,12 +27,40 @@
         <i class="fas fa-arrow-left me-2"></i>Back to Escalations
       </button>
       <h2 class="mb-0">Comprehensive Compliance Review</h2>
-      <p class="text-muted mb-0">Assignment ID: {{ assignmentId }} | Loan ID: {{ escalation.loanId }}</p>
+      <p class="text-muted mb-2">Assignment ID: {{ assignmentId }}</p>
+      
+      <!-- Loan ID Display -->
+      <div *ngIf="escalation?.loanId">
+        <app-loan-id-display 
+          [internalLoanId]="escalation.loanId"
+          displayType="badge"
+          size="medium"
+          badgeColor="warning"
+          [showLabel]="false">
+        </app-loan-id-display>
+      </div>
     </div>
     <div>
-      <button class="btn btn-danger" (click)="openVerdictModal()">
-        <i class="fas fa-gavel me-2"></i>Submit Verdict
+      <button class="btn btn-danger" 
+              (click)="openVerdictModal()"
+              [disabled]="verdictSubmitted || verdictSubmitting"
+              [class.btn-secondary]="verdictSubmitted"
+              [class.btn-danger]="!verdictSubmitted"
+              [title]="getVerdictButtonMessage()">
+        <i class="fas" 
+           [class.fa-gavel]="!verdictSubmitted && !verdictSubmitting"
+           [class.fa-check-circle]="verdictSubmitted"
+           [class.fa-spinner]="verdictSubmitting"
+           [class.fa-spin]="verdictSubmitting"
+           class="me-2"></i>
+        {{ verdictSubmitting ? 'Submitting...' : (verdictSubmitted ? 'Verdict Submitted' : 'Submit Verdict') }}
       </button>
+      <div *ngIf="verdictSubmitted" class="mt-2">
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Verdict has been submitted. You can only view this case now.
+        </small>
+      </div>
     </div>
   </div>
 
@@ -202,7 +230,7 @@
           <h2 class="h4 fw-bold mb-1" style="color: var(--text-primary);">
             <i class="fas fa-file-check me-2 text-danger"></i>Document Verification
           </h2>
-          <p class="text-muted mb-0">Review and verify applicant documents with AI extraction</p>
+          <p class="text-muted mb-0">Review and verify applicant documents</p>
         </div>
         <div class="d-flex gap-2">
           <button class="btn btn-outline-secondary" (click)="goBack()">
@@ -302,16 +330,9 @@
                   </div>
                   <div class="col-12" *ngIf="doc.remarks">
                     <small class="text-muted d-block">Remarks</small>
-                    <p class="mb-0 small" style="color: var(--text-primary);">{{ doc.remarks }}</p>
+                    <strong style="color: var(--text-primary);">{{ doc.remarks }}</strong>
                   </div>
                 </div>
-              </div>
-
-              <!-- Status Indicators -->
-              <div class="mb-2" *ngIf="isExtracted(doc)">
-                <small class="text-success">
-                  <i class="fas fa-check-circle me-1"></i>AI Data Extracted
-                </small>
               </div>
 
               <!-- Action Buttons -->
@@ -320,22 +341,18 @@
                         (click)="viewDocument(doc)">
                   <i class="fas fa-eye me-1"></i>View
                 </button>
-                <button class="btn btn-success btn-sm" 
-                        (click)="extractDocumentData(doc)"
-                        [disabled]="!canExtract(doc) || extracting">
-                  <i class="fas" 
-                     [class.fa-spinner]="extracting"
-                     [class.fa-spin]="extracting"
-                     [class.fa-robot]="!extracting && !isExtracted(doc)"
-                     [class.fa-check]="!extracting && isExtracted(doc)"
-                     class="me-1"></i>
-                  {{ extracting ? 'Extracting...' : (isExtracted(doc) ? 'Extracted' : 'Extract') }}
-                </button>
-                <button class="btn btn-warning btn-sm" 
+                <button class="btn btn-sm" 
                         (click)="requestDocumentResubmission(doc)"
-                        [disabled]="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
-                  <i class="fas fa-redo me-1"></i>
-                  {{ doc.verificationStatus === 'RESUBMISSION_REQUESTED' ? 'Requested' : 'Resubmit' }}
+                        [disabled]="doc.verificationStatus === 'RESUBMISSION_REQUESTED' || resubmissionRequested.has(doc.documentId) || verdictSubmitted"
+                        [class.btn-warning]="!resubmissionRequested.has(doc.documentId) && doc.verificationStatus !== 'RESUBMISSION_REQUESTED' && !verdictSubmitted"
+                        [class.btn-secondary]="resubmissionRequested.has(doc.documentId) || doc.verificationStatus === 'RESUBMISSION_REQUESTED' || verdictSubmitted"
+                        [title]="getResubmissionButtonMessage(doc.documentId)">
+                  <i class="fas" 
+                     [class.fa-redo]="!resubmissionRequested.has(doc.documentId) && doc.verificationStatus !== 'RESUBMISSION_REQUESTED' && !verdictSubmitted"
+                     [class.fa-check-circle]="resubmissionRequested.has(doc.documentId) || doc.verificationStatus === 'RESUBMISSION_REQUESTED'"
+                     [class.fa-lock]="verdictSubmitted"
+                     class="me-1"></i>
+                  {{ verdictSubmitted ? 'Locked' : (resubmissionRequested.has(doc.documentId) || doc.verificationStatus === 'RESUBMISSION_REQUESTED' ? 'Requested' : 'Resubmit') }}
                 </button>
               </div>
 
@@ -343,6 +360,20 @@
               <div class="mt-2" *ngIf="doc.verificationStatus === 'RESUBMISSION_REQUESTED'">
                 <small class="text-muted fst-italic">
                   <i class="fas fa-clock me-1"></i>Resubmission requested
+                </small>
+              </div>
+              
+              <!-- Current Session Resubmission Notice -->
+              <div class="mt-2" *ngIf="resubmissionRequested.has(doc.documentId) && doc.verificationStatus !== 'RESUBMISSION_REQUESTED'">
+                <small class="text-success fst-italic">
+                  <i class="fas fa-check-circle me-1"></i>Resubmission requested in this session
+                </small>
+              </div>
+              
+              <!-- Verdict Submitted Notice -->
+              <div class="mt-2" *ngIf="verdictSubmitted">
+                <small class="text-info fst-italic">
+                  <i class="fas fa-lock me-1"></i>Actions locked - verdict submitted
                 </small>
               </div>
             </div>
@@ -761,9 +792,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-danger" [disabled]="verdictForm.invalid">
-            <i class="fas fa-gavel me-2"></i>Submit Verdict
+          <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="verdictSubmitting">Cancel</button>
+          <button type="submit" class="btn btn-danger" 
+                  [disabled]="verdictForm.invalid || verdictSubmitting || verdictSubmitted">
+            <i class="fas" 
+               [class.fa-gavel]="!verdictSubmitting"
+               [class.fa-spinner]="verdictSubmitting"
+               [class.fa-spin]="verdictSubmitting"
+               class="me-2"></i>
+            {{ verdictSubmitting ? 'Submitting Verdict...' : 'Submit Verdict' }}
           </button>
         </div>
       </form>
@@ -818,9 +855,15 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-warning" [disabled]="resubmissionForm.invalid">
-            <i class="fas fa-redo me-2"></i>Request Resubmission
+          <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="resubmissionSubmitting">Cancel</button>
+          <button type="submit" class="btn btn-warning" 
+                  [disabled]="resubmissionForm.invalid || resubmissionSubmitting">
+            <i class="fas" 
+               [class.fa-redo]="!resubmissionSubmitting"
+               [class.fa-spinner]="resubmissionSubmitting"
+               [class.fa-spin]="resubmissionSubmitting"
+               class="me-2"></i>
+            {{ resubmissionSubmitting ? 'Sending Request...' : 'Request Resubmission' }}
           </button>
         </div>
       </form>
@@ -835,12 +878,12 @@
   [extractedData]="extractedData"
   [extracting]="extracting"
   [canExtract]="true"
-  [canVerify]="false"
+  [canVerify]="true"
   themeColor="danger"
   (close)="closeDocumentModal()"
   (extract)="extractDocumentData($event)"
-  (approve)="requestDocumentResubmission($event); closeDocumentModal()"
-  (reject)="null">
+  (approve)="approveDocument($event)"
+  (reject)="rejectDocument($event)">
 </app-document-viewer>
 
 <!-- Screening Details Modal -->

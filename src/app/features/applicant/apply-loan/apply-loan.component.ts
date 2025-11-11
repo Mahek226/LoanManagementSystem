@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { DraftService, DraftApplication } from '@core/services/draft.service';
+import { AuthService } from '@core/services/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-apply-loan',
@@ -10,7 +13,7 @@ import { Router } from '@angular/router';
   templateUrl: './apply-loan.component.html',
   styleUrls: ['./apply-loan.component.scss']
 })
-export class ApplyLoanComponent implements OnInit {
+export class ApplyLoanComponent implements OnInit, OnDestroy {
   currentStep!: number;
   totalSteps!: number;
   
@@ -87,17 +90,37 @@ export class ApplyLoanComponent implements OnInit {
   ];
 
   selectedLoanType: any = null;
+  
+  // Draft management
+  currentDraftId: string | null = null;
+  applicantId: number = 0;
+  autoSaveInterval: any;
+  private subscriptions: Subscription[] = [];
+  
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private draftService: DraftService,
+    private authService: AuthService
   ) {
     this.currentStep = 1;
     this.totalSteps = 6;
+    
+    // Get applicant ID from auth service
+    const user = this.authService.currentUserValue;
+    this.applicantId = user?.applicantId || user?.id || 0;
   }
 
   ngOnInit(): void {
     this.initializeForms();
-    this.loadSavedFormData();
+    this.checkForDraftToResume();
+    this.setupAutoSave();
+  }
+  
+  ngOnDestroy(): void {
+    this.clearAutoSave();
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   initializeForms(): void {
@@ -271,7 +294,7 @@ export class ApplyLoanComponent implements OnInit {
         this.updateLoanDetailsValidators();
       }
       this.currentStep++;
-      this.saveFormData(); // Auto-save on step change
+      this.saveDraft(); // Auto-save on step change
     } else {
       this.markFormGroupTouched(currentForm);
     }
@@ -280,7 +303,7 @@ export class ApplyLoanComponent implements OnInit {
   previousStep(): void {
     if (this.currentStep > 1) {
       this.currentStep--;
-      this.saveFormData(); // Auto-save on step change
+      this.saveDraft(); // Auto-save on step change
     }
   }
 
@@ -365,6 +388,10 @@ export class ApplyLoanComponent implements OnInit {
       
       console.log('Application Data:', applicationData);
       // TODO: Submit to backend
+      
+      // Clear draft after successful submission
+      this.clearSavedData();
+      
       alert('Loan application submitted successfully! You will receive a confirmation email shortly.');
       this.router.navigate(['/applicant/dashboard']);
     }
@@ -419,56 +446,95 @@ export class ApplyLoanComponent implements OnInit {
     this.router.navigate(['/applicant/dashboard']);
   }
 
-  // Form Saving and Loading Methods
-  loadSavedFormData(): void {
-    const savedData = localStorage.getItem('loanApplicationData');
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      
-      // Load saved step
-      if (parsedData.currentStep) {
-        this.currentStep = parsedData.currentStep;
-      }
-      
-      // Load form data
-      if (parsedData.loanTypeForm) {
-        this.loanTypeForm.patchValue(parsedData.loanTypeForm);
-        if (parsedData.selectedLoanType) {
-          this.selectedLoanType = parsedData.selectedLoanType;
-        }
-      }
-      
-      if (parsedData.personalDetailsForm) {
-        this.personalDetailsForm.patchValue(parsedData.personalDetailsForm);
-      }
-      
-      if (parsedData.loanDetailsForm) {
-        this.loanDetailsForm.patchValue(parsedData.loanDetailsForm);
-      }
-      
-      if (parsedData.financialDetailsForm) {
-        this.financialDetailsForm.patchValue(parsedData.financialDetailsForm);
-      }
-      
-      if (parsedData.documentsForm) {
-        this.documentsForm.patchValue(parsedData.documentsForm);
+  // Draft Management Methods
+  checkForDraftToResume(): void {
+    // Check if we're resuming a specific draft
+    const draftId = this.route.snapshot.queryParams['draftId'];
+    if (draftId) {
+      this.loadDraft(draftId);
+      return;
+    }
+    
+    // Check for existing draft for this applicant
+    const latestDraft = this.draftService.getLatestDraft(this.applicantId);
+    if (latestDraft) {
+      // Ask user if they want to resume
+      const resume = confirm(`You have an incomplete application (${latestDraft.completionPercentage}% complete). Would you like to resume it?`);
+      if (resume) {
+        this.loadDraft(latestDraft.id);
+      } else {
+        // Start fresh
+        this.clearSavedData();
       }
     }
   }
-
-  saveFormData(): void {
+  
+  loadDraft(draftId: string): void {
+    const draft = this.draftService.getDraft(draftId);
+    if (draft) {
+      this.currentDraftId = draft.id;
+      this.currentStep = draft.currentStep;
+      this.selectedLoanType = draft.selectedLoanType;
+      
+      // Load form data
+      if (draft.formData.loanTypeForm) {
+        this.loanTypeForm.patchValue(draft.formData.loanTypeForm);
+      }
+      if (draft.formData.personalDetailsForm) {
+        this.personalDetailsForm.patchValue(draft.formData.personalDetailsForm);
+      }
+      if (draft.formData.loanDetailsForm) {
+        this.loanDetailsForm.patchValue(draft.formData.loanDetailsForm);
+      }
+      if (draft.formData.financialDetailsForm) {
+        this.financialDetailsForm.patchValue(draft.formData.financialDetailsForm);
+      }
+      if (draft.formData.documentsForm) {
+        this.documentsForm.patchValue(draft.formData.documentsForm);
+      }
+      
+      // Update validators if loan type is selected
+      if (this.selectedLoanType) {
+        this.updateLoanDetailsValidators();
+      }
+    }
+  }
+  
+  saveDraft(): void {
     const formData = {
-      currentStep: this.currentStep,
-      selectedLoanType: this.selectedLoanType,
       loanTypeForm: this.loanTypeForm.value,
       personalDetailsForm: this.personalDetailsForm.value,
       loanDetailsForm: this.loanDetailsForm.value,
       financialDetailsForm: this.financialDetailsForm.value,
-      documentsForm: this.documentsForm.value,
-      lastSaved: new Date().toISOString()
+      documentsForm: this.documentsForm.value
     };
     
-    localStorage.setItem('loanApplicationData', JSON.stringify(formData));
+    const completionPercentage = this.draftService.calculateCompletionPercentage(formData, this.currentStep);
+    
+    const draftData: Partial<DraftApplication> = {
+      id: this.currentDraftId || undefined,
+      applicantId: this.applicantId,
+      currentStep: this.currentStep,
+      totalSteps: this.totalSteps,
+      completionPercentage: completionPercentage,
+      selectedLoanType: this.selectedLoanType,
+      formData: formData
+    };
+    
+    this.currentDraftId = this.draftService.saveDraft(draftData);
+  }
+  
+  setupAutoSave(): void {
+    // Auto-save every 30 seconds
+    this.autoSaveInterval = setInterval(() => {
+      this.saveDraft();
+    }, 30000);
+  }
+  
+  clearAutoSave(): void {
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+    }
   }
 
   getFormCompletionPercentage(): number {
@@ -507,7 +573,16 @@ export class ApplyLoanComponent implements OnInit {
   }
 
   clearSavedData(): void {
-    localStorage.removeItem('loanApplicationData');
+    if (this.currentDraftId) {
+      this.draftService.deleteDraft(this.currentDraftId);
+      this.currentDraftId = null;
+    }
+  }
+  
+  saveAsDraft(): void {
+    this.saveDraft();
+    alert('Application saved as draft! You can resume it later from your dashboard.');
+    this.router.navigate(['/applicant/dashboard']);
   }
 
   // Helper method to get current step as number (for template)
