@@ -273,6 +273,101 @@
           </div>
         </div>
 
+        <!-- Document Resubmission Requests -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Document Resubmission Required
+              <span class="badge bg-danger ms-2">{{ documentResubmissionRequests.length }}</span>
+            </h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-danger" (click)="toggleResubmissionRequestsVisibility()">
+                <i class="fas" [class.fa-eye]="!showResubmissionRequests" [class.fa-eye-slash]="showResubmissionRequests"></i>
+                {{ showResubmissionRequests ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+          </div>
+          <div class="card-body" *ngIf="showResubmissionRequests">
+            <div class="alert alert-warning mb-3">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Action Required:</strong> The following documents need to be resubmitted as requested by your loan officer.
+            </div>
+            
+            <!-- Empty state when no requests -->
+            <div *ngIf="documentResubmissionRequests.length === 0" class="text-center py-4">
+              <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+              <h6 class="text-muted">No Document Resubmission Requests</h6>
+              <p class="small text-muted mb-0">All your documents are currently approved. No action required.</p>
+            </div>
+            
+            <!-- Requests list -->
+            <div class="row g-3" *ngIf="documentResubmissionRequests.length > 0">
+              <div class="col-md-6 col-xl-4" *ngFor="let request of documentResubmissionRequests">
+                <div class="card border-0 shadow-sm h-100" 
+                     [class]="'border-start border-4 border-' + getResubmissionStatusColor(request.status)"
+                     style="background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="d-flex align-items-center">
+                        <i class="fas {{ getDocumentIcon(request.requestedDocuments) }} fa-2x me-3 text-danger"></i>
+                        <div>
+                          <h6 class="card-title mb-0 text-dark fw-bold">{{ getDocumentDisplayName(request.requestedDocuments) }}</h6>
+                          <small class="text-muted">Loan ID: LNID{{ (100000 + request.loanId).toString().padStart(6, '0') }}</small>
+                        </div>
+                      </div>
+                      <span class="badge bg-{{ getResubmissionStatusColor(request.status) }}">{{ request.status }}</span>
+                    </div>
+                    
+                    <!-- Rejection Reason -->
+                    <div class="mb-3">
+                      <small class="text-muted d-block mb-1">Reason for Resubmission:</small>
+                      <p class="small text-dark mb-0">{{ request.message }}</p>
+                    </div>
+                    
+                    <!-- Request Details -->
+                    <div class="mb-3">
+                      <small class="text-muted d-block">Requested On</small>
+                      <strong class="small text-dark">{{ formatResubmissionDate(request.requestedAt) }}</strong>
+                    </div>
+                    
+                    <!-- Due Date Warning -->
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Due Date:</small>
+                        <span class="small fw-bold" 
+                              [class]="isOverdue(request.dueDate) ? 'text-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'text-warning' : 'text-success')">
+                          <i class="fas fa-clock me-1"></i>
+                          <span *ngIf="!isOverdue(request.dueDate)">{{ getDaysRemaining(request.dueDate) }} days left</span>
+                          <span *ngIf="isOverdue(request.dueDate)">{{ getAbsoluteDays(getDaysRemaining(request.dueDate)) }} days overdue</span>
+                        </span>
+                      </div>
+                      <div class="progress mt-1" style="height: 4px;">
+                        <div class="progress-bar" 
+                             [class]="isOverdue(request.dueDate) ? 'bg-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'bg-warning' : 'bg-success')"
+                             [style.width.%]="getProgressBarWidth(request.dueDate)"></div>
+                      </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-danger btn-sm flex-fill" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#resubmissionModal"
+                              (click)="openResubmissionModal(request)">
+                        <i class="fas fa-upload me-1"></i>Resubmit Document
+                      </button>
+                      <button class="btn btn-outline-secondary btn-sm" (click)="dismissResubmissionRequest(request.notificationId)" 
+                              title="Dismiss this request">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Active Applications -->
         <div class="card mb-4">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -523,6 +618,114 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Document Resubmission Modal -->
+<div class="modal fade" id="resubmissionModal" tabindex="-1" aria-labelledby="resubmissionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="resubmissionModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Document Resubmission Required
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedResubmissionRequest">
+        <!-- Document Information -->
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h6 class="mb-0">
+              <i class="fas {{ getDocumentIcon(selectedResubmissionRequest.requestedDocuments) }} me-2"></i>
+              {{ getDocumentDisplayName(selectedResubmissionRequest.requestedDocuments) }}
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <small class="text-muted d-block">Loan ID</small>
+                <strong>LNID{{ (100000 + selectedResubmissionRequest.loanId).toString().padStart(6, '0') }}</strong>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Due Date</small>
+                <strong [class]="isOverdue(selectedResubmissionRequest.dueDate) ? 'text-danger' : 'text-success'">
+                  {{ formatResubmissionDate(selectedResubmissionRequest.dueDate) }}
+                  <span *ngIf="isOverdue(selectedResubmissionRequest.dueDate)" class="badge bg-danger ms-2">OVERDUE</span>
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comments from Loan Officer -->
+        <div class="card mb-4">
+          <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0">
+              <i class="fas fa-comment-alt me-2"></i>Comments from Loan Officer
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-warning mb-3">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Please review the following feedback carefully before resubmitting your document.</strong>
+            </div>
+            <p class="mb-0">{{ getCleanedMessage(selectedResubmissionRequest.message) }}</p>
+          </div>
+        </div>
+
+        <!-- Document Upload Section -->
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h6 class="mb-0">
+              <i class="fas fa-upload me-2"></i>Upload New Document
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="documentFile" class="form-label">Select Document File</label>
+              <input type="file" 
+                     class="form-control" 
+                     id="documentFile" 
+                     #fileInput
+                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                     (change)="onFileSelected($event)">
+              <div class="form-text">
+                Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max size: 10MB)
+              </div>
+            </div>
+            
+            <div class="mb-3" *ngIf="selectedFile">
+              <div class="alert alert-info">
+                <i class="fas fa-file me-2"></i>
+                <strong>Selected File:</strong> {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="applicantComments" class="form-label">Additional Comments (Optional)</label>
+              <textarea class="form-control" 
+                        id="applicantComments" 
+                        rows="3" 
+                        [(ngModel)]="applicantComments"
+                        placeholder="Add any additional information or clarifications..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancel
+        </button>
+        <button type="button" 
+                class="btn btn-danger" 
+                [disabled]="!selectedFile || isUploading"
+                (click)="submitResubmission()">
+          <span *ngIf="isUploading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i *ngIf="!isUploading" class="fas fa-upload me-1"></i>
+          {{ isUploading ? 'Uploading...' : 'Submit Document' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

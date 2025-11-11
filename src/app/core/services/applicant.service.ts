@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '@environments/environment';
 
 export interface LoanApplication {
@@ -99,14 +100,30 @@ export interface LoanType {
 
 export interface Notification {
   id: number;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION_REQUIRED';
+  type: string;
   title: string;
   message: string;
-  timestamp: string;
+  priority: string;
   isRead: boolean;
+  createdAt: string;
   actionUrl?: string;
-  actionText?: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+}
+
+export interface DocumentResubmissionNotification {
+  notificationId: number;
+  loanId: number;
+  assignmentId: number;
+  title: string;
+  message: string;
+  type: string; // 'DOCUMENT_REQUEST'
+  priority: string; // 'HIGH', 'MEDIUM', 'LOW'
+  status: string; // 'PENDING', 'READ', 'RESOLVED'
+  requestedBy: string;
+  requestedAt: string;
+  dueDate: string;
+  readAt?: string;
+  resolvedAt?: string;
+  requestedDocuments: string[]; // Array of document types
 }
 
 export interface ApplicationProgress {
@@ -346,15 +363,46 @@ export class ApplicantService {
     ];
   }
 
-  // Get notifications
-  getNotifications(applicantId: number): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.API_URL}/applicant/${applicantId}/notifications`);
+  // Get notifications from API
+  getNotifications(applicantId: number): Observable<DocumentResubmissionNotification[]> {
+    const url = `${this.API_URL}/applicant/${applicantId}/notifications`;
+    console.log('Making API call to get all notifications:', url);
+    return this.http.get<DocumentResubmissionNotification[]>(url);
+  }
+
+  // Get document resubmission requests (filter notifications by type)
+  getDocumentResubmissionRequests(applicantId: number): Observable<DocumentResubmissionNotification[]> {
+    // First try to get all notifications and filter on frontend
+    const url = `${this.API_URL}/applicant/${applicantId}/notifications`;
+    console.log('Making API call to get all notifications for filtering:', url);
+    return this.http.get<DocumentResubmissionNotification[]>(url).pipe(
+      map((notifications: DocumentResubmissionNotification[]) => {
+        console.log('All notifications received:', notifications);
+        const documentRequests = notifications.filter(notif => 
+          notif.type === 'DOCUMENT_REQUEST' && 
+          notif.resolvedAt == null && 
+          notif.status !== 'RESOLVED'
+        );
+        console.log('Filtered document resubmission requests:', documentRequests);
+        return documentRequests;
+      })
+    );
   }
 
   // Mark notification as read
-  markNotificationRead(notificationId: number): Observable<any> {
-    return this.http.put(`${this.API_URL}/applicant/notifications/${notificationId}/read`, {});
+  markNotificationAsRead(notificationId: number): Observable<any> {
+    const url = `${this.API_URL}/applicant/notification/${notificationId}/read`;
+    console.log('Making API call to mark notification as read:', url);
+    return this.http.put(url, {});
   }
+
+  // Mark notification as resolved (dismiss)
+  markNotificationAsResolved(notificationId: number): Observable<any> {
+    const url = `${this.API_URL}/applicant/notification/${notificationId}/resolve`;
+    console.log('Making API call to mark notification as resolved:', url);
+    return this.http.put(url, {});
+  }
+
 
   // Get application progress
   getApplicationProgress(loanId: number): Observable<ApplicationProgress> {
@@ -412,40 +460,5 @@ export class ApplicantService {
       estimatedMaxLoan,
       verifiedFields
     };
-  }
-
-  // Get mock notifications
-  getMockNotifications(): Notification[] {
-    return [
-      {
-        id: 1,
-        type: 'ACTION_REQUIRED',
-        title: 'Upload Salary Slip',
-        message: 'Please upload your latest salary slip to proceed with your loan application.',
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        actionUrl: '/applicant/documents',
-        actionText: 'Upload Now',
-        priority: 'HIGH'
-      },
-      {
-        id: 2,
-        type: 'INFO',
-        title: 'Application Under Review',
-        message: 'Your loan application #12345 is currently under review by our team.',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        isRead: false,
-        priority: 'MEDIUM'
-      },
-      {
-        id: 3,
-        type: 'SUCCESS',
-        title: 'Document Verified',
-        message: 'Your identity proof has been successfully verified.',
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        isRead: true,
-        priority: 'LOW'
-      }
-    ];
   }
 }
