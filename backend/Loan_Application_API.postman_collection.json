@@ -1,0 +1,260 @@
+{
+	"info": {
+		"_postman_id": "loan-app-collection-001",
+		"name": "Loan Application API",
+		"description": "Complete API collection for Loan Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Submit Loan Application",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"applicant\": {\n    \"firstName\": \"Rajesh\",\n    \"lastName\": \"Kumar\",\n    \"dob\": \"1990-05-15\",\n    \"gender\": \"Male\",\n    \"email\": \"rajesh.kumar@example.com\",\n    \"phone\": \"9876543210\",\n    \"address\": \"123, MG Road, Koramangala\",\n    \"city\": \"Bangalore\",\n    \"state\": \"Karnataka\",\n    \"country\": \"India\"\n  },\n  \"maritalStatus\": \"Married\",\n  \"education\": \"Bachelor of Engineering\",\n  \"nationality\": \"Indian\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"aadhaarNumber\": \"123456789012\",\n  \"employerName\": \"Tech Solutions Pvt Ltd\",\n  \"designation\": \"Senior Software Engineer\",\n  \"employmentType\": \"salaried\",\n  \"employmentStartDate\": \"2018-06-01\",\n  \"monthlyIncome\": 85000.00,\n  \"bankName\": \"HDFC Bank\",\n  \"accountNumber\": \"50100123456789\",\n  \"accountType\": \"savings\",\n  \"ifscCode\": \"HDFC0001234\",\n  \"residenceType\": \"owned\",\n  \"monthlyRent\": 0,\n  \"yearsAtCurrentAddress\": 5,\n  \"propertyValue\": 5000000.00,\n  \"propertyType\": \"apartment\",\n  \"creditScore\": 780,\n  \"creditBureau\": \"CIBIL\",\n  \"loanType\": \"home\",\n  \"loanAmount\": 2500000.00,\n  \"tenureMonths\": 240\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/submit",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"submit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Submit Personal Loan Application",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"applicant\": {\n    \"firstName\": \"Priya\",\n    \"lastName\": \"Sharma\",\n    \"dob\": \"1995-08-20\",\n    \"gender\": \"Female\",\n    \"email\": \"priya.sharma@example.com\",\n    \"phone\": \"9123456789\",\n    \"address\": \"456, Park Street, Salt Lake\",\n    \"city\": \"Kolkata\",\n    \"state\": \"West Bengal\",\n    \"country\": \"India\"\n  },\n  \"maritalStatus\": \"Single\",\n  \"education\": \"MBA Finance\",\n  \"nationality\": \"Indian\",\n  \"panNumber\": \"FGHIJ5678K\",\n  \"aadhaarNumber\": \"987654321098\",\n  \"employerName\": \"Global Consulting Services\",\n  \"designation\": \"Business Analyst\",\n  \"employmentType\": \"salaried\",\n  \"employmentStartDate\": \"2020-01-15\",\n  \"monthlyIncome\": 65000.00,\n  \"bankName\": \"ICICI Bank\",\n  \"accountNumber\": \"60200987654321\",\n  \"accountType\": \"savings\",\n  \"ifscCode\": \"ICIC0006789\",\n  \"residenceType\": \"rented\",\n  \"monthlyRent\": 18000.00,\n  \"yearsAtCurrentAddress\": 2,\n  \"propertyValue\": 0,\n  \"propertyType\": \"apartment\",\n  \"creditScore\": 720,\n  \"creditBureau\": \"Experian\",\n  \"loanType\": \"personal\",\n  \"loanAmount\": 500000.00,\n  \"tenureMonths\": 60\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/submit",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"submit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Submit Gold Loan Application",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"applicant\": {\n    \"firstName\": \"Amit\",\n    \"lastName\": \"Patel\",\n    \"dob\": \"1985-03-10\",\n    \"gender\": \"Male\",\n    \"email\": \"amit.patel@example.com\",\n    \"phone\": \"9988776655\",\n    \"address\": \"789, CG Road, Navrangpura\",\n    \"city\": \"Ahmedabad\",\n    \"state\": \"Gujarat\",\n    \"country\": \"India\"\n  },\n  \"maritalStatus\": \"Married\",\n  \"education\": \"B.Com\",\n  \"nationality\": \"Indian\",\n  \"panNumber\": \"KLMNO9012P\",\n  \"aadhaarNumber\": \"456789123456\",\n  \"employerName\": \"Self Employed - Textile Business\",\n  \"designation\": \"Business Owner\",\n  \"employmentType\": \"self-employed\",\n  \"employmentStartDate\": \"2010-04-01\",\n  \"monthlyIncome\": 120000.00,\n  \"bankName\": \"State Bank of India\",\n  \"accountNumber\": \"30400567891234\",\n  \"accountType\": \"current\",\n  \"ifscCode\": \"SBIN0012345\",\n  \"residenceType\": \"owned\",\n  \"monthlyRent\": 0,\n  \"yearsAtCurrentAddress\": 12,\n  \"propertyValue\": 8000000.00,\n  \"propertyType\": \"independent_house\",\n  \"creditScore\": 690,\n  \"creditBureau\": \"CIBIL\",\n  \"loanType\": \"gold\",\n  \"loanAmount\": 300000.00,\n  \"tenureMonths\": 12\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/submit",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"submit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Applicant by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/applicant/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"applicant",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Applicant Loans",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/applicant/1/loans",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"applicant",
+						"1",
+						"loans"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Applicants",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"all"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Loan by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/loan-applications/loan/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"loan-applications",
+						"loan",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "OCR - Extract Aadhaar",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "docType",
+							"value": "AADHAAR",
+							"type": "text"
+						},
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/ocr/extract",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"ocr",
+						"extract"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "OCR - Extract PAN",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "docType",
+							"value": "PAN",
+							"type": "text"
+						},
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/ocr/extract",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"ocr",
+						"extract"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
