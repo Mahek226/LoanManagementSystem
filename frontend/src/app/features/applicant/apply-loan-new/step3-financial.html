@@ -1,0 +1,206 @@
+<!-- Step 2: Financial Details -->
+<div class="step-content" *ngIf="currentStep === 2">
+  <div class="step-header">
+    <h3><i class="fas fa-money-bill-wave me-2"></i>Financial Information</h3>
+    <p class="text-muted">Provide your income and employment details</p>
+  </div>
+
+  <form [formGroup]="financialDetailsForm" class="loan-form">
+    <div class="row g-4">
+      <!-- Employment Type -->
+      <div class="col-md-6">
+        <label class="form-label required">Employment Type</label>
+        <select class="form-select" formControlName="employmentType">
+          <option value="SALARIED">Salaried</option>
+          <option value="SELF_EMPLOYED">Self Employed</option>
+          <option value="BUSINESS">Business Owner</option>
+          <option value="PROFESSIONAL">Professional</option>
+          <option value="RETIRED">Retired</option>
+        </select>
+      </div>
+
+      <!-- Salaried Fields -->
+      <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SALARIED'">
+        <div class="col-md-6">
+          <label class="form-label required">Employer Name</label>
+          <input type="text" class="form-control" formControlName="employerName"
+                 [class.is-invalid]="financialDetailsForm.get('employerName')?.invalid && financialDetailsForm.get('employerName')?.touched">
+          <div class="invalid-feedback" *ngIf="financialDetailsForm.get('employerName')?.invalid && financialDetailsForm.get('employerName')?.touched">
+            <i class="fas fa-exclamation-circle me-1"></i>Employer name is required
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Designation</label>
+          <input type="text" class="form-control" formControlName="designation"
+                 [class.is-invalid]="financialDetailsForm.get('designation')?.invalid && financialDetailsForm.get('designation')?.touched">
+          <div class="invalid-feedback" *ngIf="financialDetailsForm.get('designation')?.invalid && financialDetailsForm.get('designation')?.touched">
+            <i class="fas fa-exclamation-circle me-1"></i>Designation is required
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Work Experience (Years)</label>
+          <input type="number" class="form-control" formControlName="workExperience" min="0">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Monthly Gross Salary (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Monthly Net Salary (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyNetSalary">
+        </div>
+      </ng-container>
+
+      <!-- Self Employed / Business Fields -->
+      <ng-container *ngIf="financialDetailsForm.get('employmentType')?.value === 'SELF_EMPLOYED' || 
+                           financialDetailsForm.get('employmentType')?.value === 'BUSINESS'">
+        <div class="col-md-6">
+          <label class="form-label required">Business Name</label>
+          <input type="text" class="form-control" formControlName="businessName">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Business Type</label>
+          <input type="text" class="form-control" formControlName="businessType">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label required">Annual Turnover (₹)</label>
+          <input type="number" class="form-control" formControlName="annualTurnover">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Monthly Gross Income (₹)</label>
+          <input type="number" class="form-control" formControlName="monthlyGrossSalary">
+        </div>
+      </ng-container>
+
+      <!-- Other Income -->
+      <div class="col-md-6">
+        <label class="form-label">Other Income Sources</label>
+        <input type="text" class="form-control" formControlName="otherIncomeSources" 
+               placeholder="Rental, Investment, etc.">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Other Income Amount (₹/month)</label>
+        <input type="number" class="form-control" formControlName="otherIncomeAmount">
+      </div>
+
+      <!-- Monthly Obligations -->
+      <div class="col-12"><hr><h5>Monthly Obligations</h5></div>
+      <div class="col-md-4">
+        <label class="form-label">Existing Loan EMI (₹)</label>
+        <input type="number" class="form-control" formControlName="existingLoanEMI">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Credit Card Payment (₹)</label>
+        <input type="number" class="form-control" formControlName="creditCardPayment">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Other Obligations (₹)</label>
+        <input type="number" class="form-control" formControlName="otherObligations">
+      </div>
+
+      <!-- Bank Details -->
+      <div class="col-12"><hr><h5>Bank Account for Disbursal</h5></div>
+      <div class="col-md-6">
+        <label class="form-label required">Bank Name</label>
+        <input type="text" class="form-control" formControlName="bankName">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">Account Number</label>
+        <input type="text" class="form-control" formControlName="accountNumber">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">IFSC Code</label>
+        <input type="text" class="form-control" formControlName="ifscCode" 
+               placeholder="XXXX0XXXXXX" style="text-transform: uppercase;">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label required">Account Type</label>
+        <select class="form-select" formControlName="accountType">
+          <option value="SAVINGS">Savings</option>
+          <option value="CURRENT">Current</option>
+        </select>
+      </div>
+
+      <!-- Bank Statement Consent -->
+      <div class="col-12">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="bankStatementConsent" 
+                 id="bankConsent" required>
+          <label class="form-check-label" for="bankConsent">
+            I consent to share my bank statements for verification purposes
+          </label>
+        </div>
+      </div>
+
+      <!-- EMI Calculator & DTI Ratio (Real-time) -->
+      <div class="col-12" *ngIf="emiCalculation">
+        <div class="alert alert-info">
+          <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>EMI & Affordability Calculator</h5>
+          
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="emi-stat">
+                <label>Monthly EMI</label>
+                <h4 class="text-primary">{{ formatCurrency(emiCalculation.emi) }}</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="emi-stat">
+                <label>Total Interest</label>
+                <h4 class="text-warning">{{ formatCurrency(emiCalculation.totalInterest) }}</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="emi-stat">
+                <label>Total Amount</label>
+                <h4 class="text-info">{{ formatCurrency(emiCalculation.totalAmount) }}</h4>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="emi-stat">
+                <label>DTI Ratio</label>
+                <h4 [class]="getDTIClass()">{{ emiCalculation.dti.toFixed(1) }}%</h4>
+                <small class="d-block mt-1" [class]="getDTIClass()">
+                  {{ emiCalculation.affordabilityStatus }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- DTI Warning/Error -->
+          <div class="mt-3" *ngIf="emiCalculation.dti > 40">
+            <div class="alert" [class.alert-warning]="emiCalculation.dti <= 60" 
+                 [class.alert-danger]="emiCalculation.dti > 60">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong *ngIf="emiCalculation.dti > 60">High DTI Ratio!</strong>
+              <strong *ngIf="emiCalculation.dti > 40 && emiCalculation.dti <= 60">Moderate DTI Ratio</strong>
+              <p class="mb-0 mt-1">
+                <span *ngIf="emiCalculation.dti > 60">
+                  Your debt-to-income ratio is too high ({{ emiCalculation.dti.toFixed(1) }}%). 
+                  Maximum allowed is 60%. Please either:
+                </span>
+                <span *ngIf="emiCalculation.dti > 40 && emiCalculation.dti <= 60">
+                  Your DTI ratio is {{ emiCalculation.dti.toFixed(1) }}%. Consider reducing it for better approval chances.
+                </span>
+              </p>
+              <ul class="mb-0 mt-2" *ngIf="emiCalculation.dti > 60">
+                <li>Go back to Step 1 and reduce the loan amount</li>
+                <li>Increase the loan tenure (more months)</li>
+                <li>Reduce your existing EMI obligations below</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <div class="mt-3" *ngIf="emiCalculation.dti <= 40">
+            <div class="alert alert-success">
+              <i class="fas fa-check-circle me-2"></i>
+              <strong>Excellent!</strong> Your DTI ratio is {{ emiCalculation.dti.toFixed(1) }}% - 
+              You have good affordability for this loan.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

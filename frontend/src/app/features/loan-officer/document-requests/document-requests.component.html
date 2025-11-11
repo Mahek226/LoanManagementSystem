@@ -1,0 +1,405 @@
+<!-- Header Section -->
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="h3 mb-1 text-primary fw-bold">
+            <i class="fas fa-file-alt me-2"></i>Document Resubmission Requests
+          </h2>
+          <p class="text-muted mb-0">Review and process document resubmission requests from compliance officers</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-success" (click)="exportToCSV()" [disabled]="filteredRequests.length === 0">
+            <i class="fas fa-download me-2"></i>Export CSV
+          </button>
+          <button class="btn btn-primary" (click)="loadDocumentRequests()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="row mb-3" *ngIf="success || error">
+    <div class="col-12">
+      <div class="alert alert-success alert-dismissible fade show" *ngIf="success">
+        <i class="fas fa-check-circle me-2"></i>{{ success }}
+        <button type="button" class="btn-close" (click)="success = null"></button>
+      </div>
+      <div class="alert alert-danger alert-dismissible fade show" *ngIf="error">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        <button type="button" class="btn-close" (click)="error = null"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Search</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="fas fa-search text-muted"></i>
+                </span>
+                <input 
+                  type="text" 
+                  class="form-control border-start-0" 
+                  placeholder="Search by applicant, loan type, reason..."
+                  [(ngModel)]="searchTerm"
+                  (input)="applyFilters()">
+              </div>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Status</label>
+              <select class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
+                <option value="">All Statuses</option>
+                <option value="REQUESTED">Pending Review</option>
+                <option value="FORWARDED_TO_APPLICANT">Forwarded to Applicant</option>
+                <option value="REJECTED_BY_LOAN_OFFICER">Rejected</option>
+              </select>
+            </div>
+            
+            <!-- Priority Filter -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Priority</label>
+              <select class="form-select" [(ngModel)]="priorityFilter" (change)="applyFilters()">
+                <option value="">All Priorities</option>
+                <option value="5">URGENT</option>
+                <option value="4">HIGH</option>
+                <option value="3">MEDIUM</option>
+                <option value="2">LOW</option>
+                <option value="1">VERY LOW</option>
+              </select>
+            </div>
+            
+            <!-- Sort -->
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Sort By</label>
+              <select class="form-select" [(ngModel)]="sortBy" (change)="applyFilters()">
+                <option value="requestedAt">Date Requested</option>
+                <option value="priorityLevel">Priority</option>
+                <option value="loanAmount">Loan Amount</option>
+                <option value="applicantName">Applicant Name</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="row" *ngIf="loading">
+    <div class="col-12 text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading document requests...</p>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="row mb-3" *ngIf="!loading">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted">
+          Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
+          {{ Math.min(currentPage * itemsPerPage, filteredRequests.length) }} 
+          of {{ filteredRequests.length }} requests
+        </span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">Items per page:</span>
+          <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="itemsPerPage" (change)="calculatePagination()">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Requests Table -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="border-0 fw-semibold" (click)="setSortBy('applicantName')" style="cursor: pointer;">
+                    Applicant
+                    <i class="fas fa-sort ms-1 text-muted small"></i>
+                  </th>
+                  <th class="border-0 fw-semibold" (click)="setSortBy('loanAmount')" style="cursor: pointer;">
+                    Loan Details
+                    <i class="fas fa-sort ms-1 text-muted small"></i>
+                  </th>
+                  <th class="border-0 fw-semibold">Requested Documents</th>
+                  <th class="border-0 fw-semibold">Reason</th>
+                  <th class="border-0 fw-semibold" (click)="setSortBy('priorityLevel')" style="cursor: pointer;">
+                    Priority
+                    <i class="fas fa-sort ms-1 text-muted small"></i>
+                  </th>
+                  <th class="border-0 fw-semibold">Status</th>
+                  <th class="border-0 fw-semibold" (click)="setSortBy('requestedAt')" style="cursor: pointer;">
+                    Requested
+                    <i class="fas fa-sort ms-1 text-muted small"></i>
+                  </th>
+                  <th class="border-0 fw-semibold text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let request of paginatedRequests" class="align-middle">
+                  <!-- Applicant -->
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-circle bg-primary text-white me-3">
+                        {{ request.applicantName.charAt(0).toUpperCase() }}
+                      </div>
+                      <div>
+                        <div class="fw-semibold">{{ request.applicantName }}</div>
+                        <small class="text-muted">ID: {{ request.applicantId }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  
+                  <!-- Loan Details -->
+                  <td>
+                    <div>
+                      <div class="fw-semibold">{{ request.loanType }}</div>
+                      <div class="text-success fw-bold">{{ formatCurrency(request.loanAmount) }}</div>
+                      <small class="text-muted">Loan ID: {{ request.loanId }}</small>
+                    </div>
+                  </td>
+                  
+                  <!-- Requested Documents -->
+                  <td>
+                    <div class="d-flex flex-wrap gap-1">
+                      <span 
+                        *ngFor="let doc of parseDocumentTypes(request.requestedDocuments)" 
+                        class="badge bg-light text-dark border small">
+                        {{ doc }}
+                      </span>
+                    </div>
+                  </td>
+                  
+                  <!-- Reason -->
+                  <td>
+                    <div class="text-truncate" style="max-width: 200px;" [title]="request.reason">
+                      {{ request.reason }}
+                    </div>
+                    <div *ngIf="request.additionalComments" class="small text-muted mt-1">
+                      <i class="fas fa-comment me-1"></i>Has additional comments
+                    </div>
+                  </td>
+                  
+                  <!-- Priority -->
+                  <td>
+                    <span [class]="getPriorityClass(request.priorityLevel)">
+                      {{ getPriorityLabel(request.priorityLevel) }}
+                    </span>
+                  </td>
+                  
+                  <!-- Status -->
+                  <td>
+                    <span [class]="getStatusClass(request.status)">
+                      {{ getStatusLabel(request.status) }}
+                    </span>
+                  </td>
+                  
+                  <!-- Requested -->
+                  <td>
+                    <div>
+                      <div class="small">{{ formatDate(request.requestedAt) }}</div>
+                      <div class="small text-muted">by {{ request.requestedBy }}</div>
+                    </div>
+                  </td>
+                  
+                  <!-- Actions -->
+                  <td class="text-center">
+                    <div class="btn-group" *ngIf="request.status === 'REQUESTED'">
+                      <button 
+                        class="btn btn-sm btn-outline-success"
+                        (click)="openProcessModal(request, 'APPROVE')"
+                        title="Approve and Forward to Applicant">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button 
+                        class="btn btn-sm btn-outline-danger"
+                        (click)="openProcessModal(request, 'REJECT')"
+                        title="Reject Request">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                    <span *ngIf="request.status !== 'REQUESTED'" class="text-muted small">
+                      <i class="fas fa-check-circle"></i> Processed
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Empty State -->
+          <div *ngIf="filteredRequests.length === 0 && !loading" class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Document Requests Found</h5>
+            <p class="text-muted">There are no document resubmission requests matching your criteria.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="row mt-4" *ngIf="totalPages > 1">
+    <div class="col-12">
+      <nav aria-label="Document requests pagination">
+        <ul class="pagination justify-content-center mb-0">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <button class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+          </li>
+          <li 
+            *ngFor="let page of pageNumbers" 
+            class="page-item" 
+            [class.active]="page === currentPage">
+            <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <button class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Process Request Modal -->
+<div class="modal fade show d-block" *ngIf="showProcessModal" style="background-color: rgba(0,0,0,0.5);" (click)="closeProcessModal()">
+  <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <!-- Modal Header -->
+      <div class="modal-header" [class]="processAction === 'APPROVE' ? 'bg-success text-white' : 'bg-danger text-white'">
+        <h5 class="modal-title">
+          <i [class]="processAction === 'APPROVE' ? 'fas fa-check-circle me-2' : 'fas fa-times-circle me-2'"></i>
+          {{ processAction === 'APPROVE' ? 'Approve & Forward Request' : 'Reject Request' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeProcessModal()"></button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="modal-body" *ngIf="selectedRequest">
+        <!-- Request Details -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-primary mb-3">Request Details</h6>
+            <div class="mb-2">
+              <strong>Applicant:</strong> {{ selectedRequest.applicantName }}
+            </div>
+            <div class="mb-2">
+              <strong>Loan:</strong> {{ selectedRequest.loanType }} - {{ formatCurrency(selectedRequest.loanAmount) }}
+            </div>
+            <div class="mb-2">
+              <strong>Priority:</strong> 
+              <span [class]="getPriorityClass(selectedRequest.priorityLevel)" class="ms-1">
+                {{ getPriorityLabel(selectedRequest.priorityLevel) }}
+              </span>
+            </div>
+            <div class="mb-2">
+              <strong>Requested By:</strong> {{ selectedRequest.requestedBy }}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-primary mb-3">Requested Documents</h6>
+            <div class="d-flex flex-wrap gap-2">
+              <span 
+                *ngFor="let doc of parseDocumentTypes(selectedRequest.requestedDocuments)" 
+                class="badge bg-light text-dark border">
+                {{ doc }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Reason -->
+        <div class="mb-4">
+          <h6 class="fw-bold text-primary mb-2">Reason for Resubmission</h6>
+          <div class="p-3 bg-light rounded">
+            {{ selectedRequest.reason }}
+          </div>
+          <div *ngIf="selectedRequest.additionalComments" class="mt-2">
+            <strong>Additional Comments:</strong>
+            <div class="p-2 bg-light rounded mt-1">
+              {{ selectedRequest.additionalComments }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Action Form -->
+        <div class="border-top pt-4">
+          <h6 class="fw-bold mb-3">
+            {{ processAction === 'APPROVE' ? 'Forward to Applicant' : 'Reject Request' }}
+          </h6>
+          
+          <!-- Rejection Reason (only for reject) -->
+          <div class="mb-3" *ngIf="processAction === 'REJECT'">
+            <label class="form-label fw-semibold text-danger">
+              Rejection Reason <span class="text-danger">*</span>
+            </label>
+            <textarea 
+              class="form-control" 
+              rows="3" 
+              [(ngModel)]="rejectionReason"
+              placeholder="Please provide a clear reason for rejecting this request..."
+              required></textarea>
+          </div>
+          
+          <!-- Additional Remarks -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {{ processAction === 'APPROVE' ? 'Additional Notes (Optional)' : 'Additional Remarks (Optional)' }}
+            </label>
+            <textarea 
+              class="form-control" 
+              rows="3" 
+              [(ngModel)]="processRemarks"
+              [placeholder]="processAction === 'APPROVE' ? 
+                'Any additional instructions or notes for the applicant...' : 
+                'Any additional remarks about the rejection...'"></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeProcessModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          [class]="processAction === 'APPROVE' ? 'btn btn-success' : 'btn btn-danger'"
+          (click)="processRequest()"
+          [disabled]="processing || (processAction === 'REJECT' && !rejectionReason.trim())">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!processing" [class]="processAction === 'APPROVE' ? 'fas fa-paper-plane me-2' : 'fas fa-ban me-2'"></i>
+          {{ processAction === 'APPROVE' ? 'Forward to Applicant' : 'Reject Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

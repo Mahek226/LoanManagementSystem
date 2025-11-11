@@ -1,0 +1,170 @@
+<!-- Progress Indicators Component -->
+<div class="progress-container" [class.mini-view]="showMiniView">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+    </div>
+    <p>Loading progress...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="error-state">
+    <i class="fas fa-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+    <button class="retry-btn" (click)="refreshProgress()">
+      <i class="fas fa-redo"></i> Retry
+    </button>
+  </div>
+
+  <!-- Progress Content -->
+  <div *ngIf="progressData && !isLoading && !error" class="progress-content">
+    <!-- Header -->
+    <div class="progress-header">
+      <div class="header-info">
+        <h3 class="loan-title">
+          <i class="fas fa-file-alt"></i>
+          {{ progressData.applicantName }}
+        </h3>
+        <div class="loan-meta">
+          <span class="loan-type">{{ progressData.loanType }}</span>
+          <span class="loan-id" *ngIf="progressData.loanId > 0">#{{ progressData.loanId }}</span>
+          <span class="priority-badge" 
+                [style.color]="getPriorityColor(progressData.priority)"
+                [title]="progressData.priority + ' priority'">
+            <i [class]="getPriorityIcon(progressData.priority)"></i>
+            {{ progressData.priority | titlecase }}
+          </span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="refresh-btn" 
+                (click)="refreshProgress()" 
+                [disabled]="isLoading"
+                title="Refresh progress">
+          <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Overall Progress Bar -->
+    <div class="overall-progress">
+      <div class="progress-info">
+        <span class="current-step">{{ progressData.currentStep }}</span>
+        <span class="progress-percentage">{{ progressData.overallProgress }}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" 
+             [style.width.%]="progressData.overallProgress"
+             [class.pulsing]="progressData.overallProgress < 100">
+        </div>
+      </div>
+      <div class="progress-meta">
+        <small class="estimated-completion">
+          <i class="fas fa-clock"></i>
+          Est. completion: {{ getRelativeTime(progressData.estimatedCompletion) }}
+        </small>
+        <small class="last-updated">
+          <i class="fas fa-sync"></i>
+          Updated: {{ getRelativeTime(progressData.lastUpdated) }}
+        </small>
+      </div>
+    </div>
+
+    <!-- Detailed Steps (Hidden in mini view) -->
+    <div *ngIf="!showMiniView" class="progress-steps">
+      <div *ngFor="let step of progressData.steps; let i = index; trackBy: trackByStepId" 
+           class="progress-step"
+           [class.completed]="step.status === 'completed'"
+           [class.in-progress]="step.status === 'in_progress'"
+           [class.failed]="step.status === 'failed'"
+           [class.skipped]="step.status === 'skipped'">
+        
+        <!-- Step Connector Line -->
+        <div class="step-connector" 
+             *ngIf="i < progressData.steps.length - 1"
+             [class.active]="step.status === 'completed'">
+        </div>
+
+        <!-- Step Icon -->
+        <div class="step-icon" 
+             [style.background-color]="getStepStatusColor(step.status)"
+             [style.color]="step.status === 'pending' ? '#6b7280' : 'white'">
+          <i [class]="step.icon || getStepStatusIcon(step.status)"></i>
+        </div>
+
+        <!-- Step Content -->
+        <div class="step-content">
+          <div class="step-header">
+            <h4 class="step-title">{{ step.label }}</h4>
+            <div class="step-status">
+              <span class="status-badge" 
+                    [class]="'status-' + step.status">
+                {{ step.status | titlecase }}
+              </span>
+              <span *ngIf="step.timestamp" class="step-time">
+                {{ getRelativeTime(step.timestamp) }}
+              </span>
+            </div>
+          </div>
+          
+          <p class="step-description">{{ step.description }}</p>
+          
+          <!-- Step Progress Bar (for in-progress steps) -->
+          <div *ngIf="step.status === 'in_progress' && step.progress !== undefined" 
+               class="step-progress">
+            <div class="step-progress-bar">
+              <div class="step-progress-fill" 
+                   [style.width.%]="step.progress">
+              </div>
+            </div>
+            <span class="step-progress-text">{{ step.progress | number:'1.0-0' }}%</span>
+          </div>
+
+          <!-- Duration Info -->
+          <div *ngIf="step.estimatedDuration || step.actualDuration" class="step-duration">
+            <small>
+              <i class="fas fa-hourglass-half"></i>
+              <span *ngIf="step.actualDuration; else estimatedTime">
+                Took {{ formatDuration(step.actualDuration) }}
+              </span>
+              <ng-template #estimatedTime>
+                Est. {{ formatDuration(step.estimatedDuration!) }}
+              </ng-template>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mini View Steps Summary -->
+    <div *ngIf="showMiniView" class="mini-steps">
+      <div class="mini-step-indicators">
+        <div *ngFor="let step of progressData.steps; trackBy: trackByStepId" 
+             class="mini-step"
+             [class.completed]="step.status === 'completed'"
+             [class.in-progress]="step.status === 'in_progress'"
+             [class.failed]="step.status === 'failed'"
+             [title]="step.label + ': ' + step.description">
+          <div class="mini-step-dot" 
+               [style.background-color]="getStepStatusColor(step.status)">
+          </div>
+        </div>
+      </div>
+      <div class="mini-summary">
+        <span class="completed-count">
+          {{ (progressData.steps | filter:'status':'completed').length }} / {{ progressData.steps.length }} completed
+        </span>
+      </div>
+    </div>
+
+    <!-- Assigned Officer Info -->
+    <div *ngIf="progressData.assignedOfficer && !showMiniView" class="assigned-officer">
+      <div class="officer-info">
+        <i class="fas fa-user-tie"></i>
+        <span>Assigned to: <strong>{{ progressData.assignedOfficer }}</strong></span>
+      </div>
+    </div>
+  </div>
+</div>

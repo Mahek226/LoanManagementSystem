@@ -1,0 +1,106 @@
+<div class="compliance-layout">
+  <!-- Header -->
+  <header class="header">
+    <div class="container-fluid">
+      <div class="d-flex align-items-center justify-content-between">
+        <!-- Logo and Title -->
+        <div class="d-flex align-items-center gap-3">
+          <img src="assets/images/logo.jpeg" 
+               alt="FraudShield Logo" 
+               class="logo"
+               (error)="onImageError()"
+               *ngIf="!showFallbackLogo">
+          
+          <!-- Fallback SVG Logo -->
+          <div class="logo-fallback" *ngIf="showFallbackLogo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M9 12l2 2 4-4"></path>
+            </svg>
+          </div>
+          
+          <div>
+            <h5 class="mb-0 fw-bold">FraudShield LMS</h5>
+            <small class="text-muted">Compliance Officer Portal</small>
+          </div>
+        </div>
+
+        <!-- User Menu -->
+        <div class="d-flex align-items-center gap-3">
+          <!-- Notification Bell -->
+          <app-notification-bell></app-notification-bell>
+          
+          <div class="user-menu position-relative">
+            <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2" 
+                    (click)="toggleUserMenu()">
+              <div class="user-avatar">
+                <i class="fas fa-user-shield"></i>
+              </div>
+              <div class="text-start d-none d-md-block">
+                <div class="fw-semibold text-dark">{{ officerName }}</div>
+                <small class="text-muted">Compliance Officer</small>
+              </div>
+              <i class="fas fa-chevron-down text-muted"></i>
+            </button>
+
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu-custom" *ngIf="showUserMenu">
+            <a routerLink="/compliance-officer/profile" class="dropdown-item" (click)="showUserMenu = false">
+              <i class="fas fa-user me-2"></i> My Profile
+            </a>
+            <a href="#" class="dropdown-item">
+              <i class="fas fa-cog me-2"></i> Settings
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item text-danger" (click)="logout()">
+              <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </a>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs-container">
+    <div class="container-fluid">
+      <ul class="nav nav-tabs border-0">
+        <li class="nav-item">
+          <a class="nav-link" 
+             [class.active]="activeTab === 'dashboard'"
+             routerLink="/compliance-officer/dashboard"
+             (click)="setActiveTab('dashboard')">
+            <i class="fas fa-chart-line me-2"></i>
+            Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" 
+             [class.active]="activeTab === 'escalations'"
+             routerLink="/compliance-officer/escalations"
+             (click)="setActiveTab('escalations')">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Escalations
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" 
+             [class.active]="activeTab === 'profile'"
+             routerLink="/compliance-officer/profile"
+             (click)="setActiveTab('profile')">
+            <i class="fas fa-user me-2"></i>
+            Profile
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container-fluid py-4">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

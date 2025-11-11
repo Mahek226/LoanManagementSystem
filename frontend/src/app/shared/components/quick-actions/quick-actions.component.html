@@ -1,0 +1,47 @@
+<!-- Quick Actions Floating Menu -->
+<div class="quick-actions-container" (keydown)="onKeydown($event)" tabindex="0">
+  <!-- Main Floating Action Button -->
+  <div class="fab-main" 
+       [class.active]="isOpen" 
+       (click)="toggleMenu()"
+       title="Quick Actions (Ctrl+Q)">
+    <i class="fas fa-bolt" [class.rotate]="isOpen"></i>
+  </div>
+
+  <!-- Action Items -->
+  <div class="fab-menu" [class.open]="isOpen">
+    <div *ngFor="let action of getVisibleActions(); let i = index" 
+         class="fab-item"
+         [style.--delay]="i * 0.1 + 's'"
+         [style.--bg-color]="action.color"
+         (click)="executeAction(action)"
+         [title]="action.description">
+      
+      <!-- Action Icon -->
+      <div class="fab-icon">
+        <i [class]="action.icon"></i>
+        <!-- Badge for notifications/counts -->
+        <span *ngIf="action.badge && action.badge > 0" 
+              class="fab-badge">
+          {{ action.badge > 99 ? '99+' : action.badge }}
+        </span>
+      </div>
+      
+      <!-- Action Label (appears on hover) -->
+      <div class="fab-label">
+        <span class="label-text">{{ action.label }}</span>
+        <span class="label-desc">{{ action.description }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backdrop -->
+  <div class="fab-backdrop" 
+       [class.visible]="isOpen" 
+       (click)="toggleMenu()"></div>
+</div>
+
+<!-- Keyboard shortcut hint -->
+<div class="shortcut-hint" *ngIf="!isOpen">
+  <small><i class="fas fa-keyboard"></i> Ctrl+Q for Quick Actions</small>
+</div>

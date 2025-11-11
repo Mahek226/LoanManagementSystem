@@ -1,0 +1,352 @@
+<!-- Applicant Notifications Component -->
+
+<!-- Loading State -->
+<div *ngIf="loading && notifications.length === 0" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted">Loading notifications...</p>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" *ngIf="!loading || notifications.length > 0">
+  
+  <!-- Header -->
+  <div class="mb-4">
+    <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+      <i class="fas fa-bell me-2 text-primary"></i>Notifications
+    </h2>
+    <p class="text-muted mb-0">Stay updated on your loan application requests and status changes</p>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show">
+    <i class="fas fa-check-circle me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show">
+    <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = ''"></button>
+  </div>
+
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small text-muted fw-semibold">Status</label>
+          <select class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Status</option>
+            <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted fw-semibold">Type</label>
+          <select class="form-select" [(ngModel)]="typeFilter" (change)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Types</option>
+            <option *ngFor="let type of typeOptions" [value]="type">{{ type.replace('_', ' ') }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted fw-semibold">Priority</label>
+          <select class="form-select" [(ngModel)]="priorityFilter" (change)="applyFilters()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option value="">All Priorities</option>
+            <option *ngFor="let priority of priorityOptions" [value]="priority">{{ priority }}</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button class="btn btn-outline-secondary w-100" (click)="clearFilters()"
+                  *ngIf="statusFilter || typeFilter || priorityFilter">
+            <i class="fas fa-times me-2"></i>Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications List -->
+  <div class="row g-4">
+    <div class="col-12" *ngFor="let notification of filteredNotifications; let i = index">
+      <div class="card border-0 shadow-sm animate-slide-up" 
+           [style.animation-delay.s]="i * 0.1"
+           [class.border-start]="true"
+           [class.border-danger]="notification.priority === 'HIGH' && notification.status === 'UNREAD'"
+           [class.border-warning]="notification.priority === 'MEDIUM' && notification.status === 'UNREAD'"
+           style="background-color: var(--bg-primary); border-width: 4px !important;"
+           [style.opacity]="notification.status === 'RESOLVED' ? '0.7' : '1'">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <!-- Icon Column -->
+            <div class="col-auto">
+              <div class="notification-icon rounded-circle p-3"
+                   [class.bg-info]="notification.type === 'INFO_REQUEST'"
+                   [class.bg-warning]="notification.type === 'DOCUMENT_REQUEST'"
+                   [class.bg-primary]="notification.type === 'STATUS_UPDATE'"
+                   [class.bg-success]="notification.type === 'APPROVAL'"
+                   [class.bg-danger]="notification.type === 'REJECTION'"
+                   class="bg-opacity-10">
+                <i class="fas {{ getTypeIcon(notification.type) }} fs-3"
+                   [class.text-info]="notification.type === 'INFO_REQUEST'"
+                   [class.text-warning]="notification.type === 'DOCUMENT_REQUEST'"
+                   [class.text-primary]="notification.type === 'STATUS_UPDATE'"
+                   [class.text-success]="notification.type === 'APPROVAL'"
+                   [class.text-danger]="notification.type === 'REJECTION'"></i>
+              </div>
+            </div>
+
+            <!-- Content Column -->
+            <div class="col">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h5 class="fw-bold mb-1" style="color: var(--text-primary);">
+                    {{ notification.title }}
+                  </h5>
+                  <div class="d-flex gap-2 mb-2">
+                    <span class="badge bg-{{ getTypeColor(notification.type) }}">
+                      {{ notification.type.replace('_', ' ') }}
+                    </span>
+                    <span class="badge bg-{{ getPriorityColor(notification.priority) }}">
+                      {{ notification.priority }} PRIORITY
+                    </span>
+                    <span class="badge bg-{{ getStatusColor(notification.status) }}">
+                      {{ notification.status }}
+                    </span>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <small class="text-muted d-block">{{ formatDate(notification.requestedAt) }}</small>
+                  <small class="text-muted">Loan #{{ notification.loanId }}</small>
+                </div>
+              </div>
+
+              <p class="mb-2" style="color: var(--text-secondary);">
+                {{ notification.message }}
+              </p>
+
+              <div class="row g-2 mb-3" *ngIf="notification.requestedDocuments || notification.requestedInfo">
+                <div class="col-md-6" *ngIf="notification.requestedDocuments">
+                  <div class="alert alert-warning mb-0 small">
+                    <strong><i class="fas fa-file-upload me-2"></i>Required Documents:</strong>
+                    <ul class="mb-0 mt-2 ps-3">
+                      <li *ngFor="let doc of notification.requestedDocuments">{{ doc }}</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="col-md-6" *ngIf="notification.requestedInfo">
+                  <div class="alert alert-info mb-0 small">
+                    <strong><i class="fas fa-info-circle me-2"></i>Required Information:</strong>
+                    <ul class="mb-0 mt-2 ps-3">
+                      <li *ngFor="let info of notification.requestedInfo">{{ info }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <small class="text-muted">
+                    <i class="fas fa-user me-1"></i>{{ notification.requestedBy }}
+                  </small>
+                  <span *ngIf="notification.dueDate" class="ms-3">
+                    <small class="text-muted" *ngIf="getDaysRemaining(notification.dueDate) > 0">
+                      <i class="fas fa-clock me-1"></i>{{ getDaysRemaining(notification.dueDate) }} days remaining
+                    </small>
+                    <small class="text-danger fw-bold" *ngIf="getDaysRemaining(notification.dueDate) <= 0">
+                      <i class="fas fa-exclamation-triangle me-1"></i>Overdue!
+                    </small>
+                  </span>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-primary" (click)="viewNotification(notification)">
+                    <i class="fas fa-eye me-1"></i>View Details
+                  </button>
+                  <button class="btn btn-sm btn-primary" 
+                          (click)="respondToRequest(notification)"
+                          *ngIf="notification.type === 'INFO_REQUEST' || notification.type === 'DOCUMENT_REQUEST'"
+                          [disabled]="notification.status === 'RESOLVED'">
+                    <i class="fas fa-reply me-1"></i>Respond
+                  </button>
+                  <button class="btn btn-sm btn-success" 
+                          (click)="markAsResolved(notification)"
+                          *ngIf="notification.status !== 'RESOLVED'">
+                    <i class="fas fa-check me-1"></i>Mark Resolved
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="col-12" *ngIf="filteredNotifications.length === 0 && !loading">
+      <div class="text-center py-5">
+        <i class="fas fa-bell-slash text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3 text-muted">No Notifications</h4>
+        <p class="text-muted">You don't have any notifications at the moment</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Notification Detail Modal -->
+<div class="modal fade show d-block" *ngIf="showDetailModal && selectedNotification" 
+     style="background-color: rgba(0,0,0,0.5);" 
+     (click)="closeDetailModal()">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: var(--bg-primary);">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom"
+           [class.bg-info]="selectedNotification.type === 'INFO_REQUEST'"
+           [class.bg-warning]="selectedNotification.type === 'DOCUMENT_REQUEST'"
+           [class.bg-primary]="selectedNotification.type === 'STATUS_UPDATE'"
+           [class.bg-success]="selectedNotification.type === 'APPROVAL'"
+           [class.bg-danger]="selectedNotification.type === 'REJECTION'"
+           class="bg-opacity-10">
+        <h5 class="modal-title fw-bold" style="color: var(--text-primary);">
+          <i class="fas {{ getTypeIcon(selectedNotification.type) }} me-2"></i>
+          {{ selectedNotification.title }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDetailModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Notification Info -->
+        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="small text-muted">Notification ID</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">#{{ selectedNotification.notificationId }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Loan ID</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">#{{ selectedNotification.loanId }}</p>
+              </div>
+              <div class="col-md-4">
+                <label class="small text-muted">Type</label>
+                <p class="mb-0">
+                  <span class="badge bg-{{ getTypeColor(selectedNotification.type) }}">
+                    {{ selectedNotification.type.replace('_', ' ') }}
+                  </span>
+                </p>
+              </div>
+              <div class="col-md-4">
+                <label class="small text-muted">Priority</label>
+                <p class="mb-0">
+                  <span class="badge bg-{{ getPriorityColor(selectedNotification.priority) }}">
+                    {{ selectedNotification.priority }}
+                  </span>
+                </p>
+              </div>
+              <div class="col-md-4">
+                <label class="small text-muted">Status</label>
+                <p class="mb-0">
+                  <span class="badge bg-{{ getStatusColor(selectedNotification.status) }}">
+                    {{ selectedNotification.status }}
+                  </span>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Requested By</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">{{ selectedNotification.requestedBy }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="small text-muted">Requested On</label>
+                <p class="fw-semibold mb-0" style="color: var(--text-primary);">{{ formatDate(selectedNotification.requestedAt) }}</p>
+              </div>
+              <div class="col-12" *ngIf="selectedNotification.dueDate">
+                <label class="small text-muted">Due Date</label>
+                <p class="fw-semibold mb-0">
+                  <span [class.text-danger]="getDaysRemaining(selectedNotification.dueDate) <= 0"
+                        [class.text-warning]="getDaysRemaining(selectedNotification.dueDate) <= 3 && getDaysRemaining(selectedNotification.dueDate) > 0"
+                        style="color: var(--text-primary);">
+                    {{ formatDate(selectedNotification.dueDate) }}
+                    <small class="ms-2">
+                      ({{ getDaysRemaining(selectedNotification.dueDate) > 0 ? getDaysRemaining(selectedNotification.dueDate) + ' days remaining' : 'Overdue' }})
+                    </small>
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message -->
+        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-secondary);">
+          <div class="card-header border-0">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-envelope me-2 text-primary"></i>Message
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="mb-0" style="color: var(--text-primary);">{{ selectedNotification.message }}</p>
+          </div>
+        </div>
+
+        <!-- Required Documents -->
+        <div class="card border-0 shadow-sm mb-4" 
+             *ngIf="selectedNotification.requestedDocuments"
+             style="background-color: var(--bg-secondary);">
+          <div class="card-header border-0 bg-warning bg-opacity-10">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-file-upload me-2 text-warning"></i>Required Documents
+            </h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0">
+              <li *ngFor="let doc of selectedNotification.requestedDocuments" class="mb-2">
+                <i class="fas fa-file-alt text-warning me-2"></i>
+                <span style="color: var(--text-primary);">{{ doc }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Required Information -->
+        <div class="card border-0 shadow-sm" 
+             *ngIf="selectedNotification.requestedInfo"
+             style="background-color: var(--bg-secondary);">
+          <div class="card-header border-0 bg-info bg-opacity-10">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-info-circle me-2 text-info"></i>Required Information
+            </h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0">
+              <li *ngFor="let info of selectedNotification.requestedInfo" class="mb-2">
+                <i class="fas fa-question-circle text-info me-2"></i>
+                <span style="color: var(--text-primary);">{{ info }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer border-top">
+        <button type="button" class="btn btn-secondary" (click)="closeDetailModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+        <button type="button" class="btn btn-success" 
+                (click)="markAsResolved(selectedNotification); closeDetailModal()"
+                *ngIf="selectedNotification.status !== 'RESOLVED'">
+          <i class="fas fa-check me-2"></i>Mark as Resolved
+        </button>
+        <button type="button" class="btn btn-primary" 
+                (click)="respondToRequest(selectedNotification)"
+                *ngIf="selectedNotification.type === 'INFO_REQUEST' || selectedNotification.type === 'DOCUMENT_REQUEST'">
+          <i class="fas fa-reply me-2"></i>Respond to Request
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,278 @@
+<!-- Step 4: Declarations & Consent -->
+<div class="step-content" *ngIf="currentStep === 4">
+  <div class="step-header">
+    <h3><i class="fas fa-file-contract me-2"></i>Terms, Consents & Declarations</h3>
+    <p class="text-muted">Please carefully read the following information before proceeding</p>
+  </div>
+
+  <form [formGroup]="declarationsForm" class="loan-form">
+    
+    <!-- KYC Verification Information -->
+    <div class="card mb-3 border-primary">
+      <div class="card-header bg-primary text-white">
+        <h6 class="mb-0"><i class="fas fa-user-check me-2"></i>1. KYC Verification & Identity Authentication</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>Purpose:</strong> To verify your identity and comply with regulatory requirements under the Prevention of Money Laundering Act (PMLA) and RBI guidelines.</p>
+        
+        <p><strong>What we will do:</strong></p>
+        <ul>
+          <li>Verify your identity through government databases including Aadhaar (UIDAI), PAN (Income Tax Department), and Voter ID</li>
+          <li>Cross-check your personal details (name, date of birth, address) with official records</li>
+          <li>Perform face matching and biometric verification if required</li>
+          <li>Validate your address through utility bills, bank statements, or government-issued documents</li>
+        </ul>
+        
+        <p><strong>Legal Basis:</strong> Reserve Bank of India (RBI) Master Direction on KYC, Prevention of Money Laundering (Maintenance of Records) Rules, 2005</p>
+        
+        <p class="mb-0"><strong>Data Security:</strong> All KYC data is encrypted and stored in compliance with data protection laws. Your information will not be shared with third parties except as required by law.</p>
+      </div>
+    </div>
+
+    <!-- Credit Bureau Check Information -->
+    <div class="card mb-3 border-info">
+      <div class="card-header bg-info text-white">
+        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>2. Credit Bureau Report & Credit Score Assessment</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>Purpose:</strong> To assess your creditworthiness, repayment capacity, and credit history for determining loan eligibility and interest rates.</p>
+        
+        <p><strong>What we will access:</strong></p>
+        <ul>
+          <li><strong>Credit Bureaus:</strong> CIBIL (TransUnion), Experian, Equifax, and CRIF High Mark</li>
+          <li><strong>Credit Score:</strong> Your credit score ranging from 300-900 (higher is better)</li>
+          <li><strong>Credit History:</strong> Past and current loans, credit cards, payment history, defaults, and settlements</li>
+          <li><strong>Credit Inquiries:</strong> Recent credit applications and hard inquiries made by other lenders</li>
+          <li><strong>Public Records:</strong> Bankruptcies, foreclosures, civil suits, and judgments (if any)</li>
+        </ul>
+        
+        <p><strong>Impact on Credit Score:</strong> This will be recorded as a "hard inquiry" and may temporarily impact your credit score by 5-10 points. Multiple loan applications within a short period may further reduce your score.</p>
+        
+        <p><strong>Your Rights:</strong> You have the right to obtain a free credit report annually from each bureau. You can dispute any inaccuracies in your credit report.</p>
+        
+        <p class="mb-0"><strong>Retention:</strong> Credit inquiry records are retained by credit bureaus for 2 years as per RBI guidelines.</p>
+      </div>
+    </div>
+
+    <!-- Bank Statement Analysis Information -->
+    <div class="card mb-3 border-success">
+      <div class="card-header bg-success text-white">
+        <h6 class="mb-0"><i class="fas fa-university me-2"></i>3. Bank Statement Retrieval & Financial Analysis</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>Purpose:</strong> To verify your income, assess your financial stability, spending patterns, and repayment capacity.</p>
+        
+        <p><strong>What we will analyze:</strong></p>
+        <ul>
+          <li><strong>Income Verification:</strong> Salary credits, business income, rental income, and other regular deposits</li>
+          <li><strong>Banking Behavior:</strong> Average monthly balance, account maintenance, cheque bounces, and overdraft usage</li>
+          <li><strong>Expense Analysis:</strong> EMI payments, credit card payments, utility bills, and discretionary spending</li>
+          <li><strong>Cash Flow Pattern:</strong> Inflow vs outflow ratio to determine surplus income available for loan repayment</li>
+          <li><strong>Red Flags:</strong> Frequent loan applications, gambling transactions, cryptocurrency trading, or suspicious activities</li>
+        </ul>
+        
+        <p><strong>Statement Period:</strong> We typically require 3-6 months of bank statements. For business loans, 12 months may be required.</p>
+        
+        <p><strong>Multiple Accounts:</strong> If you have multiple bank accounts, we may request statements from all accounts used for salary/income credits.</p>
+        
+        <p><strong>Data Privacy:</strong> Bank statements are analyzed using automated systems with bank-grade encryption. Access is limited to authorized personnel only.</p>
+        
+        <p class="mb-0"><strong>Account Aggregator Framework:</strong> We use RBI-approved Account Aggregator services for secure, consent-based access to your financial data.</p>
+      </div>
+    </div>
+
+    <!-- Terms & Conditions Information -->
+    <div class="card mb-3 border-warning">
+      <div class="card-header bg-warning">
+        <h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>4. Terms & Conditions of Loan Agreement</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>Key Terms You Must Understand:</strong></p>
+        
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Loan Disbursement:</strong></p>
+            <ul class="small">
+              <li>Loan amount will be disbursed to your registered bank account</li>
+              <li>Processing fee (typically 1-2% of loan amount) will be deducted upfront</li>
+              <li>Disbursement timeline: 3-7 working days after approval</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Interest Calculation:</strong></p>
+            <ul class="small">
+              <li>Interest is calculated on reducing balance method</li>
+              <li>Annual Percentage Rate (APR) includes all charges</li>
+              <li>Interest rates may be fixed or floating based on loan type</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-6">
+            <p><strong>Repayment Terms:</strong></p>
+            <ul class="small">
+              <li>EMI due date: 5th of every month (or as specified)</li>
+              <li>Auto-debit mandate from your bank account</li>
+              <li>Prepayment allowed with/without penalty (as per loan type)</li>
+              <li>Late payment charges: ₹500 + 2% per month on overdue amount</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Default Consequences:</strong></p>
+            <ul class="small">
+              <li>Credit score will be negatively impacted (reported to CIBIL)</li>
+              <li>Legal action may be initiated after 90 days of default</li>
+              <li>Recovery charges and legal fees will be added to outstanding amount</li>
+              <li>Collateral (if any) may be seized/auctioned</li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="mt-3 mb-0"><strong>Important:</strong> <a href="#" target="_blank" class="text-primary">Click here to read the complete Terms & Conditions</a> document. This is a legally binding agreement.</p>
+      </div>
+    </div>
+
+    <!-- Privacy Policy Information -->
+    <div class="card mb-3 border-secondary">
+      <div class="card-header bg-secondary text-white">
+        <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>5. Privacy Policy & Data Protection</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>How We Handle Your Personal Data:</strong></p>
+        
+        <p><strong>Data We Collect:</strong></p>
+        <ul>
+          <li><strong>Personal Information:</strong> Name, DOB, gender, contact details, address, identification documents</li>
+          <li><strong>Financial Information:</strong> Income details, bank account information, credit history, tax records</li>
+          <li><strong>Employment Information:</strong> Employer name, designation, salary, years of employment</li>
+          <li><strong>Technical Data:</strong> IP address, device information, browser type, location data (for fraud prevention)</li>
+          <li><strong>Biometric Data:</strong> Face recognition, fingerprints (if applicable for authentication)</li>
+        </ul>
+        
+        <p><strong>How We Use Your Data:</strong></p>
+        <ul>
+          <li>Processing your loan application and making lending decisions</li>
+          <li>Conducting credit risk assessment and fraud detection</li>
+          <li>Compliance with legal and regulatory requirements</li>
+          <li>Communicating loan status, payment reminders, and promotional offers</li>
+          <li>Improving our services through data analytics</li>
+        </ul>
+        
+        <p><strong>Data Sharing:</strong></p>
+        <ul>
+          <li><strong>Credit Bureaus:</strong> We report your loan and repayment data to CIBIL, Experian, Equifax, CRIF</li>
+          <li><strong>Service Providers:</strong> KYC verification agencies, payment gateways, document storage providers</li>
+          <li><strong>Legal Authorities:</strong> Law enforcement, tax authorities, regulators (when required by law)</li>
+          <li><strong>Collection Agencies:</strong> In case of default, your data may be shared with authorized recovery agents</li>
+        </ul>
+        
+        <p><strong>Data Security Measures:</strong></p>
+        <ul>
+          <li>256-bit SSL encryption for data transmission</li>
+          <li>Multi-factor authentication for account access</li>
+          <li>Regular security audits and penetration testing</li>
+          <li>Access control and activity logging for all data access</li>
+          <li>Compliance with ISO 27001 and PCI-DSS standards</li>
+        </ul>
+        
+        <p><strong>Your Rights Under Data Protection:</strong></p>
+        <ul>
+          <li><strong>Right to Access:</strong> Request a copy of your personal data we hold</li>
+          <li><strong>Right to Correction:</strong> Request correction of inaccurate data</li>
+          <li><strong>Right to Deletion:</strong> Request deletion of data (subject to legal obligations)</li>
+          <li><strong>Right to Withdraw Consent:</strong> Withdraw consent at any time (may affect loan processing)</li>
+        </ul>
+        
+        <p><strong>Data Retention:</strong> We retain your data for 7 years after loan closure as per RBI guidelines.</p>
+        
+        <p class="mb-0"><strong>Privacy Policy:</strong> <a href="#" target="_blank" class="text-primary">Read our complete Privacy Policy here</a> for detailed information.</p>
+      </div>
+    </div>
+
+    <!-- Electronic Signature Information -->
+    <div class="card mb-3 border-dark">
+      <div class="card-header bg-dark text-white">
+        <h6 class="mb-0"><i class="fas fa-signature me-2"></i>6. Electronic Signature & Digital Documentation</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>Digital Signature Process:</strong></p>
+        <p>By consenting to electronic signatures, you agree to sign loan documents digitally using:</p>
+        <ul>
+          <li><strong>Aadhaar eSign:</strong> OTP-based signature using your Aadhaar number (as per IT Act, 2000)</li>
+          <li><strong>Digital Signature Certificate (DSC):</strong> PKI-based signatures for higher security</li>
+          <li><strong>Email/SMS OTP:</strong> For consent and acceptance of terms</li>
+        </ul>
+        
+        <p><strong>Legal Validity:</strong> Electronic signatures have the same legal validity as physical signatures under the Information Technology Act, 2000, and Indian Evidence Act.</p>
+        
+        <p><strong>Documents to be Signed:</strong></p>
+        <ul>
+          <li>Loan Agreement and Schedule of Charges</li>
+          <li>NACH/ECS Mandate for auto-debit</li>
+          <li>Hypothecation/Mortgage Agreement (if applicable)</li>
+          <li>Guarantor/Co-borrower Agreement (if applicable)</li>
+        </ul>
+        
+        <p class="mb-0"><strong>Note:</strong> This is optional. If you prefer physical signatures, loan documents will be sent to your registered address via courier.</p>
+      </div>
+    </div>
+
+    <!-- Final Declaration & Agreement -->
+    <div class="card border-danger mb-4">
+      <div class="card-header bg-danger text-white">
+        <h6 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>7. Final Declaration & Acknowledgment</h6>
+      </div>
+      <div class="card-body">
+        <p><strong>I hereby solemnly declare and confirm that:</strong></p>
+        <ol>
+          <li>All information provided in this loan application is <strong>true, accurate, complete, and up-to-date</strong> to the best of my knowledge and belief.</li>
+          <li>I understand that any <strong>false, misleading, or incomplete information</strong> may result in:
+            <ul>
+              <li>Immediate rejection of my loan application</li>
+              <li>Cancellation of loan even after disbursement</li>
+              <li>Legal action including criminal prosecution under IPC Section 420 (Cheating) and Section 193 (False Evidence)</li>
+              <li>Blacklisting and reporting to credit bureaus</li>
+            </ul>
+          </li>
+          <li>I am <strong>not involved in any illegal activities</strong> including money laundering, terrorist financing, or fraud.</li>
+          <li>The <strong>source of my income is legitimate</strong> and I can provide supporting documents if required.</li>
+          <li>I do <strong>not have any undisclosed loans or liabilities</strong> that may affect my repayment capacity.</li>
+          <li>I <strong>authorize the lender</strong> to verify any information provided with third parties including employers, banks, and government agencies.</li>
+          <li>I understand that <strong>loan approval is subject to credit assessment</strong> and the lender reserves the right to reject my application without assigning any reason.</li>
+          <li>I agree to <strong>repay the loan as per the agreed schedule</strong> and understand the consequences of default.</li>
+        </ol>
+        
+        <div class="alert alert-warning mt-3">
+          <p class="mb-2"><strong><i class="fas fa-info-circle me-2"></i>Important Information:</strong></p>
+          <ul class="mb-0 small">
+            <li>This application does not guarantee loan approval</li>
+            <li>Interest rates and terms are subject to change based on credit assessment</li>
+            <li>Processing fees are non-refundable even if the loan is rejected</li>
+            <li>You can cancel the loan within 7 days of disbursement without penalty (cooling-off period)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Single Agreement Checkbox -->
+    <div class="card bg-light border-primary">
+      <div class="card-body">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" formControlName="termsAccepted" id="agreeAll" required 
+                 style="width: 20px; height: 20px; cursor: pointer;">
+          <label class="form-check-label ms-2" for="agreeAll" style="cursor: pointer;">
+            <strong class="text-primary" style="font-size: 1.1em;">
+              <i class="fas fa-check-circle me-2"></i>I have carefully read and understood all the above information, terms, conditions, consents, and declarations. I hereby agree to all of them and authorize the lender to proceed with my loan application.
+            </strong>
+          </label>
+        </div>
+        <div *ngIf="declarationsForm.get('termsAccepted')?.invalid && declarationsForm.get('termsAccepted')?.touched" 
+             class="text-danger mt-2">
+          <small><i class="fas fa-exclamation-triangle me-1"></i>You must agree to the terms and conditions to proceed</small>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>

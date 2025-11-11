@@ -1,0 +1,456 @@
+<!-- Predictive Analytics Dashboard -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+    <span class="visually-hidden">Loading predictive analytics...</span>
+  </div>
+  <p class="mt-3 text-muted">Analyzing data and generating insights...</p>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error" class="alert alert-danger alert-dismissible fade show">
+  <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+  <button type="button" class="btn-close" (click)="error = ''"></button>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" *ngIf="!loading">
+  
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+        <i class="fas fa-brain me-2 text-primary"></i>Predictive Analytics
+      </h2>
+      <p class="text-muted mb-0">AI-powered insights and predictions for loan management</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary" (click)="refreshData()">
+        <i class="fas fa-sync-alt me-1"></i>Refresh
+      </button>
+      <button class="btn btn-primary" (click)="exportData()">
+        <i class="fas fa-download me-1"></i>Export
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small text-muted fw-semibold">Time Frame</label>
+          <select class="form-select" [(ngModel)]="selectedTimeframe" (change)="onTimeframeChange()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option *ngFor="let option of timeframeOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small text-muted fw-semibold">Metric Focus</label>
+          <select class="form-select" [(ngModel)]="selectedMetric" (change)="onMetricChange()"
+                  style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <option *ngFor="let option of metricOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button class="btn btn-outline-secondary w-100" (click)="onLoanSelect(1001)">
+            <i class="fas fa-calculator me-1"></i>Analyze Loan #1001
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-tabs mb-4" style="border-bottom: 2px solid var(--border-color);">
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab === 'insights'" (click)="onTabChange('insights')"
+              style="color: var(--text-primary); border-color: transparent;">
+        <i class="fas fa-lightbulb me-1"></i>AI Insights
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab === 'trends'" (click)="onTabChange('trends')"
+              style="color: var(--text-primary); border-color: transparent;">
+        <i class="fas fa-chart-line me-1"></i>Market Trends
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab === 'risk'" (click)="onTabChange('risk')"
+              style="color: var(--text-primary); border-color: transparent;">
+        <i class="fas fa-shield-alt me-1"></i>Risk Forecast
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab === 'performance'" (click)="onTabChange('performance')"
+              style="color: var(--text-primary); border-color: transparent;">
+        <i class="fas fa-tachometer-alt me-1"></i>Performance
+      </button>
+    </li>
+    <li class="nav-item" *ngIf="selectedLoanPrediction">
+      <button class="nav-link" [class.active]="activeTab === 'prediction'" (click)="onTabChange('prediction')"
+              style="color: var(--text-primary); border-color: transparent;">
+        <i class="fas fa-crystal-ball me-1"></i>Loan Prediction
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    
+    <!-- AI Insights Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'insights'" [class.active]="activeTab === 'insights'">
+      <div class="row g-4">
+        <div class="col-lg-6" *ngFor="let insight of insights; let i = index">
+          <div class="card border-0 shadow-sm h-100 animate-slide-up" 
+               [style.animation-delay]="(i * 0.1) + 's'"
+               style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                  <div class="rounded-circle p-2 me-3" 
+                       [ngClass]="'bg-' + getInsightColor(insight.impact)"
+                       style="width: 40px; height: 40px;">
+                    <i [class]="'fas ' + getInsightIcon(insight.category) + ' text-white'"></i>
+                  </div>
+                  <div>
+                    <h6 class="fw-bold mb-1" style="color: var(--text-primary);">{{ insight.title }}</h6>
+                    <small class="text-muted">{{ insight.category }} • {{ insight.impact }} Impact</small>
+                  </div>
+                </div>
+                <span class="badge" [ngClass]="'bg-' + getConfidenceColor(insight.confidence)">
+                  {{ insight.confidence }}% Confidence
+                </span>
+              </div>
+              
+              <p class="text-muted mb-3">{{ insight.description }}</p>
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                  <span class="h4 fw-bold mb-0 me-2" style="color: var(--text-primary);">
+                    {{ insight.value }}{{ insight.category === 'RISK' ? '%' : '' }}
+                  </span>
+                  <span class="badge" [ngClass]="insight.change >= 0 ? 'bg-success' : 'bg-danger'" *ngIf="insight.change !== undefined">
+                    <i [class]="insight.change >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                    {{ getAbsoluteValue(insight.change) }}%
+                  </span>
+                </div>
+                <small class="text-muted">{{ formatDate(insight.timestamp) }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Trends Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'trends'" [class.active]="activeTab === 'trends'">
+      <div class="row g-4">
+        <!-- Trends Chart -->
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <div style="height: 400px; position: relative;">
+                <canvas #trendsChart></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Trend Cards -->
+        <div class="col-lg-3" *ngFor="let trend of marketTrends; let i = index">
+          <div class="card border-0 shadow-sm h-100 animate-slide-up"
+               [style.animation-delay]="(i * 0.1) + 's'"
+               style="background-color: var(--bg-primary);">
+            <div class="card-body text-center">
+              <h6 class="fw-bold mb-3" style="color: var(--text-primary);">{{ trend.metric }}</h6>
+              
+              <div class="mb-3">
+                <div class="h3 fw-bold mb-1" style="color: var(--text-primary);">
+                  {{ formatCurrency(trend.currentValue) }}
+                </div>
+                <small class="text-muted">Current Value</small>
+              </div>
+              
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-center">
+                  <div class="fw-semibold" style="color: var(--text-primary);">
+                    {{ formatCurrency(trend.predictedValue) }}
+                  </div>
+                  <small class="text-muted">Predicted</small>
+                </div>
+                <div class="text-center">
+                  <span class="badge" [ngClass]="'bg-' + getTrendColor(trend.trend)">
+                    <i [class]="'fas ' + getTrendIcon(trend.trend)"></i>
+                    {{ trend.trend }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="progress mb-2" style="height: 6px;">
+                <div class="progress-bar bg-primary" 
+                     [style.width.%]="trend.confidence"
+                     [attr.aria-valuenow]="trend.confidence"></div>
+              </div>
+              <small class="text-muted">{{ trend.confidence }}% Confidence</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Forecast Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'risk'" [class.active]="activeTab === 'risk'">
+      <div class="row g-4" *ngIf="riskForecast">
+        <!-- Overall Risk Score -->
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm h-100" style="background-color: var(--bg-primary);">
+            <div class="card-body text-center">
+              <h6 class="fw-bold mb-4" style="color: var(--text-primary);">Overall Risk Level</h6>
+              
+              <div class="position-relative d-inline-block mb-4">
+                <div class="risk-circle" 
+                     [style.background]="'conic-gradient(#ef4444 0deg ' + (riskForecast.overallRisk * 3.6) + 'deg, #e5e7eb ' + (riskForecast.overallRisk * 3.6) + 'deg 360deg)'">
+                  <div class="risk-circle-inner">
+                    <div class="h2 fw-bold mb-0" style="color: var(--text-primary);">{{ riskForecast.overallRisk }}%</div>
+                    <small class="text-muted">Risk Score</small>
+                  </div>
+                </div>
+              </div>
+              
+              <p class="text-muted mb-0">{{ riskForecast.timeframe }} forecast</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Risk Distribution Chart -->
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm h-100" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <div style="height: 300px; position: relative;">
+                <canvas #riskChart></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Risk Recommendations -->
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3" style="color: var(--text-primary);">
+                <i class="fas fa-lightbulb me-2"></i>Risk Mitigation Recommendations
+              </h6>
+              <div class="row g-3">
+                <div class="col-lg-6" *ngFor="let recommendation of riskForecast.recommendations; let i = index">
+                  <div class="d-flex align-items-start">
+                    <div class="rounded-circle bg-warning text-white p-2 me-3 flex-shrink-0">
+                      <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                      <p class="mb-0" style="color: var(--text-primary);">{{ recommendation }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'performance'" [class.active]="activeTab === 'performance'">
+      <div class="row g-4">
+        <!-- Performance Chart -->
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <div style="height: 400px; position: relative;">
+                <canvas #performanceChart></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Performance Metrics Cards -->
+        <div class="col-lg-3" *ngFor="let metric of performanceMetrics; let i = index">
+          <div class="card border-0 shadow-sm h-100 animate-slide-up"
+               [style.animation-delay]="(i * 0.1) + 's'"
+               style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3" style="color: var(--text-primary);">{{ metric.metric }}</h6>
+              
+              <div class="row g-2 mb-3">
+                <div class="col-4 text-center">
+                  <div class="fw-semibold" style="color: var(--text-primary);">{{ metric.current }}</div>
+                  <small class="text-muted">Current</small>
+                </div>
+                <div class="col-4 text-center">
+                  <div class="fw-semibold text-success">{{ metric.predicted }}</div>
+                  <small class="text-muted">Predicted</small>
+                </div>
+                <div class="col-4 text-center">
+                  <div class="fw-semibold text-warning">{{ metric.target }}</div>
+                  <small class="text-muted">Target</small>
+                </div>
+              </div>
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="badge" [ngClass]="'bg-' + getTrendColor(metric.trend)">
+                  <i [class]="'fas ' + getTrendIcon(metric.trend)"></i>
+                  {{ metric.variance > 0 ? '+' : '' }}{{ metric.variance }}
+                </span>
+                <small class="text-muted">vs. current</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loan Prediction Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'prediction'" [class.active]="activeTab === 'prediction'" 
+         *ngIf="selectedLoanPrediction">
+      <div class="row g-4">
+        <!-- Prediction Overview -->
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm h-100" style="background-color: var(--bg-primary);">
+            <div class="card-body text-center">
+              <h6 class="fw-bold mb-4" style="color: var(--text-primary);">Approval Probability</h6>
+              
+              <div class="position-relative d-inline-block mb-4">
+                <div class="prediction-circle"
+                     [style.background]="'conic-gradient(#10b981 0deg ' + (selectedLoanPrediction.approvalProbability * 3.6) + 'deg, #e5e7eb ' + (selectedLoanPrediction.approvalProbability * 3.6) + 'deg 360deg)'">
+                  <div class="prediction-circle-inner">
+                    <div class="h2 fw-bold mb-0" style="color: var(--text-primary);">{{ selectedLoanPrediction.approvalProbability }}%</div>
+                    <small class="text-muted">Probability</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="fw-semibold" style="color: var(--text-primary);">{{ selectedLoanPrediction.applicantName }}</div>
+                <small class="text-muted">Loan #{{ selectedLoanPrediction.loanId }}</small>
+              </div>
+              
+              <span class="badge" [ngClass]="'bg-' + getInsightColor(selectedLoanPrediction.recommendedAction === 'APPROVE' ? 'LOW' : 'HIGH')">
+                {{ selectedLoanPrediction.recommendedAction }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Prediction Timeline Chart -->
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm h-100" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <div style="height: 300px; position: relative;">
+                <canvas #predictionChart></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Key Factors -->
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3" style="color: var(--text-primary);">
+                <i class="fas fa-key me-2"></i>Key Factors Influencing Decision
+              </h6>
+              <div class="row g-3">
+                <div class="col-lg-4" *ngFor="let factor of selectedLoanPrediction.keyFactors">
+                  <div class="d-flex align-items-start">
+                    <div class="rounded-circle p-2 me-3 flex-shrink-0"
+                         [ngClass]="factor.impact > 0 ? 'bg-success' : 'bg-danger'">
+                      <i [class]="factor.impact > 0 ? 'fas fa-plus text-white' : 'fas fa-minus text-white'"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold" style="color: var(--text-primary);">{{ factor.factor }}</span>
+                        <span class="badge" [ngClass]="factor.impact > 0 ? 'bg-success' : 'bg-danger'">
+                          {{ factor.impact > 0 ? '+' : '' }}{{ factor.impact }}
+                        </span>
+                      </div>
+                      <p class="text-muted small mb-0">{{ factor.description }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Styles -->
+<style>
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.risk-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.risk-circle-inner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.prediction-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.prediction-circle-inner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-link.active {
+  background-color: var(--bg-primary) !important;
+  border-bottom: 2px solid var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.tab-pane {
+  min-height: 500px;
+}
+</style>

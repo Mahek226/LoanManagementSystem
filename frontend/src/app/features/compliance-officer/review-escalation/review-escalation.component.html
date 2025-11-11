@@ -1,0 +1,1583 @@
+<div class="review-container">
+  <!-- Back Button -->
+  <button class="btn btn-outline-secondary mb-4" (click)="goBack()">
+    <i class="fas fa-arrow-left me-2"></i>
+    Back to Escalations
+  </button>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading escalation details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !loading && !successMessage" class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Success State -->
+  <div *ngIf="successMessage" class="alert alert-success" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ successMessage }}
+    <div class="mt-2">
+      <small>Redirecting to escalations list...</small>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading && escalation && !successMessage">
+    <!-- Header -->
+    <div class="review-header mb-4">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="mb-2">
+            <i class="fas fa-gavel me-2 text-danger"></i>
+            Compliance Review
+          </h2>
+          <p class="text-muted mb-0">Review and make a decision on this escalated application</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <span class="priority-badge" 
+                [style.background-color]="getPriorityColor(getPriorityLevel(escalation))">
+            <i class="fas fa-exclamation-circle me-1"></i>
+            {{ getPriorityLevel(escalation) }} PRIORITY
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Assessment Card -->
+    <div class="card card-custom risk-card mb-4">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-shield-alt me-2 text-danger"></i>
+          Risk Assessment
+        </h5>
+        <div class="row align-items-center">
+          <div class="col-md-4 text-center">
+            <div class="risk-circle" [style.border-color]="getRiskColor(escalation.riskLevel)">
+              <div class="risk-score">{{ escalation.riskScore }}</div>
+              <div class="risk-label">Risk Score</div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="fw-semibold">Risk Level:</span>
+                <span [class]="getRiskBadgeClass(escalation.riskLevel)">
+                  {{ escalation.riskLevel }}
+                </span>
+              </div>
+              <div class="progress" style="height: 20px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     [class.bg-success]="escalation.riskLevel === 'LOW'"
+                     [class.bg-warning]="escalation.riskLevel === 'MEDIUM'"
+                     [class.bg-danger]="escalation.riskLevel === 'HIGH' || escalation.riskLevel === 'CRITICAL'"
+                     [style.width.%]="escalation.riskScore"
+                     role="progressbar">
+                  {{ escalation.riskScore }}%
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-danger" *ngIf="escalation.riskLevel === 'CRITICAL' || escalation.riskLevel === 'HIGH'">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>High Risk Alert:</strong> This application requires careful review due to elevated fraud indicators.
+            </div>
+
+            <div *ngIf="escalation.fraudIndicators && escalation.fraudIndicators.length > 0">
+              <h6 class="fw-bold mb-2">Fraud Indicators:</h6>
+              <ul class="fraud-indicators">
+                <li *ngFor="let indicator of escalation.fraudIndicators">
+                  <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                  {{ indicator }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <!-- Applicant Information -->
+      <div class="col-md-6">
+        <div class="card card-custom h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-4">
+              <i class="fas fa-user me-2 text-danger"></i>
+              Applicant Information
+            </h5>
+            <div class="info-group">
+              <div class="info-item">
+                <span class="info-label">Name:</span>
+                <span class="info-value">{{ escalation.applicantName }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Applicant ID:</span>
+                <span class="info-value">{{ escalation.applicantId }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Status:</span>
+                <span [class]="getStatusBadgeClass(escalation.status)">
+                  {{ escalation.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loan Information -->
+      <div class="col-md-6">
+        <div class="card card-custom h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-4">
+              <i class="fas fa-file-invoice-dollar me-2 text-danger"></i>
+              Loan Information
+            </h5>
+            <div class="info-group">
+              <div class="info-item">
+                <span class="info-label">Loan ID:</span>
+                <span class="info-value">{{ escalation.loanId }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Loan Type:</span>
+                <span class="info-value">{{ escalation.loanType }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Loan Amount:</span>
+                <span class="info-value text-danger fw-bold">{{ formatCurrency(escalation.loanAmount) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Escalation Details -->
+    <div class="card card-custom mb-4">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-info-circle me-2 text-danger"></i>
+          Escalation Details
+        </h5>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="info-item">
+              <span class="info-label">Assignment ID:</span>
+              <span class="info-value">{{ escalation.assignmentId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Escalated At:</span>
+              <span class="info-value">{{ formatDate(escalation.assignedAt) }}</span>
+            </div>
+            <div class="info-item" *ngIf="escalation.officerName">
+              <span class="info-label">Escalated By:</span>
+              <span class="info-value">{{ escalation.officerName }} ({{ escalation.officerType }})</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-item" *ngIf="escalation.escalationReason">
+              <span class="info-label">Escalation Reason:</span>
+              <span class="info-value">{{ escalation.escalationReason }}</span>
+            </div>
+            <div class="info-item" *ngIf="escalation.remarks">
+              <span class="info-label">Officer Remarks:</span>
+              <span class="info-value">{{ escalation.remarks }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Information Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-history fa-2x text-danger mb-3"></i>
+            <h6 class="fw-bold">Fraud History</h6>
+            <p class="text-muted small mb-3">{{ fraudHistory.length }} record(s)</p>
+            <button class="btn btn-sm btn-outline-danger" (click)="openFraudHistoryModal()">
+              <i class="fas fa-eye me-1"></i>View History
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-file-alt fa-2x text-primary mb-3"></i>
+            <h6 class="fw-bold">Documents</h6>
+            <p class="text-muted small mb-3">{{ documents.length }} document(s)</p>
+            <button class="btn btn-sm btn-outline-primary" (click)="openDocumentsModal()">
+              <i class="fas fa-eye me-1"></i>View Documents
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-shield-alt fa-2x text-info mb-3"></i>
+            <h6 class="fw-bold">External Fraud Data</h6>
+            <p class="text-muted small mb-3" *ngIf="externalFraudData">
+              Risk: <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskLevel)">{{ externalFraudData.riskAssessment.riskLevel }}</span>
+            </p>
+            <p class="text-muted small mb-3" *ngIf="!externalFraudData && !externalFraudLoading">No data available</p>
+            <p class="text-muted small mb-3" *ngIf="externalFraudLoading">Loading...</p>
+            <button class="btn btn-sm btn-outline-info" (click)="openExternalFraudModal()" [disabled]="externalFraudLoading">
+              <i class="fas fa-eye me-1"></i>View Data
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card card-custom h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-plus-circle fa-2x text-warning mb-3"></i>
+            <h6 class="fw-bold">Request Documents</h6>
+            <p class="text-muted small mb-3">Additional verification</p>
+            <button class="btn btn-sm btn-outline-warning" (click)="openRequestDocumentsModal()">
+              <i class="fas fa-paper-plane me-1"></i>Request Docs
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compliance Verification Tools -->
+    <div class="card card-custom mb-4">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-tools me-2 text-danger"></i>
+          Compliance Verification Tools
+        </h5>
+        <p class="text-muted mb-4">
+          Perform comprehensive compliance checks before making your final decision.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <button class="btn btn-primary w-100" (click)="openKYCModal()">
+              <i class="fas fa-id-card me-2"></i>
+              KYC Verification
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-warning w-100" (click)="openAMLModal()">
+              <i class="fas fa-shield-alt me-2"></i>
+              AML Screening
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-danger w-100" (click)="openRiskAnalysisModal()">
+              <i class="fas fa-chart-line me-2"></i>
+              Risk Analysis
+            </button>
+          </div>
+          <div class="col-md-3">
+            <button class="btn btn-secondary w-100" (click)="openAuditLogsModal()">
+              <i class="fas fa-history me-2"></i>
+              Audit Logs
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card card-custom action-card">
+      <div class="card-body">
+        <h5 class="card-title mb-4">
+          <i class="fas fa-tasks me-2 text-danger"></i>
+          Compliance Decision
+        </h5>
+        <p class="text-muted mb-4">
+          Review all information carefully and make your compliance decision. Your decision will be final and recorded in the system.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <button class="btn btn-success w-100 action-btn" (click)="openApproveModal()">
+              <i class="fas fa-check-circle me-2"></i>
+              Approve Application
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-danger w-100 action-btn" (click)="openRejectModal()">
+              <i class="fas fa-times-circle me-2"></i>
+              Reject Application
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-warning w-100 action-btn" (click)="openRequestInfoModal()">
+              <i class="fas fa-question-circle me-2"></i>
+              Request More Info
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" *ngIf="showApproveModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-check-circle me-2"></i>
+          Approve Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Are you sure you want to approve this loan application?</p>
+        <div class="mb-3">
+          <label class="form-label">Remarks (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="remarks"
+                    placeholder="Add any additional comments..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-success" (click)="processDecision()" [disabled]="processing">
+          <span *ngIf="!processing">
+            <i class="fas fa-check me-2"></i>
+            Confirm Approval
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" *ngIf="showRejectModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-times-circle me-2"></i>
+          Reject Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Please provide a reason for rejecting this application.</p>
+        <div class="mb-3">
+          <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="3" [(ngModel)]="rejectionReason" required
+                    placeholder="Explain why this application is being rejected..."></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Additional Remarks (Optional)</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="remarks"
+                    placeholder="Add any additional comments..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="processDecision()" 
+                [disabled]="processing || !rejectionReason.trim()">
+          <span *ngIf="!processing">
+            <i class="fas fa-times me-2"></i>
+            Confirm Rejection
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request More Info Modal -->
+<div class="modal fade" id="requestInfoModal" tabindex="-1" *ngIf="showRequestInfoModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-question-circle me-2"></i>
+          Request More Information
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModals()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Specify what additional information or checks are needed.</p>
+        <div class="mb-3">
+          <label class="form-label">Information Required <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="4" [(ngModel)]="remarks" required
+                    placeholder="Describe what additional information or verification is needed..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" (click)="processDecision()" 
+                [disabled]="processing || !remarks.trim()">
+          <span *ngIf="!processing">
+            <i class="fas fa-paper-plane me-2"></i>
+            Send Request
+          </span>
+          <span *ngIf="processing">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Processing...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fraud History Modal -->
+<div class="modal fade" id="fraudHistoryModal" tabindex="-1" *ngIf="showFraudHistoryModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-history me-2"></i>
+          Fraud History - {{ escalation?.applicantName }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeFraudHistoryModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="fraudHistory.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+          <p>No fraud history found for this applicant</p>
+        </div>
+        <div *ngFor="let record of fraudHistory" class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h6 class="fw-bold mb-1">{{ record.fraudType }}</h6>
+                <small class="text-muted">Record ID: {{ record.recordId }}</small>
+              </div>
+              <span [class]="getFraudStatusClass(record.status)">{{ record.status }}</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <small class="text-muted d-block">Risk Level</small>
+                <span [class]="getRiskBadgeClass(record.riskLevel)">{{ record.riskLevel }}</span>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Risk Score</small>
+                <strong>{{ record.riskScore }}/100</strong>
+              </div>
+              <div class="col-12" *ngIf="record.fraudTags && record.fraudTags.length > 0">
+                <small class="text-muted d-block mb-2">Fraud Tags</small>
+                <div class="d-flex flex-wrap gap-2">
+                  <span *ngFor="let tag of record.fraudTags" class="badge bg-danger">{{ tag }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Detected At</small>
+                <strong>{{ formatDate(record.detectedAt) }}</strong>
+              </div>
+              <div class="col-md-6" *ngIf="record.resolvedAt">
+                <small class="text-muted d-block">Resolved At</small>
+                <strong>{{ formatDate(record.resolvedAt) }}</strong>
+              </div>
+              <div class="col-12" *ngIf="record.remarks">
+                <small class="text-muted d-block">Remarks</small>
+                <p class="mb-0">{{ record.remarks }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeFraudHistoryModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Documents Modal -->
+<div class="modal fade" id="documentsModal" tabindex="-1" *ngIf="showDocumentsModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-file-alt me-2"></i>
+          Loan Documents
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentsModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="documents.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-folder-open fa-3x mb-3"></i>
+          <p>No documents available</p>
+        </div>
+        <div *ngFor="let doc of documents" class="card mb-3">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-7">
+                <h6 class="fw-semibold mb-1">
+                  <i class="fas fa-file-pdf text-danger me-2"></i>{{ formatDocumentType(doc.documentType) }}
+                </h6>
+                <small class="text-muted d-block">{{ doc.documentName }}</small>
+                <div class="mt-2">
+                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                  <small class="text-muted ms-2">Uploaded: {{ formatDate(doc.uploadedAt) }}</small>
+                </div>
+              </div>
+              <div class="col-md-5 text-end">
+                <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye me-1"></i>View Document
+                </a>
+              </div>
+            </div>
+            <div class="mt-3" *ngIf="doc.remarks">
+              <small class="text-muted d-block">Verification Remarks</small>
+              <p class="mb-0">{{ doc.remarks }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request Additional Documents Modal -->
+<div class="modal fade" id="requestDocumentsModal" tabindex="-1" *ngIf="showRequestDocumentsModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-plus-circle me-2"></i>
+          Request Additional Documents
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRequestDocumentsModal()" [disabled]="processing"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Select documents that need to be submitted by the applicant:</p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Document Types <span class="text-danger">*</span></label>
+          <div class="row g-2">
+            <div *ngFor="let docType of availableDocumentTypes" class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" 
+                       [id]="'req-doc-' + docType"
+                       [checked]="selectedDocumentTypes.includes(docType)"
+                       (change)="toggleDocumentType(docType)">
+                <label class="form-check-label" [for]="'req-doc-' + docType">
+                  {{ formatDocumentType(docType) }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Reason for Request <span class="text-danger">*</span></label>
+          <textarea class="form-control" rows="4" 
+                    [(ngModel)]="documentRequestReason"
+                    placeholder="Explain why these additional documents are needed for compliance review..."></textarea>
+        </div>
+
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          The request will be routed through the Loan Officer, who will contact the applicant.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeRequestDocumentsModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="requestAdditionalDocuments()" 
+                [disabled]="processing || selectedDocumentTypes.length === 0 || !documentRequestReason.trim()">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          {{ processing ? 'Sending...' : 'Send Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD THESE 4 MODALS AT THE END OF review-escalation.component.html (after line 562) -->
+
+<!-- ==================== MODAL 1: KYC VERIFICATION ==================== -->
+<!-- KYC Verification Modal -->
+<div class="modal fade" [class.show]="showKYCModal" [style.display]="showKYCModal ? 'block' : 'none'" id="kycModal" tabindex="-1" *ngIf="showKYCModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-id-card me-2"></i>
+          KYC Verification
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeKYCModal()" [disabled]="kycVerifying"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-4">Perform identity verification for the applicant using PAN and/or Aadhaar.</p>
+        
+        <!-- Verification Type Selection -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Verification Type <span class="text-danger">*</span></label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="kycType" id="kycPAN" value="PAN" [(ngModel)]="selectedKYCType">
+            <label class="btn btn-outline-primary" for="kycPAN">
+              <i class="fas fa-id-card me-2"></i>PAN Only
+            </label>
+            
+            <input type="radio" class="btn-check" name="kycType" id="kycAadhaar" value="AADHAAR" [(ngModel)]="selectedKYCType">
+            <label class="btn btn-outline-primary" for="kycAadhaar">
+              <i class="fas fa-fingerprint me-2"></i>Aadhaar Only
+            </label>
+            
+            <input type="radio" class="btn-check" name="kycType" id="kycBoth" value="BOTH" [(ngModel)]="selectedKYCType" checked>
+            <label class="btn btn-outline-primary" for="kycBoth">
+              <i class="fas fa-check-double me-2"></i>Both
+            </label>
+          </div>
+        </div>
+
+        <!-- Verification Results -->
+        <div *ngIf="kycResult" class="mt-4">
+          <div class="alert" [class.alert-success]="kycResult.verified" [class.alert-danger]="!kycResult.verified">
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-3x me-3" [class.fa-check-circle]="kycResult.verified" [class.fa-times-circle]="!kycResult.verified"></i>
+              <div>
+                <h5 class="mb-1">{{ kycResult.verified ? 'Verification Successful' : 'Verification Failed' }}</h5>
+                <p class="mb-0">{{ kycResult.remarks }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6" *ngIf="kycResult.panStatus">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="fas fa-id-card me-2 text-primary"></i>PAN Status
+                  </h6>
+                  <p class="card-text">
+                    <span class="badge" [class.bg-success]="kycResult.panStatus === 'VERIFIED'" [class.bg-danger]="kycResult.panStatus !== 'VERIFIED'">
+                      {{ kycResult.panStatus }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6" *ngIf="kycResult.aadhaarStatus">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="card-title">
+                    <i class="fas fa-fingerprint me-2 text-primary"></i>Aadhaar Status
+                  </h6>
+                  <p class="card-text">
+                    <span class="badge" [class.bg-success]="kycResult.aadhaarStatus === 'VERIFIED'" [class.bg-danger]="kycResult.aadhaarStatus !== 'VERIFIED'">
+                      {{ kycResult.aadhaarStatus }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body text-center">
+                  <i class="fas fa-2x mb-2" [class.fa-check]="kycResult.nameMatch" [class.fa-times]="!kycResult.nameMatch" [class.text-success]="kycResult.nameMatch" [class.text-danger]="!kycResult.nameMatch"></i>
+                  <p class="mb-0 small">Name Match</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body text-center">
+                  <i class="fas fa-2x mb-2" [class.fa-check]="kycResult.addressMatch" [class.fa-times]="!kycResult.addressMatch" [class.text-success]="kycResult.addressMatch" [class.text-danger]="!kycResult.addressMatch"></i>
+                  <p class="mb-0 small">Address Match</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body text-center">
+                  <i class="fas fa-2x mb-2" [class.fa-times]="!kycResult.duplicateFound" [class.fa-exclamation-triangle]="kycResult.duplicateFound" [class.text-success]="!kycResult.duplicateFound" [class.text-warning]="kycResult.duplicateFound"></i>
+                  <p class="mb-0 small">{{ kycResult.duplicateFound ? 'Duplicate Found' : 'No Duplicates' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="kycVerifying" class="text-center py-4">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Verifying...</span>
+          </div>
+          <p class="text-muted">Performing KYC verification...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeKYCModal()" [disabled]="kycVerifying">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" 
+                (click)="performKYCVerification()" 
+                [disabled]="kycVerifying">
+          <span *ngIf="kycVerifying" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!kycVerifying" class="fas fa-check me-2"></i>
+          {{ kycVerifying ? 'Verifying...' : 'Verify KYC' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL 2: AML SCREENING ==================== -->
+<!-- AML Screening Modal -->
+<div class="modal fade" [class.show]="showAMLModal" [style.display]="showAMLModal ? 'block' : 'none'" id="amlModal" tabindex="-1" *ngIf="showAMLModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="fas fa-shield-alt me-2"></i>
+          AML & Sanctions Screening
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAMLModal()" [disabled]="amlScreening"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-4">Perform comprehensive Anti-Money Laundering and sanctions screening.</p>
+        
+        <!-- Check Type Selection -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Screening Sources <span class="text-danger">*</span></label>
+          <div class="row g-2">
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="checkRBI" value="RBI_DEFAULTERS" 
+                       [checked]="selectedAMLChecks.includes('RBI_DEFAULTERS')"
+                       (change)="toggleAMLCheck('RBI_DEFAULTERS')">
+                <label class="form-check-label" for="checkRBI">
+                  <i class="fas fa-university me-2"></i>RBI Defaulters List
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="checkFATF" value="FATF_SANCTIONS"
+                       [checked]="selectedAMLChecks.includes('FATF_SANCTIONS')"
+                       (change)="toggleAMLCheck('FATF_SANCTIONS')">
+                <label class="form-check-label" for="checkFATF">
+                  <i class="fas fa-globe me-2"></i>FATF Sanctions List
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="checkOFAC" value="OFAC"
+                       [checked]="selectedAMLChecks.includes('OFAC')"
+                       (change)="toggleAMLCheck('OFAC')">
+                <label class="form-check-label" for="checkOFAC">
+                  <i class="fas fa-flag-usa me-2"></i>OFAC Sanctions List
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="checkInternal" value="INTERNAL_BLACKLIST"
+                       [checked]="selectedAMLChecks.includes('INTERNAL_BLACKLIST')"
+                       (change)="toggleAMLCheck('INTERNAL_BLACKLIST')">
+                <label class="form-check-label" for="checkInternal">
+                  <i class="fas fa-ban me-2"></i>Internal Blacklist
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screening Results -->
+        <div *ngIf="amlResult" class="mt-4">
+          <!-- Overall Risk -->
+          <div class="alert mb-4" 
+               [class.alert-success]="amlResult.overallRisk === 'CLEAR' || amlResult.overallRisk === 'LOW'"
+               [class.alert-warning]="amlResult.overallRisk === 'MEDIUM'"
+               [class.alert-danger]="amlResult.overallRisk === 'HIGH' || amlResult.overallRisk === 'CRITICAL'">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-3x me-3" 
+                 [class.fa-check-circle]="amlResult.overallRisk === 'CLEAR'"
+                 [class.fa-exclamation-triangle]="amlResult.overallRisk === 'MEDIUM' || amlResult.overallRisk === 'HIGH'"
+                 [class.fa-exclamation-circle]="amlResult.overallRisk === 'CRITICAL'"></i>
+              <div>
+                <h5 class="mb-1">Overall Risk: {{ amlResult.overallRisk }}</h5>
+                <p class="mb-0">Screening completed on {{ amlResult.screeningDate | date:'medium' }}</p>
+              </div>
+              <div class="ms-auto">
+                <span class="badge fs-6" [ngClass]="getAMLRiskClass(amlResult.overallRisk)">
+                  {{ amlResult.overallRisk }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PEP Status -->
+          <div class="card mb-4" *ngIf="amlResult.isPEP">
+            <div class="card-body bg-warning bg-opacity-10">
+              <h6 class="card-title text-warning">
+                <i class="fas fa-user-tie me-2"></i>Politically Exposed Person (PEP) Detected
+              </h6>
+              <p class="card-text mb-0">This applicant has been identified as a Politically Exposed Person. Enhanced due diligence required.</p>
+            </div>
+          </div>
+
+          <!-- Findings Table -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-list me-2"></i>Screening Findings ({{ amlResult.findings.length }})
+              </h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Match Type</th>
+                      <th>Score</th>
+                      <th>Severity</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let finding of amlResult.findings">
+                      <td>
+                        <i class="fas fa-database me-2"></i>
+                        {{ finding.source.replace('_', ' ') }}
+                      </td>
+                      <td>
+                        <span class="badge" 
+                              [class.bg-danger]="finding.matchType === 'EXACT'"
+                              [class.bg-warning]="finding.matchType === 'PARTIAL'"
+                              [class.bg-success]="finding.matchType === 'NONE'">
+                          {{ finding.matchType }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar" 
+                               [class.bg-danger]="finding.matchScore > 70"
+                               [class.bg-warning]="finding.matchScore > 30 && finding.matchScore <= 70"
+                               [class.bg-success]="finding.matchScore <= 30"
+                               [style.width.%]="finding.matchScore">
+                            {{ finding.matchScore }}%
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge" [ngClass]="getSeverityClass(finding.severity)">
+                          {{ finding.severity }}
+                        </span>
+                      </td>
+                      <td>{{ finding.details }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="card">
+            <div class="card-header bg-info text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-lightbulb me-2"></i>Recommendations
+              </h6>
+            </div>
+            <div class="card-body">
+              <ul class="mb-0">
+                <li *ngFor="let rec of amlResult.recommendations">{{ rec }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="amlScreening" class="text-center py-4">
+          <div class="spinner-border text-warning mb-3" role="status">
+            <span class="visually-hidden">Screening...</span>
+          </div>
+          <p class="text-muted">Performing AML screening across multiple sources...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeAMLModal()" [disabled]="amlScreening">
+          Close
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="performAMLScreening()" 
+                [disabled]="amlScreening || selectedAMLChecks.length === 0">
+          <span *ngIf="amlScreening" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!amlScreening" class="fas fa-search me-2"></i>
+          {{ amlScreening ? 'Screening...' : 'Run AML Screening' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD THESE 2 REMAINING MODALS AFTER THE FIRST 2 MODALS -->
+
+<!-- ==================== MODAL 3: RISK CORRELATION ANALYSIS ==================== -->
+<!-- Risk Correlation Analysis Modal -->
+<div class="modal fade" [class.show]="showRiskAnalysisModal" [style.display]="showRiskAnalysisModal ? 'block' : 'none'" id="riskAnalysisModal" tabindex="-1" *ngIf="showRiskAnalysisModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-chart-line me-2"></i>
+          Risk Correlation Analysis
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRiskAnalysisModal()" [disabled]="riskAnalysisLoading"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-4">Comprehensive risk assessment based on multiple data sources and fraud indicators.</p>
+        
+        <!-- Risk Analysis Results -->
+        <div *ngIf="riskAnalysis && !riskAnalysisLoading">
+          <!-- Compliance Risk Rating -->
+          <div class="card mb-4">
+            <div class="card-body text-center">
+              <h6 class="text-muted mb-3">Compliance Risk Rating</h6>
+              <div class="mb-3">
+                <span *ngFor="let star of getRiskRatingStars(riskAnalysis.complianceRiskRating)" 
+                      [class]="star" style="font-size: 2rem; margin: 0 5px;"></span>
+              </div>
+              <h3 class="mb-0">{{ riskAnalysis.complianceRiskRating }} / 5</h3>
+              <p class="text-muted mb-0">
+                {{ riskAnalysis.complianceRiskRating >= 4 ? 'Low Risk' : 
+                   riskAnalysis.complianceRiskRating === 3 ? 'Medium Risk' : 'High Risk' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Fraud Tags -->
+          <div class="card mb-4" *ngIf="riskAnalysis.fraudTags && riskAnalysis.fraudTags.length > 0">
+            <div class="card-header bg-danger text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-flag me-2"></i>Fraud Tags ({{ riskAnalysis.fraudTags.length }})
+              </h6>
+            </div>
+            <div class="card-body">
+              <span *ngFor="let tag of riskAnalysis.fraudTags" class="badge bg-danger me-2 mb-2">
+                <i class="fas fa-exclamation-triangle me-1"></i>{{ tag }}
+              </span>
+              <p class="text-muted mb-0 mt-2" *ngIf="riskAnalysis.fraudTags.length === 0">
+                No fraud tags found
+              </p>
+            </div>
+          </div>
+
+          <!-- Defaulter History -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-3x me-3" 
+                   [class.fa-times-circle]="!riskAnalysis.defaulterHistory" 
+                   [class.fa-exclamation-circle]="riskAnalysis.defaulterHistory"
+                   [class.text-success]="!riskAnalysis.defaulterHistory"
+                   [class.text-danger]="riskAnalysis.defaulterHistory"></i>
+                <div>
+                  <h6 class="mb-1">Defaulter History</h6>
+                  <p class="mb-0">
+                    {{ riskAnalysis.defaulterHistory ? 'Found in defaulter databases' : 'No defaulter history found' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Anomalies -->
+          <div class="card mb-4" *ngIf="riskAnalysis.transactionAnomalies && riskAnalysis.transactionAnomalies.length > 0">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0">
+                <i class="fas fa-exchange-alt me-2"></i>Transaction Anomalies
+              </h6>
+            </div>
+            <div class="card-body">
+              <ul class="mb-0">
+                <li *ngFor="let anomaly of riskAnalysis.transactionAnomalies">{{ anomaly }}</li>
+              </ul>
+              <p class="text-muted mb-0" *ngIf="riskAnalysis.transactionAnomalies.length === 0">
+                No transaction anomalies detected
+              </p>
+            </div>
+          </div>
+
+          <!-- Risk Factors Breakdown -->
+          <div class="card mb-4" *ngIf="riskAnalysis.riskFactors && riskAnalysis.riskFactors.length > 0">
+            <div class="card-header">
+              <h6 class="mb-0">
+                <i class="fas fa-list-ul me-2"></i>Risk Factors Breakdown
+              </h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Description</th>
+                      <th>Severity</th>
+                      <th>Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let factor of riskAnalysis.riskFactors">
+                      <td>
+                        <strong>{{ factor.category.replace('_', ' ') }}</strong>
+                      </td>
+                      <td>{{ factor.description }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="getSeverityClass(factor.severity)">
+                          {{ factor.severity }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-info" 
+                               [style.width.%]="factor.weight * 100">
+                            {{ (factor.weight * 100).toFixed(0) }}%
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendation -->
+          <div class="alert alert-info">
+            <h6 class="alert-heading">
+              <i class="fas fa-lightbulb me-2"></i>Compliance Recommendation
+            </h6>
+            <p class="mb-0">{{ riskAnalysis.recommendation }}</p>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="riskAnalysisLoading" class="text-center py-4">
+          <div class="spinner-border text-danger mb-3" role="status">
+            <span class="visually-hidden">Analyzing...</span>
+          </div>
+          <p class="text-muted">Performing risk correlation analysis...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!riskAnalysis && !riskAnalysisLoading" class="text-center py-4">
+          <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Click "Run Analysis" to perform risk correlation analysis</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeRiskAnalysisModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL 4: AUDIT LOGS ==================== -->
+<!-- Audit Logs Modal -->
+<div class="modal fade" [class.show]="showAuditLogsModal" [style.display]="showAuditLogsModal ? 'block' : 'none'" id="auditLogsModal" tabindex="-1" *ngIf="showAuditLogsModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-secondary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-history me-2"></i>
+          Compliance Audit Logs
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeAuditLogsModal()" [disabled]="auditLogsLoading"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-4">Complete audit trail of all compliance actions and decisions for this application.</p>
+        
+        <!-- Audit Logs Timeline -->
+        <div *ngIf="auditLogs && auditLogs.length > 0 && !auditLogsLoading">
+          <div class="timeline">
+            <div class="timeline-item mb-4" *ngFor="let log of auditLogs; let i = index">
+              <div class="d-flex align-items-start">
+                <!-- Timeline Marker -->
+                <div class="timeline-marker rounded-circle me-3 d-flex align-items-center justify-content-center"
+                     [class.bg-primary]="log.action === 'KYC_VERIFICATION'"
+                     [class.bg-warning]="log.action === 'AML_SCREENING'"
+                     [class.bg-danger]="log.action === 'RISK_ANALYSIS'"
+                     [class.bg-success]="log.decision === 'APPROVED' || log.decision === 'COMPLETED'"
+                     [class.bg-danger]="log.decision === 'REJECTED' || log.decision === 'FAILED'"
+                     [class.bg-info]="log.decision === 'PENDING' || log.decision === 'IN_PROGRESS'"
+                     style="width: 40px; height: 40px; flex-shrink: 0;">
+                  <i class="fas text-white"
+                     [class.fa-id-card]="log.action === 'KYC_VERIFICATION'"
+                     [class.fa-shield-alt]="log.action === 'AML_SCREENING'"
+                     [class.fa-chart-line]="log.action === 'RISK_ANALYSIS'"
+                     [class.fa-file-alt]="log.action === 'DOCUMENT_REQUEST'"
+                     [class.fa-check]="log.decision === 'APPROVED' || log.decision === 'COMPLETED'"
+                     [class.fa-times]="log.decision === 'REJECTED' || log.decision === 'FAILED'"
+                     [class.fa-clock]="log.decision === 'PENDING' || log.decision === 'IN_PROGRESS'"></i>
+                </div>
+
+                <!-- Timeline Content -->
+                <div class="flex-grow-1">
+                  <div class="card">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">{{ log.action.replace('_', ' ') }}</h6>
+                        <small class="text-muted">{{ log.timestamp | date:'medium' }}</small>
+                      </div>
+                      
+                      <p class="text-muted mb-2" *ngIf="log.remarks">
+                        <i class="fas fa-comment me-2"></i>{{ log.remarks }}
+                      </p>
+
+                      <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-secondary" *ngIf="log.officerName">
+                          <i class="fas fa-user me-1"></i>{{ log.officerName }}
+                        </span>
+                        <span class="badge" *ngIf="log.decision"
+                              [class.bg-success]="log.decision === 'APPROVED' || log.decision === 'COMPLETED'"
+                              [class.bg-danger]="log.decision === 'REJECTED' || log.decision === 'FAILED'"
+                              [class.bg-warning]="log.decision === 'PENDING'"
+                              [class.bg-info]="log.decision === 'IN_PROGRESS'">
+                          {{ log.decision }}
+                        </span>
+                        <span class="badge bg-light text-dark" *ngIf="log.ipAddress">
+                          <i class="fas fa-network-wired me-1"></i>{{ log.ipAddress }}
+                        </span>
+                      </div>
+
+                      <!-- Checks Performed -->
+                      <div class="mt-2" *ngIf="log.checksPerformed && log.checksPerformed.length > 0">
+                        <small class="text-muted d-block mb-1">Checks Performed:</small>
+                        <div class="d-flex flex-wrap gap-1">
+                          <span *ngFor="let check of log.checksPerformed" class="badge bg-info">
+                            {{ check }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="auditLogsLoading" class="text-center py-4">
+          <div class="spinner-border text-secondary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted">Loading audit logs...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="auditLogs && auditLogs.length === 0 && !auditLogsLoading" class="text-center py-5">
+          <i class="fas fa-history fa-3x text-muted mb-3"></i>
+          <h6 class="text-muted">No Audit Logs Available</h6>
+          <p class="text-muted mb-0">No compliance actions have been recorded for this application yet.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeAuditLogsModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- External Fraud Data Modal -->
+<div class="modal fade" [class.show]="showExternalFraudModal" [style.display]="showExternalFraudModal ? 'block' : 'none'" id="externalFraudModal" tabindex="-1" *ngIf="showExternalFraudModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-shield-alt me-2"></i>
+          External Fraud Data - {{ escalation?.applicantName }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeExternalFraudModal()" [disabled]="externalFraudLoading"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading State -->
+        <div *ngIf="externalFraudLoading" class="text-center py-5">
+          <div class="spinner-border text-info mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted">Loading external fraud data...</p>
+        </div>
+
+        <!-- No Data State -->
+        <div *ngIf="!externalFraudData && !externalFraudLoading" class="text-center py-5">
+          <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+          <h6 class="text-muted">No External Fraud Data Available</h6>
+          <p class="text-muted mb-0">No external fraud screening data found for this applicant.</p>
+        </div>
+
+        <!-- External Fraud Data Content -->
+        <div *ngIf="externalFraudData && !externalFraudLoading">
+          <!-- Personal Information Summary -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">
+                <i class="fas fa-user me-2"></i>
+                Personal Information
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Full Name</small>
+                  <strong>{{ externalFraudData.firstName }} {{ externalFraudData.lastName }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Date of Birth</small>
+                  <strong>{{ formatDate(externalFraudData.dateOfBirth) }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Gender</small>
+                  <strong>{{ externalFraudData.gender }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">PAN Number</small>
+                  <strong>{{ externalFraudData.panNumber }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Aadhaar Number</small>
+                  <strong>{{ externalFraudData.aadhaarNumber }}</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Phone Number</small>
+                  <strong>{{ externalFraudData.phoneNumber }}</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted d-block">Email</small>
+                  <strong>{{ externalFraudData.email }}</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted d-block">Matched By</small>
+                  <span class="badge bg-info">{{ externalFraudData.matchedBy }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Assessment -->
+          <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Risk Assessment
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                  <div class="text-center">
+                    <div class="display-6 fw-bold text-danger">{{ externalFraudData.riskAssessment.overallRiskScore }}</div>
+                    <small class="text-muted">Risk Score</small>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Risk Level</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskLevel)">{{ externalFraudData.riskAssessment.riskLevel }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Recommendation</small>
+                  <span class="badge" [class.bg-danger]="externalFraudData.riskAssessment.recommendation === 'REJECT'" [class.bg-success]="externalFraudData.riskAssessment.recommendation === 'APPROVE'">{{ externalFraudData.riskAssessment.recommendation }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Assessment Date</small>
+                  <strong>{{ formatDate(externalFraudData.riskAssessment.assessmentDate) }}</strong>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <h6 class="fw-bold mb-2">Risk Factors:</h6>
+                <ul class="list-unstyled">
+                  <li *ngFor="let factor of externalFraudData.riskAssessment.riskFactors" class="mb-1">
+                    <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                    {{ factor }}
+                  </li>
+                </ul>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Document Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.documentRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.documentRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Criminal Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.criminalRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.criminalRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Financial Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.financialRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.financialRisk }}</span>
+                </div>
+                <div class="col-md-3">
+                  <small class="text-muted d-block">Banking Risk</small>
+                  <span [class]="getRiskBadgeClass(externalFraudData.riskAssessment.riskBreakdown.bankingRisk)">{{ externalFraudData.riskAssessment.riskBreakdown.bankingRisk }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabbed Content -->
+          <ul class="nav nav-tabs" id="fraudDataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bank-records" type="button" role="tab">
+                <i class="fas fa-university me-2"></i>
+                Bank Records ({{ externalFraudData.bankRecords.totalAccounts }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="criminal-tab" data-bs-toggle="tab" data-bs-target="#criminal-records" type="button" role="tab">
+                <i class="fas fa-gavel me-2"></i>
+                Criminal Records ({{ externalFraudData.criminalRecords.totalCases }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="loan-tab" data-bs-toggle="tab" data-bs-target="#loan-history" type="button" role="tab">
+                <i class="fas fa-money-bill me-2"></i>
+                Loan History ({{ externalFraudData.loanHistory.totalLoans }})
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#government-documents" type="button" role="tab">
+                <i class="fas fa-id-card me-2"></i>
+                Documents ({{ externalFraudData.governmentDocuments.totalDocuments }})
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content mt-3" id="fraudDataTabContent">
+            <!-- Bank Records Tab -->
+            <div class="tab-pane fade show active" id="bank-records" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Bank Account Summary</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-info">Total Balance: {{ formatCurrency(externalFraudData.bankRecords.totalBalance) }}</span>
+                      <span class="badge bg-success ms-2">Active: {{ externalFraudData.bankRecords.activeAccounts }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Bank Name</th>
+                          <th>Account Type</th>
+                          <th>Balance</th>
+                          <th>Last Transaction</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let account of externalFraudData.bankRecords.accounts">
+                          <td><strong>{{ account.bankName }}</strong></td>
+                          <td>{{ account.accountType }}</td>
+                          <td>{{ formatCurrency(account.balance) }}</td>
+                          <td>{{ formatDate(account.lastTransaction) }}</td>
+                          <td>
+                            <span class="badge" [class.bg-success]="account.isActive" [class.bg-secondary]="!account.isActive">
+                              {{ account.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Criminal Records Tab -->
+            <div class="tab-pane fade" id="criminal-records" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Criminal Case History</h6>
+                </div>
+                <div class="card-body">
+                  <div *ngIf="externalFraudData.criminalRecords.cases.length === 0" class="text-center py-4">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <p class="text-muted mb-0">No criminal records found</p>
+                  </div>
+                  <div *ngFor="let case of externalFraudData.criminalRecords.cases" class="border rounded p-3 mb-3">
+                    <div class="row">
+                      <div class="col-md-8">
+                        <h6 class="fw-bold mb-1">{{ case.caseNumber }}</h6>
+                        <p class="mb-2">{{ case.description }}</p>
+                        <small class="text-muted">{{ case.courtName }}</small>
+                      </div>
+                      <div class="col-md-4 text-end">
+                        <div class="mb-2">
+                          <span [class]="getCriminalStatusClass(case.status)">{{ case.status }}</span>
+                        </div>
+                        <div class="mb-1">
+                          <small class="text-muted d-block">Case Type</small>
+                          <strong>{{ case.caseType }}</strong>
+                        </div>
+                        <div *ngIf="case.verdictDate">
+                          <small class="text-muted d-block">Verdict Date</small>
+                          <strong>{{ formatDate(case.verdictDate) }}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loan History Tab -->
+            <div class="tab-pane fade" id="loan-history" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Loan History Summary</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-warning">Default Rate: {{ externalFraudData.loanHistory.defaultRate }}%</span>
+                      <span class="badge bg-danger ms-2">Defaulted: {{ externalFraudData.loanHistory.defaultedLoans }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-6">
+                      <small class="text-muted d-block">Total Amount Borrowed</small>
+                      <h5 class="text-primary">{{ formatCurrency(externalFraudData.loanHistory.totalAmountBorrowed) }}</h5>
+                    </div>
+                    <div class="col-md-6">
+                      <small class="text-muted d-block">Total Outstanding Balance</small>
+                      <h5 class="text-danger">{{ formatCurrency(externalFraudData.loanHistory.totalOutstandingBalance) }}</h5>
+                    </div>
+                  </div>
+                  
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Institution</th>
+                          <th>Loan Type</th>
+                          <th>Amount</th>
+                          <th>Outstanding</th>
+                          <th>Start Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let loan of externalFraudData.loanHistory.loans">
+                          <td><strong>{{ loan.institutionName }}</strong></td>
+                          <td>{{ loan.loanType }}</td>
+                          <td>{{ formatCurrency(loan.loanAmount) }}</td>
+                          <td>{{ formatCurrency(loan.outstandingBalance) }}</td>
+                          <td>{{ formatDate(loan.startDate) }}</td>
+                          <td>
+                            <span [class]="getLoanStatusClass(loan.status)">{{ loan.status }}</span>
+                            <i *ngIf="loan.defaultFlag" class="fas fa-exclamation-triangle text-danger ms-2" title="Default Flag"></i>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Government Documents Tab -->
+            <div class="tab-pane fade" id="government-documents" role="tabpanel">
+              <div class="card">
+                <div class="card-header">
+                  <div class="row align-items-center">
+                    <div class="col">
+                      <h6 class="mb-0">Government Document Verification</h6>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge bg-success">Verified: {{ externalFraudData.governmentDocuments.verifiedDocuments }}</span>
+                      <span class="badge bg-info ms-2">Rate: {{ externalFraudData.governmentDocuments.verificationRate.toFixed(1) }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Document Type</th>
+                          <th>Document Number</th>
+                          <th>Issuing Authority</th>
+                          <th>Issue Date</th>
+                          <th>Expiry Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let doc of externalFraudData.governmentDocuments.documents">
+                          <td><strong>{{ doc.documentType }}</strong></td>
+                          <td>{{ doc.documentNumber }}</td>
+                          <td>{{ doc.issuingAuthority }}</td>
+                          <td>{{ formatDate(doc.issuedDate) }}</td>
+                          <td>{{ doc.expiryDate ? formatDate(doc.expiryDate) : 'N/A' }}</td>
+                          <td>
+                            <span [class]="getVerificationStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeExternalFraudModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrops -->
+<div class="modal-backdrop fade" [class.show]="showKYCModal" *ngIf="showKYCModal"></div>
+<div class="modal-backdrop fade" [class.show]="showAMLModal" *ngIf="showAMLModal"></div>
+<div class="modal-backdrop fade" [class.show]="showRiskAnalysisModal" *ngIf="showRiskAnalysisModal"></div>
+<div class="modal-backdrop fade" [class.show]="showAuditLogsModal" *ngIf="showAuditLogsModal"></div>
+<div class="modal-backdrop fade" [class.show]="showExternalFraudModal" *ngIf="showExternalFraudModal"></div>

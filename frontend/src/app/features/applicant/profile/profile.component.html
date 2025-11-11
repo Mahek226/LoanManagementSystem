@@ -1,0 +1,344 @@
+<div class="min-h-screen" style="background-color: var(--bg-secondary);">
+  <div class="container-fluid px-4 py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+      <div>
+        <button class="btn btn-outline-secondary btn-sm mb-2" (click)="goBack()">
+          <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </button>
+        <h2 class="h4 fw-bold mb-1" style="color: var(--text-primary);">
+          <i class="fas fa-user-circle me-2"></i>My Profile
+        </h2>
+        <p class="mb-0" style="color: var(--text-secondary);">View and manage your personal information</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button *ngIf="!editMode" class="btn btn-primary" (click)="toggleEditMode()">
+          <i class="fas fa-edit me-1"></i>Edit Profile
+        </button>
+        <button *ngIf="editMode" class="btn btn-outline-secondary" (click)="toggleEditMode()">
+          <i class="fas fa-times me-1"></i>Cancel
+        </button>
+        <button *ngIf="editMode" class="btn btn-primary" (click)="saveProfile()">
+          <i class="fas fa-save me-1"></i>Save Changes
+        </button>
+      </div>
+    </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="success" class="alert alert-success-custom">
+    <i class="fas fa-check-circle"></i> {{ success }}
+  </div>
+
+  <div *ngIf="error && !loading" class="alert alert-error-custom">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading profile...</p>
+  </div>
+
+    <!-- Profile Content -->
+    <div *ngIf="!loading && profile" class="row g-4">
+      
+      <!-- Profile Summary Card -->
+      <div class="col-xl-4">
+        <div class="card border-0 shadow-sm text-center" style="background-color: var(--bg-primary);">
+          <div class="card-body p-4">
+            <div class="profile-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <h4 class="fw-bold mb-1" style="color: var(--text-primary);">{{ profile.firstName }} {{ profile.lastName }}</h4>
+            <p class="text-muted mb-3" *ngIf="profile.username">{{ '@' + profile.username }}</p>
+            
+            <!-- Status Badges -->
+            <div class="d-flex flex-column gap-2 align-items-center">
+              <span class="badge bg-{{ getVerificationBadge() }}">
+                <i class="fas fa-envelope me-1"></i>
+                {{ profile.isEmailVerified ? 'Email Verified' : 'Email Not Verified' }}
+              </span>
+              <span class="badge bg-{{ getApprovalBadge() }}">
+                <i class="fas fa-check-circle me-1"></i>
+                {{ profile.isApproved ? 'Account Approved' : 'Pending Approval' }}
+              </span>
+              <span class="badge bg-{{ getApprovalStatusColor() }}">
+                <i class="fas fa-info-circle me-1"></i>
+                {{ profile.approvalStatus }}
+              </span>
+            </div>
+          </div>
+
+          <div class="card-body pt-0">
+            <div class="stat-item">
+              <i class="fas fa-calendar-alt text-primary"></i>
+              <div>
+                <small>Member Since</small>
+                <strong>{{ formatDate(profile.createdAt) }}</strong>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="fas fa-id-card text-primary"></i>
+              <div>
+                <small>Applicant ID</small>
+                <strong>#{{ profile.applicantId }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Info Card -->
+        <div class="card border-0 shadow-sm mt-3" style="background-color: var(--bg-primary);">
+          <div class="card-header border-0" style="background-color: var(--bg-primary);">
+            <h5 class="mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-info-circle me-2"></i>Quick Info
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+              <span class="fw-semibold text-muted">Date of Birth</span>
+              <span class="fw-semibold" style="color: var(--text-primary);">{{ formatDate(profile.dob) }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2">
+              <span class="fw-semibold text-muted">Gender</span>
+              <span class="fw-semibold" style="color: var(--text-primary);">{{ profile.gender }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Details Card -->
+      <div class="col-xl-8">
+        <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+          <div class="card-header border-0" style="background-color: var(--bg-primary);">
+            <h5 class="mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-user-edit me-2"></i>Personal Information
+            </h5>
+          </div>
+        
+          <!-- View Mode -->
+          <div *ngIf="!editMode" class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-user me-2 text-primary"></i>First Name
+                </label>
+                <div class="detail-value">{{ profile.firstName }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-user me-2 text-primary"></i>Last Name
+                </label>
+                <div class="detail-value">{{ profile.lastName }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-envelope me-2 text-primary"></i>Email
+                </label>
+                <div class="detail-value">{{ profile.email }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-phone me-2 text-primary"></i>Phone
+                </label>
+                <div class="detail-value">{{ profile.phone }}</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>Address
+                </label>
+                <div class="detail-value">{{ profile.address }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-city me-2 text-primary"></i>City
+                </label>
+                <div class="detail-value">{{ profile.city }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-map me-2 text-primary"></i>State
+                </label>
+                <div class="detail-value">{{ profile.state }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div>
+                <label class="fw-semibold text-muted d-block mb-2">
+                  <i class="fas fa-globe me-2 text-primary"></i>Country
+                </label>
+                <div class="detail-value">{{ profile.country }}</div>
+              </div>
+            </div>
+            </div>
+          </div>
+
+          <!-- Edit Mode -->
+          <form *ngIf="editMode" class="card-body">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-user me-2 text-primary"></i>First Name
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.firstName"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="firstName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-user me-2 text-primary"></i>Last Name
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.lastName"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="lastName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-envelope me-2 text-primary"></i>Email (Cannot be changed)
+              </label>
+              <input type="email" class="form-control" [value]="profile.email" 
+                     disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-phone me-2 text-primary"></i>Phone
+              </label>
+              <input type="tel" class="form-control" [(ngModel)]="editForm.phone"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="phone" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-map-marker-alt me-2 text-primary"></i>Address
+              </label>
+              <textarea class="form-control" [(ngModel)]="editForm.address"
+                        style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                        name="address" rows="2" required></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-city me-2 text-primary"></i>City
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.city"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="city" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-map me-2 text-primary"></i>State
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.state"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="state" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-globe me-2 text-primary"></i>Country
+              </label>
+              <input type="text" class="form-control" [(ngModel)]="editForm.country"
+                     style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);" 
+                     name="country" required>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Account Security Card -->
+        <div class="card border-0 shadow-sm mt-3" style="background-color: var(--bg-primary);">
+          <div class="card-header border-0" style="background-color: var(--bg-primary);">
+            <h5 class="mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-shield-alt me-2"></i>Account Security
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="security-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 class="mb-1">Password</h6>
+                  <p class="text-muted mb-0">Last changed: Never</p>
+                </div>
+                <button class="btn btn-primary" (click)="showChangePasswordModal = true">
+                  <i class="fas fa-key me-1"></i>Change Password
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" [class.show]="showChangePasswordModal" [style.display]="showChangePasswordModal ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" *ngIf="showChangePasswordModal">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-key me-2"></i>Change Password
+        </h5>
+        <button type="button" class="btn-close" (click)="closeChangePasswordModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="changePassword()">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">Current Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.currentPassword" 
+                   name="currentPassword" required
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.newPassword" 
+                   name="newPassword" required minlength="6"
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <small class="text-muted">Password must be at least 6 characters long</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm New Password</label>
+            <input type="password" class="form-control" [(ngModel)]="passwordForm.confirmPassword" 
+                   name="confirmPassword" required
+                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+          </div>
+          
+          <div *ngIf="passwordError" class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-1"></i>{{ passwordError }}
+          </div>
+          
+          <div *ngIf="passwordSuccess" class="alert alert-success">
+            <i class="fas fa-check-circle me-1"></i>{{ passwordSuccess }}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeChangePasswordModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="changePassword()" 
+                [disabled]="changingPassword || !isPasswordFormValid()">
+          <span *ngIf="changingPassword" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!changingPassword" class="fas fa-save me-1"></i>
+          {{ changingPassword ? 'Changing...' : 'Change Password' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showChangePasswordModal" (click)="closeChangePasswordModal()"></div>
+

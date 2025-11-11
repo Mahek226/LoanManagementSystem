@@ -1,0 +1,455 @@
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.welcome-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+}
+
+/* Stat Cards */
+.stat-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+}
+
+.stat-icon {
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Counter Animation */
+.counter {
+  display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Avatar */
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+}
+
+/* Table Hover Effect */
+.loan-row {
+  transition: all 0.2s ease;
+}
+
+.loan-row:hover {
+  background-color: var(--bg-tertiary) !important;
+  transform: scale(1.01);
+}
+
+/* Card Hover */
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+}
+
+/* Progress Bar Animations */
+@keyframes progressShine {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes riskPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes qualityGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced Progress Bars */
+.progress-sm {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-striped.progress-bar-animated {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+.progress-bar-striped.progress-bar-animated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: progressShine 2s infinite;
+}
+
+/* Risk Circles */
+.risk-circle {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.risk-circle:hover {
+  animation: riskPulse 2s infinite;
+}
+
+/* Quality Metrics */
+.progress[data-quality="excellent"] .progress-bar {
+  animation: qualityGlow 3s ease-in-out infinite;
+}
+
+/* KPI Cards Enhanced */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.stat-card:hover::before {
+  left: 100%;
+}
+
+/* Counter Enhanced Animation */
+.counter {
+  animation: countUp 0.8s ease-out forwards, pulse 2s ease-in-out infinite 1s;
+}
+
+/* Performance Metrics Grid */
+.performance-metric {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.performance-metric:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.performance-metric::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.performance-metric:hover::after {
+  opacity: 1;
+}
+
+/* Portfolio Mix Progress */
+.portfolio-progress {
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-progress .progress-bar {
+  transition: width 1s ease-in-out;
+}
+
+/* Chart Container Enhancements */
+.chart-container {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  transform: scale(1.02);
+}
+
+/* Badge Animations */
+.badge {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.badge:hover {
+  transform: scale(1.1);
+}
+
+.badge.bg-success {
+  animation: qualityGlow 3s ease-in-out infinite;
+}
+
+.badge.bg-danger {
+  animation: riskPulse 2s ease-in-out infinite;
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Tooltip Enhancements */
+.tooltip-trigger {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip-trigger:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* Enhanced Chart Animations */
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chart-wrapper {
+  animation: chartFadeIn 0.8s ease-out forwards;
+}
+
+/* Professional Design System Integration */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  color: var(--gray-500);
+}
+
+.loading-spinner {
+  font-size: 2rem;
+  margin-bottom: var(--space-4);
+  color: var(--primary-blue);
+}
+
+.kpi-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-icon.primary {
+  background: var(--gradient-primary);
+  color: var(--white);
+}
+
+.kpi-icon.success {
+  background: var(--gradient-success);
+  color: var(--white);
+}
+
+.kpi-icon.warning {
+  background: var(--gradient-gold);
+  color: var(--white);
+}
+
+.kpi-icon.danger {
+  background: var(--gradient-danger);
+  color: var(--white);
+}
+
+.kpi-icon.info {
+  background: linear-gradient(135deg, var(--info-cyan) 0%, var(--info-cyan-light) 100%);
+  color: var(--white);
+}
+
+.p-6 {
+  padding: var(--space-6);
+}
+
+/* Responsive Enhancements */
+@media (max-width: 1200px) {
+  .performance-metric {
+    margin-bottom: 0.5rem;
+  }
+  
+  .risk-circle {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .stat-card {
+    margin-bottom: 1rem;
+  }
+  
+  .welcome-banner .d-flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .performance-metric {
+    padding: 1rem;
+  }
+  
+  .risk-circle {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  .chart-container {
+    height: 250px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .stat-card .card-body {
+    padding: 1rem;
+  }
+  
+  .stat-icon {
+    padding: 0.5rem !important;
+  }
+  
+  .counter {
+    font-size: 1.5rem !important;
+  }
+  
+  .performance-metric {
+    text-align: center;
+  }
+}

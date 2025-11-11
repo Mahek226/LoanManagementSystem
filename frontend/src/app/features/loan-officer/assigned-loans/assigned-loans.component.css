@@ -1,0 +1,156 @@
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* Loan Cards */
+.loan-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-left: 4px solid transparent !important;
+}
+
+.loan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+  border-left-color: #3b82f6 !important;
+}
+
+/* Avatar */
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  transition: transform 0.3s ease;
+}
+
+.loan-card:hover .avatar-lg {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Detail Item */
+.detail-item {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+.detail-item:hover {
+  background-color: var(--bg-tertiary);
+  transform: scale(1.02);
+}
+
+/* Empty State */
+.empty-state {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Table Styles */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-secondary) !important;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.table tbody tr.table-warning {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.table tbody tr.table-warning:hover {
+  background-color: rgba(255, 193, 7, 0.2) !important;
+}
+
+.loan-row {
+  cursor: pointer;
+}
+
+/* Avatar Small */
+.avatar-sm {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+/* Table Responsive */
+.table-responsive {
+  max-height: calc(100vh - 350px);
+  overflow-y: auto;
+}
+
+.table-responsive::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .loan-card {
+    margin-bottom: 1rem;
+  }
+  
+  .table thead th,
+  .table tbody td {
+    padding: 0.5rem !important;
+    font-size: 0.875rem;
+  }
+  
+  .table-responsive {
+    max-height: calc(100vh - 400px);
+  }
+}
