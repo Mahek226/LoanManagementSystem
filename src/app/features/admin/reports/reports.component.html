@@ -1,0 +1,158 @@
+<div class="reports-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div>
+      <h2 class="page-title">
+        <i class="fas fa-chart-bar"></i>
+        Reports & Analytics
+      </h2>
+      <p class="page-subtitle">Comprehensive system insights and statistics</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary-custom" (click)="exportReport('pdf')">
+        <i class="fas fa-file-pdf"></i>
+        Export PDF
+      </button>
+      <button class="btn btn-secondary-custom" (click)="exportReport('excel')">
+        <i class="fas fa-file-excel"></i>
+        Export Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading reports...</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div *ngIf="!loading" class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <div class="card-custom stats-card">
+        <div class="stats-icon bg-primary">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stats-content">
+          <h6>Total Applicants</h6>
+          <h3>{{ dashboardStats?.totalApplicants || 0 }}</h3>
+          <span class="badge badge-success">Active</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card-custom stats-card">
+        <div class="stats-icon bg-warning">
+          <i class="fas fa-history"></i>
+        </div>
+        <div class="stats-content">
+          <h6>Total Activities</h6>
+          <h3>{{ activityStats?.totalActivities || 0 }}</h3>
+          <span class="badge badge-info">Tracked</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card-custom stats-card">
+        <div class="stats-icon bg-success">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="stats-content">
+          <h6>Active Fraud Rules</h6>
+          <h3>{{ ruleStats?.activeRules || 0 }}</h3>
+          <span class="badge badge-success">Enabled</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="card-custom stats-card">
+        <div class="stats-icon bg-danger">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stats-content">
+          <h6>Failed Activities</h6>
+          <h3>{{ activityStats?.failedActivities || 0 }}</h3>
+          <span class="badge badge-danger">Errors</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div *ngIf="!loading" class="row g-4 mb-4">
+    <div class="col-xl-6">
+      <div class="card-custom chart-card">
+        <canvas #applicantStatusChart width="400" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="col-xl-6">
+      <div class="card-custom chart-card">
+        <canvas #activityTrendChart width="400" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div *ngIf="!loading" class="row g-4 mb-4">
+    <div class="col-xl-6">
+      <div class="card-custom chart-card">
+        <canvas #ruleStatusChart width="400" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="col-xl-6">
+      <div class="card-custom chart-card">
+        <canvas #severityChart width="400" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rule Category Statistics -->
+  <div *ngIf="!loading && ruleStats" class="row g-4">
+    <div class="col-12">
+      <div class="card-custom">
+        <div class="card-header">
+          <h5><i class="fas fa-tasks"></i> Fraud Rule Categories</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="category-box">
+                <i class="fas fa-user-check category-icon text-primary"></i>
+                <h6>Identity Rules</h6>
+                <h3>{{ ruleStats.identityRules || 0 }}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="category-box">
+                <i class="fas fa-dollar-sign category-icon text-success"></i>
+                <h6>Financial Rules</h6>
+                <h3>{{ ruleStats.financialRules || 0 }}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="category-box">
+                <i class="fas fa-briefcase category-icon text-warning"></i>
+                <h6>Employment Rules</h6>
+                <h3>{{ ruleStats.employmentRules || 0 }}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="category-box">
+                <i class="fas fa-exchange-alt category-icon text-info"></i>
+                <h6>Cross-Verification</h6>
+                <h3>{{ ruleStats.crossVerificationRules || 0 }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

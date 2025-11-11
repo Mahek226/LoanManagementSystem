@@ -1,0 +1,117 @@
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">Logo</span>
+      </div>
+    </div>
+    
+    <div class="sidebar-menu">
+      <ul class="menu-list">
+        <li class="menu-item">
+          <a routerLink="/applicant/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="menu-link">
+            <span class="menu-icon">📊</span>
+            <span class="menu-text">Dashboard</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a routerLink="/applicant/apply-loan" routerLinkActive="active" class="menu-link">
+            <span class="menu-icon">📝</span>
+            <span class="menu-text">Apply for Loan</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a routerLink="/applicant/track-application" routerLinkActive="active" class="menu-link">
+            <span class="menu-icon">📋</span>
+            <span class="menu-text">Track Application</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="page-title">Dashboard</h1>
+      </div>
+      <div class="header-right">
+        <div class="search-box">
+          <input type="text" placeholder="Search anything..." class="search-input">
+          <span class="search-icon">🔍</span>
+        </div>
+        <button class="logout-btn" (click)="logout()">Logout</button>
+        <div class="user-avatar">
+          <span>{{ userName.charAt(0).toUpperCase() }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="content">
+      <router-outlet></router-outlet>
+      
+      <!-- Default Dashboard Content (when no child route is active) -->
+      <div class="dashboard-home" *ngIf="router.url === '/applicant/dashboard'">
+        <div class="welcome-section">
+          <h2>Welcome back, {{ userName }}!</h2>
+          <p>Manage your loan applications and track your progress.</p>
+        </div>
+
+        <!-- Saved Application Progress -->
+        <div *ngIf="savedApplicationData" class="saved-application-card">
+          <div class="card-header">
+            <h3>📝 Continue Your Application</h3>
+            <div class="progress-badge">{{ formProgress }}% Complete</div>
+          </div>
+          <div class="card-content">
+            <div class="application-info">
+              <div class="loan-type" *ngIf="savedApplicationData.selectedLoanType">
+                <span class="loan-icon">{{ savedApplicationData.selectedLoanType.icon }}</span>
+                <span class="loan-name">{{ savedApplicationData.selectedLoanType.name }}</span>
+              </div>
+              <div class="last-saved">
+                Last saved: {{ savedApplicationData.lastSaved | date:'medium' }}
+              </div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="formProgress"></div>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary" (click)="continueApplication()">
+                Continue Application
+              </button>
+              <button class="btn btn-secondary" (click)="startNewApplication()">
+                Start New
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="quick-actions">
+          <div class="action-card" routerLink="/applicant/apply-loan">
+            <div class="action-icon">📝</div>
+            <h3>Apply for New Loan</h3>
+            <p>Start a new loan application process</p>
+          </div>
+          
+          <div class="action-card" routerLink="/applicant/track-application">
+            <div class="action-icon">📋</div>
+            <h3>Track Applications</h3>
+            <p>Monitor your existing applications</p>
+          </div>
+          
+          <div class="action-card" routerLink="/applicant/profile">
+            <div class="action-icon">👤</div>
+            <h3>Profile Settings</h3>
+            <p>Update your personal information</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

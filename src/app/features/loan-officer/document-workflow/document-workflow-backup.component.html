@@ -1,0 +1,472 @@
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="h4 fw-bold mb-1" style="color: var(--text-primary);">
+      <i class="fas fa-file-upload me-2 text-primary"></i>Applicant Document Resubmissions
+    </h2>
+    <p class="text-muted mb-0">Review documents resubmitted by applicants</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-success" (click)="exportToCSV()" [disabled]="filteredResubmissions.length === 0">
+      <i class="fas fa-download me-2"></i>Export CSV
+    </button>
+    <button class="btn btn-primary" (click)="loadApplicantResubmissions()">
+      <i class="fas fa-sync-alt me-2"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Success Message -->
+<div *ngIf="success" class="alert alert-success alert-dismissible fade show mb-3">
+  <i class="fas fa-check-circle me-2"></i>{{ success }}
+  <button type="button" class="btn-close" (click)="success = ''"></button>
+</div>
+
+<!-- Error Message -->
+<div *ngIf="error" class="alert alert-danger alert-dismissible fade show mb-3">
+  <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+  <button type="button" class="btn-close" (click)="error = ''"></button>
+</div>
+
+<!-- Filters Section -->
+<div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Search</label>
+        <input type="text" 
+               class="form-control" 
+               placeholder="Search applicant, loan type, document..."
+               [(ngModel)]="searchTerm"
+               (input)="applyFilters()">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Status</label>
+        <select class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option value="PENDING_REVIEW">Pending Review</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="ESCALATED_TO_COMPLIANCE">Escalated</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Document Type</label>
+        <select class="form-select" [(ngModel)]="documentTypeFilter" (change)="applyFilters()">
+          <option value="">All Types</option>
+          <option value="AADHAAR">Aadhaar Card</option>
+          <option value="PAN">PAN Card</option>
+          <option value="PASSPORT">Passport</option>
+          <option value="PHOTO">Photograph</option>
+          <option value="INCOME_PROOF">Income Proof</option>
+          <option value="BANK_STATEMENT">Bank Statement</option>
+          <option value="EMPLOYMENT_PROOF">Employment Proof</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Sort By</label>
+        <select class="form-select" [(ngModel)]="sortBy" (change)="applyFilters()">
+          <option value="resubmittedAt">Resubmitted Date</option>
+          <option value="applicantName">Applicant Name</option>
+          <option value="loanAmount">Loan Amount</option>
+          <option value="status">Status</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted">Order</label>
+        <select class="form-select" [(ngModel)]="sortOrder" (change)="applyFilters()">
+          <option value="desc">Newest First</option>
+          <option value="asc">Oldest First</option>
+        </select>
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
+        <button class="btn btn-outline-secondary w-100" 
+                (click)="searchTerm=''; statusFilter=''; documentTypeFilter=''; applyFilters()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4" *ngIf="!loading">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center" style="background-color: var(--bg-primary);">
+      <div class="card-body">
+        <i class="fas fa-file-upload fa-2x text-primary mb-2"></i>
+        <h4 class="fw-bold">{{ resubmissions.length }}</h4>
+        <p class="text-muted mb-0">Total Resubmissions</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center" style="background-color: var(--bg-primary);">
+      <div class="card-body">
+        <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+        <h4 class="fw-bold">{{ (resubmissions | filter: 'status':'PENDING_REVIEW').length }}</h4>
+        <p class="text-muted mb-0">Pending Review</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center" style="background-color: var(--bg-primary);">
+      <div class="card-body">
+        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+        <h4 class="fw-bold">{{ (resubmissions | filter: 'status':'APPROVED').length }}</h4>
+        <p class="text-muted mb-0">Approved</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center" style="background-color: var(--bg-primary);">
+      <div class="card-body">
+        <i class="fas fa-exclamation-triangle fa-2x text-info mb-2"></i>
+        <h4 class="fw-bold">{{ (resubmissions | filter: 'status':'ESCALATED_TO_COMPLIANCE').length }}</h4>
+        <p class="text-muted mb-0">Escalated</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="text-muted mt-3">Loading applicant resubmissions...</p>
+</div>
+
+<!-- Resubmissions Table -->
+<div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);" *ngIf="!loading">
+  <div class="card-header border-0 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+      <i class="fas fa-list me-2"></i>Document Resubmissions ({{ filteredResubmissions.length }})
+    </h6>
+    <small class="text-muted">Page {{ currentPage }} of {{ totalPages }}</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead style="background-color: var(--bg-secondary);">
+          <tr>
+            <th class="border-0 py-3 cursor-pointer" (click)="setSortBy('applicantName')">
+              <span style="color: var(--text-primary);">Applicant</span>
+              <i class="fas fa-sort ms-1 text-muted"></i>
+            </th>
+            <th class="border-0 py-3 cursor-pointer" (click)="setSortBy('documentType')">
+              <span style="color: var(--text-primary);">Document</span>
+              <i class="fas fa-sort ms-1 text-muted"></i>
+            </th>
+            <th class="border-0 py-3 cursor-pointer" (click)="setSortBy('loanAmount')">
+              <span style="color: var(--text-primary);">Loan Details</span>
+              <i class="fas fa-sort ms-1 text-muted"></i>
+            </th>
+            <th class="border-0 py-3">
+              <span style="color: var(--text-primary);">Original Reason</span>
+            </th>
+            <th class="border-0 py-3 cursor-pointer" (click)="setSortBy('resubmittedAt')">
+              <span style="color: var(--text-primary);">Resubmitted</span>
+              <i class="fas fa-sort ms-1 text-muted"></i>
+            </th>
+            <th class="border-0 py-3 cursor-pointer" (click)="setSortBy('status')">
+              <span style="color: var(--text-primary);">Status</span>
+              <i class="fas fa-sort ms-1 text-muted"></i>
+            </th>
+            <th class="border-0 py-3 text-center">
+              <span style="color: var(--text-primary);">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let resubmission of paginatedResubmissions; let i = index" 
+              class="animate-slide-up" 
+              [style.animation-delay.s]="i * 0.1">
+            
+            <!-- Applicant Info -->
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="fas fa-user text-primary"></i>
+                </div>
+                <div>
+                  <h6 class="mb-0 fw-bold" style="color: var(--text-primary);">{{ resubmission.applicantName }}</h6>
+                  <small class="text-muted">ID: {{ resubmission.applicantId }}</small>
+                </div>
+              </div>
+            </td>
+            
+            <!-- Document Info -->
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="fas {{ getDocumentIcon(resubmission.documentType) }} text-info"></i>
+                </div>
+                <div>
+                  <h6 class="mb-0 fw-bold" style="color: var(--text-primary);">{{ getDocumentDisplayName(resubmission.documentType) }}</h6>
+                  <small class="text-muted">{{ resubmission.documentName }}</small>
+                </div>
+              </div>
+            </td>
+            
+            <!-- Loan Details -->
+            <td class="py-3">
+              <div>
+                <h6 class="mb-0 fw-bold" style="color: var(--text-primary);">{{ formatCurrency(resubmission.loanAmount) }}</h6>
+                <small class="text-muted">{{ resubmission.loanType }}</small><br>
+                <small class="text-muted">Loan ID: {{ resubmission.loanId }}</small>
+              </div>
+            </td>
+            
+            <!-- Original Reason -->
+            <td class="py-3">
+              <div class="text-truncate" style="max-width: 200px;" [title]="resubmission.originalRequestReason">
+                <small style="color: var(--text-primary);">{{ resubmission.originalRequestReason }}</small>
+              </div>
+              <div *ngIf="resubmission.applicantComments" class="mt-1">
+                <small class="text-muted fst-italic">Comments: {{ resubmission.applicantComments }}</small>
+              </div>
+            </td>
+            
+            <!-- Resubmitted Date -->
+            <td class="py-3">
+              <div>
+                <small class="text-muted d-block">{{ formatDate(resubmission.resubmittedAt) }}</small>
+                <div *ngIf="resubmission.reviewedAt" class="mt-1">
+                  <small class="text-success">Reviewed: {{ formatDate(resubmission.reviewedAt) }}</small>
+                </div>
+              </div>
+            </td>
+            
+            <!-- Status -->
+            <td class="py-3">
+              <span [class]="getStatusClass(resubmission.status)">
+                {{ getStatusLabel(resubmission.status) }}
+              </span>
+              <div *ngIf="resubmission.reviewedBy" class="mt-1">
+                <small class="text-muted">By: {{ resubmission.reviewedBy }}</small>
+              </div>
+            </td>
+            
+            <!-- Actions -->
+            <td class="py-3 text-center">
+              <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-primary" 
+                        (click)="viewDocument(resubmission)"
+                        title="View Document">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success" 
+                        (click)="openProcessModal(resubmission, 'APPROVE')"
+                        [disabled]="resubmission.status !== 'PENDING_REVIEW'"
+                        title="Approve Document">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" 
+                        (click)="openProcessModal(resubmission, 'REJECT')"
+                        [disabled]="resubmission.status !== 'PENDING_REVIEW'"
+                        title="Reject Document">
+                  <i class="fas fa-times"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info" 
+                        (click)="openProcessModal(resubmission, 'ESCALATE_TO_COMPLIANCE')"
+                        [disabled]="resubmission.status !== 'PENDING_REVIEW'"
+                        title="Escalate to Compliance">
+                  <i class="fas fa-arrow-up"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Empty State -->
+          <tr *ngIf="filteredResubmissions.length === 0">
+            <td colspan="7" class="text-center py-5">
+              <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">No Document Resubmissions Found</h5>
+              <p class="text-muted mb-0">
+                <span *ngIf="searchTerm || statusFilter || documentTypeFilter">Try adjusting your filters</span>
+                <span *ngIf="!searchTerm && !statusFilter && !documentTypeFilter">No applicants have resubmitted documents yet</span>
+              </p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Pagination -->
+  <div class="card-footer border-0 d-flex justify-content-between align-items-center" 
+       style="background-color: var(--bg-secondary);" 
+       *ngIf="totalPages > 1">
+    <small class="text-muted">
+      Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to 
+      {{ Math.min(currentPage * itemsPerPage, filteredResubmissions.length) }} of 
+      {{ filteredResubmissions.length }} entries
+    </small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="goToPage(currentPage - 1)">Previous</button>
+        </li>
+        <li class="page-item" 
+            *ngFor="let page of pageNumbers" 
+            [class.active]="page === currentPage">
+          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+        </li>
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="goToPage(currentPage + 1)">Next</button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Process Resubmission Modal -->
+<div class="modal fade" [class.show]="showProcessModal" [style.display]="showProcessModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showProcessModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas" 
+             [class.fa-check]="processAction === 'APPROVE'"
+             [class.fa-times]="processAction === 'REJECT'"
+             [class.fa-arrow-up]="processAction === 'ESCALATE_TO_COMPLIANCE'"
+             class="me-2"></i>
+          {{ processAction === 'APPROVE' ? 'Approve Document' : 
+             processAction === 'REJECT' ? 'Reject Document' : 'Escalate to Compliance' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeProcessModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedResubmission">
+        <!-- Resubmission Info -->
+        <div class="alert alert-info">
+          <strong>Document:</strong> {{ getDocumentDisplayName(selectedResubmission.documentType) }}<br>
+          <strong>Applicant:</strong> {{ selectedResubmission.applicantName }}<br>
+          <strong>Loan:</strong> {{ formatCurrency(selectedResubmission.loanAmount) }} ({{ selectedResubmission.loanType }})<br>
+          <strong>Original Reason:</strong> {{ selectedResubmission.originalRequestReason }}
+        </div>
+        
+        <!-- Applicant Comments -->
+        <div class="mb-3" *ngIf="selectedResubmission.applicantComments">
+          <label class="form-label">Applicant Comments</label>
+          <div class="form-control bg-light" style="min-height: 60px;">
+            {{ selectedResubmission.applicantComments }}
+          </div>
+        </div>
+        
+        <!-- Review Comments -->
+        <div class="mb-3">
+          <label class="form-label">Review Comments</label>
+          <textarea class="form-control" 
+                    rows="3" 
+                    [(ngModel)]="reviewComments"
+                    placeholder="Add your review comments..."></textarea>
+        </div>
+        
+        <!-- Rejection Reason (only for reject action) -->
+        <div class="mb-3" *ngIf="processAction === 'REJECT'">
+          <label class="form-label">Rejection Reason *</label>
+          <textarea class="form-control" 
+                    rows="3" 
+                    [(ngModel)]="rejectionReason"
+                    placeholder="Specify why this document is being rejected..."
+                    required></textarea>
+        </div>
+        
+        <!-- Action Description -->
+        <div class="alert" 
+             [class.alert-success]="processAction === 'APPROVE'"
+             [class.alert-danger]="processAction === 'REJECT'"
+             [class.alert-info]="processAction === 'ESCALATE_TO_COMPLIANCE'">
+          <strong>Action:</strong>
+          <span *ngIf="processAction === 'APPROVE'">
+            The document will be approved and the loan application can proceed.
+          </span>
+          <span *ngIf="processAction === 'REJECT'">
+            The document will be rejected and the applicant will be notified to resubmit.
+          </span>
+          <span *ngIf="processAction === 'ESCALATE_TO_COMPLIANCE'">
+            The document will be escalated to the compliance officer for final review.
+          </span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeProcessModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" 
+                class="btn" 
+                [class.btn-success]="processAction === 'APPROVE'"
+                [class.btn-danger]="processAction === 'REJECT'"
+                [class.btn-info]="processAction === 'ESCALATE_TO_COMPLIANCE'"
+                [disabled]="processing || (processAction === 'REJECT' && !rejectionReason.trim())"
+                (click)="processResubmission()">
+          <i class="fas" 
+             [class.fa-check]="processAction === 'APPROVE' && !processing"
+             [class.fa-times]="processAction === 'REJECT' && !processing"
+             [class.fa-arrow-up]="processAction === 'ESCALATE_TO_COMPLIANCE' && !processing"
+             [class.fa-spinner]="processing"
+             [class.fa-spin]="processing"
+             class="me-2"></i>
+          {{ processing ? 'Processing...' : 
+             (processAction === 'APPROVE' ? 'Approve Document' : 
+              processAction === 'REJECT' ? 'Reject Document' : 'Escalate to Compliance') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" [class.show]="showDocumentModal" [style.display]="showDocumentModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showDocumentModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-file-alt me-2"></i>Document Viewer
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDocumentModal()"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div *ngIf="selectedDocumentUrl">
+          <!-- Image documents -->
+          <img *ngIf="selectedDocumentUrl.includes('.jpg') || selectedDocumentUrl.includes('.jpeg') || selectedDocumentUrl.includes('.png')"
+               [src]="selectedDocumentUrl" 
+               class="img-fluid rounded shadow" 
+               style="max-height: 500px;"
+               alt="Document">
+          
+          <!-- PDF documents -->
+          <iframe *ngIf="selectedDocumentUrl.includes('.pdf')"
+                  [src]="selectedDocumentUrl" 
+                  width="100%" 
+                  height="500px" 
+                  class="rounded shadow">
+          </iframe>
+          
+          <!-- Other documents -->
+          <div *ngIf="!selectedDocumentUrl.includes('.jpg') && !selectedDocumentUrl.includes('.jpeg') && 
+                      !selectedDocumentUrl.includes('.png') && !selectedDocumentUrl.includes('.pdf')"
+               class="text-center py-5">
+            <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
+            <p class="text-muted">Document preview not available</p>
+            <a [href]="selectedDocumentUrl" target="_blank" class="btn btn-primary">
+              <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentModal()">Close</button>
+        <a [href]="selectedDocumentUrl" target="_blank" class="btn btn-primary">
+          <i class="fas fa-external-link-alt me-2"></i>Open in New Tab
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade show" *ngIf="showProcessModal || showDocumentModal" (click)="closeProcessModal(); closeDocumentModal()"></div>

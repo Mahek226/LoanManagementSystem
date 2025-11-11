@@ -1,0 +1,1298 @@
+<!-- Professional Loan Review Interface -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p class="mt-3 text-muted fw-semibold">Loading loan application details...</p>
+</div>
+
+<!-- Alert Messages -->
+<div class="container-fluid px-4 pt-3" *ngIf="!loading">
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+    <button type="button" class="btn-close" (click)="error = ''"></button>
+  </div>
+  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>{{ success }}
+    <button type="button" class="btn-close" (click)="success = ''"></button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-3" *ngIf="!loading && loan">
+  
+  <!-- Header with Breadcrumb -->
+  <div class="mb-4">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="javascript:void(0)" (click)="goBack()" class="text-decoration-none">Assigned Loans</a></li>
+        <li class="breadcrumb-item active">Review Application #{{ assignmentId }}</li>
+      </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h2 class="h3 fw-bold mb-2" style="color: var(--text-primary);">
+          <i class="fas fa-clipboard-check me-2 text-primary"></i>Loan Application Review
+        </h2>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge bg-{{ getStatusColor(loan.status) }} fs-6 px-3 py-2">{{ loan.status }}</span>
+          <span class="text-muted">|</span>
+          <span class="text-muted"><i class="fas fa-hashtag me-1"></i>Assignment: {{ assignmentId }}</span>
+          <span class="text-muted">|</span>
+          <span class="text-muted"><i class="fas fa-calendar me-1"></i>{{ formatDate(loan.assignedAt) }}</span>
+        </div>
+      </div>
+      <button class="btn btn-outline-secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
+      </button>
+    </div>
+  </div>
+
+  <!-- Workflow Tabs -->
+  <ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'overview'" (click)="switchTab('overview')" type="button" role="tab">
+        <i class="fas fa-info-circle me-2"></i>Overview
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'verification'" (click)="switchTab('verification')" type="button" role="tab">
+        <i class="fas fa-shield-alt me-2"></i>Verification & Fraud Check
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" [class.active]="activeTab === 'decision'" (click)="switchTab('decision')" type="button" role="tab">
+        <i class="fas fa-gavel me-2"></i>Final Decision
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    
+    <!-- Overview Tab -->
+    <div *ngIf="activeTab === 'overview'" class="tab-pane fade show active" id="overview-tab" role="tabpanel">
+      <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+      
+          <!-- Applicant Information Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Applicant Information</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+                      <i class="fas fa-user text-primary fs-3"></i>
+                    </div>
+                    <div>
+                      <label class="text-muted small d-block mb-1">Full Name</label>
+                      <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ loan.applicantName }}</h5>
+                      <small class="text-muted">Applicant ID: #{{ loan.applicantId }}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small d-block mb-1">Loan Application ID</label>
+                  <h5 class="fw-bold" style="color: var(--text-primary);">#{{ loan.loanId }}</h5>
+                  <small class="text-muted">Assigned to you on {{ formatDate(loan.assignedAt) }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loan Details Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="fas fa-money-check-alt me-2"></i>Loan Request Details</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-tag me-1"></i>Loan Type</label>
+                    <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ loan.loanType }}</h5>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-rupee-sign me-1"></i>Requested Amount</label>
+                    <h5 class="fw-bold mb-0 text-success">{{ formatCurrency(loan.loanAmount) }}</h5>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded" style="background-color: var(--bg-secondary);">
+                    <label class="text-muted small d-block mb-1"><i class="fas fa-calendar me-1"></i>Application Date</label>
+                    <h5 class="fw-bold mb-0" style="color: var(--text-primary);">{{ formatDate(loan.assignedAt) }}</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Previous Remarks Card -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="loan.remarks">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Previous Officer Remarks</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> {{ loan.remarks }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Document Summary -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-warning text-dark">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Documents Summary</h5>
+                <span class="badge bg-dark">{{ documents.length }} Total</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div *ngIf="documents.length === 0" class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted mb-0">No documents uploaded yet</p>
+                <small class="text-muted">Applicant needs to upload required documents</small>
+              </div>
+              <div *ngIf="documents.length > 0">
+                <div class="row g-2 mb-3">
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-success">{{ getVerifiedDocumentsCount() }}</h4>
+                      <small class="text-muted">Verified</small>
+                    </div>
+                  </div>
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-warning">{{ getPendingDocumentsCount() }}</h4>
+                      <small class="text-muted">Pending</small>
+                    </div>
+                  </div>
+                  <div class="col-4 text-center">
+                    <div class="p-2 rounded" style="background-color: var(--bg-secondary);">
+                      <h4 class="mb-0 text-danger">{{ getRejectedDocumentsCount() }}</h4>
+                      <small class="text-muted">Rejected</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-grid">
+                  <button class="btn btn-outline-primary" (click)="navigateToVerifyDocuments()">
+                    <i class="fas fa-eye me-2"></i>View & Verify All Documents
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        
+        <!-- Right Column - Risk Assessment & Actions -->
+        <div class="col-lg-4">
+      
+          <!-- Risk Assessment -->
+      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.4s; background-color: var(--bg-primary);">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-chart-line me-2 text-primary"></i>Risk Assessment
+          </h5>
+        </div>
+        <div class="card-body text-center">
+          <!-- Risk Score Circle -->
+          <div class="risk-circle mx-auto mb-3" [class]="'risk-' + loan.riskLevel.toLowerCase()">
+            <div class="risk-score">
+              <h2 class="fw-bold mb-0">{{ loan.riskScore }}</h2>
+              <small>/ 100</small>
+            </div>
+          </div>
+          
+          <!-- Risk Level Badge -->
+          <h4 class="mb-3">
+            <span class="badge bg-{{ getRiskColor(loan.riskLevel) }} fs-5">
+              {{ loan.riskLevel }} RISK
+            </span>
+          </h4>
+
+          <!-- Risk Progress Bar -->
+          <div class="progress" style="height: 12px;">
+            <div class="progress-bar {{ getRiskProgressColor(loan.riskScore) }} progress-bar-striped progress-bar-animated" 
+                 [style.width.%]="getRiskPercentage(loan.riskScore)"
+                 role="progressbar">
+            </div>
+          </div>
+          <small class="text-muted d-block mt-2">Risk Score: {{ loan.riskScore }}%</small>
+
+          <!-- Can Approve/Reject Indicator -->
+          <div class="mt-3 p-3 rounded" [class]="getApprovalIndicatorClass()">
+            <i class="fas" [class.fa-check-circle]="loan.canApproveReject" [class.fa-exclamation-triangle]="!loan.canApproveReject"
+               [class.text-success]="loan.canApproveReject" [class.text-warning]="!loan.canApproveReject"></i>
+            <small class="d-block mt-2 fw-semibold" [class.text-success]="loan.canApproveReject" [class.text-warning]="!loan.canApproveReject">
+              {{ getApprovalIndicatorText() }}
+            </small>
+          </div>
+
+          <!-- Score Interpretation -->
+          <div class="mt-3 p-3 rounded bg-info bg-opacity-10" *ngIf="enhancedLoan">
+            <small class="text-muted d-block mb-1"><i class="fas fa-info-circle me-1"></i>Score Interpretation</small>
+            <small class="d-block" style="color: var(--text-primary);">{{ enhancedLoan.normalizedRiskScore.scoreInterpretation }}</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scoring Breakdown (Enhanced) -->
+      <div class="card border-0 shadow-sm mb-4 animate-slide-up" style="animation-delay: 0.45s; background-color: var(--bg-primary);" *ngIf="enhancedLoan">
+        <div class="card-header border-0" style="background-color: var(--bg-primary);">
+          <h5 class="fw-semibold mb-0" style="color: var(--text-primary);">
+            <i class="fas fa-calculator me-2 text-primary"></i>Scoring Breakdown
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Final Score -->
+          <div class="mb-3 p-3 rounded" style="background-color: var(--bg-secondary);">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold" style="color: var(--text-primary);">Final Score</span>
+              <span class="badge bg-{{ getRiskColor(enhancedLoan.normalizedRiskScore.riskLevel) }} fs-6">
+                {{ enhancedLoan.normalizedRiskScore.finalScore.toFixed(1) }}%
+              </span>
+            </div>
+          </div>
+
+          <!-- Internal Scoring -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted"><i class="fas fa-building me-1"></i>Internal Scoring</small>
+              <span class="badge bg-secondary">{{ enhancedLoan.scoringBreakdown.internalScoring.normalizedScore.toFixed(1) }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-info" 
+                   [style.width.%]="enhancedLoan.scoringBreakdown.internalScoring.normalizedScore"
+                   role="progressbar">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">
+              {{ enhancedLoan.scoringBreakdown.internalScoring.rawScore }} / {{ enhancedLoan.scoringBreakdown.internalScoring.maxPossibleScore }} points
+              ({{ enhancedLoan.scoringBreakdown.internalScoring.violatedRulesCount }} violations)
+            </small>
+          </div>
+
+          <!-- External Scoring -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted"><i class="fas fa-globe me-1"></i>External Scoring</small>
+              <span class="badge bg-secondary">{{ enhancedLoan.scoringBreakdown.externalScoring.normalizedScore.toFixed(1) }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-warning" 
+                   [style.width.%]="enhancedLoan.scoringBreakdown.externalScoring.normalizedScore"
+                   role="progressbar">
+              </div>
+            </div>
+            <small class="text-muted d-block mt-1">
+              {{ enhancedLoan.scoringBreakdown.externalScoring.rawScore }} / {{ enhancedLoan.scoringBreakdown.externalScoring.maxPossibleScore }} points
+              ({{ enhancedLoan.scoringBreakdown.externalScoring.violatedRulesCount }} violations)
+            </small>
+          </div>
+
+          <!-- Recommendation -->
+          <div class="mt-3 p-2 rounded text-center" 
+               [class.bg-success]="enhancedLoan.finalRecommendation === 'APPROVE'"
+               [class.bg-warning]="enhancedLoan.finalRecommendation === 'REVIEW'"
+               [class.bg-danger]="enhancedLoan.finalRecommendation === 'REJECT'"
+               style="opacity: 0.1;">
+            <small class="fw-semibold" style="color: var(--text-primary);">
+              Recommendation: {{ enhancedLoan.finalRecommendation }}
+            </small>
+          </div>
+        </div>
+      </div>
+
+        </div>
+      </div>
+
+      <!-- Officer Notes Section - COMMENTED OUT UNTIL BACKEND IMPLEMENTED -->
+      <!-- 
+      <div class="row g-4 mt-3">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <app-officer-notes 
+                [loanId]="loan.loanId"
+                [officerId]="officerId"
+                [officerName]="loan.officerName || 'Unknown Officer'"
+                [officerType]="'LOAN_OFFICER'"
+                [canEdit]="true">
+              </app-officer-notes>
+            </div>
+          </div>
+        </div>
+      </div>
+      -->
+
+      <!-- Loan Eligibility Report Section - COMMENTED OUT UNTIL BACKEND IMPLEMENTED -->
+      <!--
+      <div class="row g-4 mt-3" *ngIf="loan.status === 'APPROVED' || loan.canApproveReject">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-body">
+              <app-loan-eligibility-report 
+                [loanId]="loan.loanId"
+                [assignmentId]="assignmentId">
+              </app-loan-eligibility-report>
+            </div>
+          </div>
+        </div>
+      </div>
+      -->
+    </div>
+    <!-- End Overview Tab -->
+
+
+    <!-- Verification & Fraud Check Tab -->
+    <div *ngIf="activeTab === 'verification'">
+      <div class="row g-4">
+        
+        <!-- Left Column - Fraud Detection -->
+        <div class="col-lg-6">
+          <!-- Fraud Check Trigger -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-warning text-dark">
+              <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Fraud Detection System</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Comprehensive Fraud Screening</strong>
+                <p class="mb-0 mt-2 small">Our system performs multi-layer fraud detection including:</p>
+                <ul class="small mb-0 mt-2">
+                  <li>Identity verification (PAN, Aadhaar)</li>
+                  <li>Document authenticity checks</li>
+                  <li>Cross-reference validation</li>
+                  <li>Behavioral pattern analysis</li>
+                  <li>Financial anomaly detection</li>
+                </ul>
+              </div>
+              
+              <button class="btn btn-info btn-lg w-100" 
+                      (click)="openFraudCheckModal()"
+                      [disabled]="isFraudCheckDisabled()">
+                <i class="fas fa-shield-alt me-2"></i>{{ getFraudCheckButtonText() }}
+              </button>
+              
+              <div *ngIf="fraudCheckTriggered" class="mt-3">
+                <div class="d-flex align-items-center text-success">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <span>Fraud check completed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screening Process Details -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Screening Process</h5>
+            </div>
+            <div class="card-body">
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getDocumentVerificationProgress() === 100"
+                       [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.bg-secondary]="getDocumentVerificationProgress() === 0"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getDocumentVerificationProgress() === 100"
+                       [class.fa-sync]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.fa-clock]="getDocumentVerificationProgress() === 0"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">1. Document Verification</h6>
+                    <p class="text-muted small mb-1">{{ getVerifiedDocumentsCount() }} of {{ documents.length }} documents verified</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" 
+                           [class.bg-success]="getDocumentVerificationProgress() === 100"
+                           [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                           [class.bg-secondary]="getDocumentVerificationProgress() === 0"
+                           [style.width.%]="getDocumentVerificationProgress()"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getIdentityVerificationStatus()"
+                       [class.bg-secondary]="!getIdentityVerificationStatus()"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getIdentityVerificationStatus()"
+                       [class.fa-clock]="!getIdentityVerificationStatus()"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">2. Identity Validation</h6>
+                    <p class="text-muted small mb-1">{{ getIdentityVerificationText() }}</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" 
+                           [class.bg-success]="getIdentityVerificationStatus()"
+                           [class.bg-secondary]="!getIdentityVerificationStatus()"
+                           [style.width.%]="getIdentityVerificationStatus() ? 100 : 0"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon rounded-circle me-3" 
+                       [class.bg-success]="getFinancialAnalysisStatus()"
+                       [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                       [class.bg-secondary]="!loan"
+                       class="text-white" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas" 
+                       [class.fa-check]="getFinancialAnalysisStatus()"
+                       [class.fa-exclamation-triangle]="!getFinancialAnalysisStatus() && loan"
+                       [class.fa-clock]="!loan"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">3. Financial Analysis</h6>
+                    <p class="text-muted small mb-1">{{ getFinancialAnalysisText() }}</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" 
+                           [class.bg-success]="getFinancialAnalysisStatus()"
+                           [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                           [class.bg-secondary]="!loan"
+                           [style.width.%]="getFinancialAnalysisProgress()"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step mb-3">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon rounded-circle me-3 text-white" 
+                       [class.bg-success]="fraudCheckResult"
+                       [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                       [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                       [class.bg-info]="!fraudCheckResult"
+                       style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-sync fa-spin" *ngIf="!fraudCheckResult && fraudCheckLoading"></i>
+                    <i class="fas fa-check" *ngIf="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"></i>
+                    <i class="fas fa-exclamation-triangle" *ngIf="fraudCheckResult && (fraudCheckResult.riskLevel === 'MEDIUM' || fraudCheckResult.riskLevel === 'HIGH')"></i>
+                    <i class="fas fa-clock" *ngIf="!fraudCheckResult && !fraudCheckLoading"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">4. Fraud Rule Engine</h6>
+                    <p class="text-muted small mb-1">{{ getFraudCheckStatusText() }}</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" 
+                           [class.bg-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                           [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                           [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                           [class.bg-info]="!fraudCheckResult"
+                           [style.width.%]="getFraudCheckProgress()"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="screening-step">
+                <div class="d-flex align-items-start">
+                  <div class="step-icon rounded-circle me-3 text-white" 
+                       [class.bg-success]="loan && loan.riskLevel === 'LOW'"
+                       [class.bg-warning]="loan && loan.riskLevel === 'MEDIUM'"
+                       [class.bg-danger]="loan && loan.riskLevel === 'HIGH'"
+                       [class.bg-secondary]="!loan"
+                       style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">5. Final Risk Assessment</h6>
+                    <p class="text-muted small mb-1">{{ getFinalRiskAssessmentText() }}</p>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar" 
+                           [class.bg-success]="loan && loan.riskLevel === 'LOW'"
+                           [class.bg-warning]="loan && loan.riskLevel === 'MEDIUM'"
+                           [class.bg-danger]="loan && loan.riskLevel === 'HIGH'"
+                           [class.bg-secondary]="!loan"
+                           [style.width.%]="loan ? loan.riskScore : 0"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Fraud Check Results -->
+        <div class="col-lg-6">
+          <!-- Overall Risk Assessment -->
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header" [class.bg-success]="loan.riskLevel === 'LOW'" 
+                                     [class.bg-warning]="loan.riskLevel === 'MEDIUM'"
+                                     [class.bg-danger]="loan.riskLevel === 'HIGH'" 
+                                     class="text-white">
+              <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Overall Risk Assessment</h5>
+            </div>
+            <div class="card-body">
+              <div class="text-center mb-4">
+                <div class="risk-circle mx-auto mb-3" style="width: 150px; height: 150px; border-radius: 50%; border: 10px solid; display: flex; align-items: center; justify-content: center;"
+                     [style.border-color]="getRiskColor(loan.riskLevel)">
+                  <div>
+                    <h2 class="mb-0" [style.color]="getRiskColor(loan.riskLevel)">{{ loan.riskScore }}%</h2>
+                    <small class="text-muted">Risk Score</small>
+                  </div>
+                </div>
+                <h4 [class.text-success]="loan.riskLevel === 'LOW'"
+                    [class.text-warning]="loan.riskLevel === 'MEDIUM'"
+                    [class.text-danger]="loan.riskLevel === 'HIGH'">
+                  {{ loan.riskLevel }} RISK
+                </h4>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-user-check fa-2x mb-2" 
+                       [class.text-success]="getIdentityVerificationStatus()"
+                       [class.text-secondary]="!getIdentityVerificationStatus()"></i>
+                    <h6 class="mb-1">Identity</h6>
+                    <span class="badge" 
+                          [class.bg-success]="getIdentityVerificationStatus()"
+                          [class.bg-secondary]="!getIdentityVerificationStatus()">
+                      {{ getIdentityVerificationStatus() ? 'Verified' : 'Pending' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-file-alt fa-2x mb-2" 
+                       [class.text-success]="getDocumentVerificationProgress() === 100"
+                       [class.text-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                       [class.text-secondary]="getDocumentVerificationProgress() === 0"></i>
+                    <h6 class="mb-1">Documents</h6>
+                    <span class="badge" 
+                          [class.bg-success]="getDocumentVerificationProgress() === 100"
+                          [class.bg-warning]="getDocumentVerificationProgress() > 0 && getDocumentVerificationProgress() < 100"
+                          [class.bg-secondary]="getDocumentVerificationProgress() === 0">
+                      {{ getVerifiedDocumentsCount() }}/{{ documents.length }}
+                    </span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-money-bill-wave fa-2x mb-2" 
+                       [class.text-success]="getFinancialAnalysisStatus()"
+                       [class.text-warning]="!getFinancialAnalysisStatus() && loan"
+                       [class.text-secondary]="!loan"></i>
+                    <h6 class="mb-1">Financial</h6>
+                    <span class="badge" 
+                          [class.bg-success]="getFinancialAnalysisStatus()"
+                          [class.bg-warning]="!getFinancialAnalysisStatus() && loan"
+                          [class.bg-secondary]="!loan">
+                      {{ getFinancialStatusText() }}
+                    </span>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 rounded text-center" style="background-color: var(--bg-secondary);">
+                    <i class="fas fa-shield-alt fa-2x mb-2" 
+                       [class.text-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                       [class.text-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                       [class.text-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                       [class.text-secondary]="!fraudCheckResult"></i>
+                    <h6 class="mb-1">Fraud Check</h6>
+                    <span class="badge" 
+                          [class.bg-success]="fraudCheckResult && fraudCheckResult.riskLevel === 'LOW'"
+                          [class.bg-warning]="fraudCheckResult && fraudCheckResult.riskLevel === 'MEDIUM'"
+                          [class.bg-danger]="fraudCheckResult && fraudCheckResult.riskLevel === 'HIGH'"
+                          [class.bg-secondary]="!fraudCheckResult">
+                      {{ getFraudCheckBadgeText() }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Fraud Check Results -->
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-danger text-white">
+              <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Results</h5>
+            </div>
+            <div class="card-body">
+              <div *ngIf="!fraudCheckResult" class="text-center py-4">
+                <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">No fraud check performed yet</h6>
+                <p class="text-muted small">Click "Run Fraud Check" to perform comprehensive fraud detection</p>
+                
+                <!-- Debug Info -->
+                <div class="mt-3 p-2 bg-light rounded" *ngIf="loan">
+                  <small class="text-muted">
+                    Debug: Loan ID {{ loan.loanId }}, Applicant ID {{ loan.applicantId }}
+                    <br>
+                    Fraud Check Triggered: {{ fraudCheckTriggered }}
+                    <br>
+                    Fraud Check Loading: {{ fraudCheckLoading }}
+                  </small>
+                </div>
+                
+                <!-- Quick Test Button -->
+                <button class="btn btn-sm btn-warning mt-2" (click)="createMockFraudData()">
+                  <i class="fas fa-flask me-1"></i>Create Mock Data (Test)
+                </button>
+              </div>
+
+              <!-- Overall Loan Risk Assessment -->
+              <div class="alert mb-4" 
+                   [class.alert-success]="getCurrentRiskLevel() === 'LOW'"
+                   [class.alert-warning]="getCurrentRiskLevel() === 'MEDIUM'"
+                   [class.alert-danger]="getCurrentRiskLevel() === 'HIGH'">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="mb-1">
+                      <i class="fas fa-chart-line me-2"></i>
+                      Overall Risk Level: {{ getCurrentRiskLevel() }}
+                    </h5>
+                    <p class="mb-0">Loan Risk Score: {{ getCurrentRiskScore() }}%</p>
+                  </div>
+                  <div class="text-end">
+                    <small class="d-block">{{ fraudCheckResult ? 'Fraud Check Completed:' : 'Last Updated:' }}</small>
+                    <small>{{ getCurrentCheckDate() }}</small>
+                  </div>
+                </div>
+              </div>
+
+
+              <div *ngIf="fraudCheckResult">
+
+                <!-- Fraud Tags -->
+                <div *ngIf="fraudCheckResult.fraudTags && fraudCheckResult.fraudTags.length > 0" class="mb-4">
+                  <h6 class="mb-3"><i class="fas fa-tags me-2"></i>Fraud Indicators</h6>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let tag of fraudCheckResult.fraudTags" class="badge bg-warning text-dark">
+                      {{ tag }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Risk Score Calculation Breakdown -->
+                <div class="mb-4">
+                  <h6 class="mb-3"><i class="fas fa-calculator me-2"></i>Risk Score Calculation</h6>
+                  <div class="card border-0" style="background-color: var(--bg-secondary);">
+                    <div class="card-body">
+                      
+                      <!-- Always show loan-based calculation -->
+                      <div *ngIf="loan">
+                        <div class="alert alert-info mb-3">
+                          <i class="fas fa-info-circle me-2"></i>
+                          <strong>Loan Risk Assessment</strong>
+                          <p class="mb-0 mt-2">This risk score is based on comprehensive loan screening including financial analysis, credit history, and eligibility criteria.</p>
+                        </div>
+                        
+                        <!-- Loan Risk Components -->
+                        <div class="row g-3 mb-3">
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Credit Score Impact</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanCreditScoreImpact() <= 20"
+                                  [class.text-warning]="getLoanCreditScoreImpact() > 20 && getLoanCreditScoreImpact() <= 40"
+                                  [class.text-danger]="getLoanCreditScoreImpact() > 40">
+                                {{ getLoanCreditScoreImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Income Analysis</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanIncomeImpact() <= 15"
+                                  [class.text-warning]="getLoanIncomeImpact() > 15 && getLoanIncomeImpact() <= 30"
+                                  [class.text-danger]="getLoanIncomeImpact() > 30">
+                                {{ getLoanIncomeImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Debt-to-Income</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanDTIImpact() <= 10"
+                                  [class.text-warning]="getLoanDTIImpact() > 10 && getLoanDTIImpact() <= 20"
+                                  [class.text-danger]="getLoanDTIImpact() > 20">
+                                {{ getLoanDTIImpact() }}
+                              </h4>
+                            </div>
+                          </div>
+                          <div class="col-3">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Other Factors</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="getLoanOtherFactors() <= 10"
+                                  [class.text-warning]="getLoanOtherFactors() > 10 && getLoanOtherFactors() <= 20"
+                                  [class.text-danger]="getLoanOtherFactors() > 20">
+                                {{ getLoanOtherFactors() }}
+                              </h4>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Final Score Breakdown -->
+                        <div class="row g-3 mb-3">
+                          <div class="col-6">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Total Risk Points</small>
+                              <h4 class="mb-0 text-primary">{{ getLoanTotalRiskPoints() }}</h4>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-center">
+                              <small class="text-muted d-block">Final Risk Score</small>
+                              <h4 class="mb-0" 
+                                  [class.text-success]="loan.riskLevel === 'LOW'"
+                                  [class.text-warning]="loan.riskLevel === 'MEDIUM'"
+                                  [class.text-danger]="loan.riskLevel === 'HIGH'">
+                                {{ loan.riskScore }}%
+                              </h4>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Formula Explanation -->
+                        <div class="alert alert-light mb-0">
+                          <small>
+                            <strong>Formula:</strong> Risk Score = Credit Impact + Income Analysis + DTI Impact + Other Factors
+                            <br>
+                            <strong>Calculation:</strong> 
+                            {{ loan.riskScore }}% = {{ getLoanCreditScoreImpact() }} + {{ getLoanIncomeImpact() }} + {{ getLoanDTIImpact() }} + {{ getLoanOtherFactors() }}
+                            <br>
+                            <strong>Risk Level:</strong> {{ loan.riskLevel }} ({{ getRiskLevelDescription() }})
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Flagged Rules with Detailed Breakdown -->
+                <div *ngIf="fraudCheckResult.flaggedRules && fraudCheckResult.flaggedRules.length > 0">
+                  <h6 class="mb-3">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Violated Rules - Detailed Breakdown ({{ fraudCheckResult.flaggedRules.length }})
+                  </h6>
+                  
+                  <div class="accordion" id="fraudRulesAccordion">
+                    <div *ngFor="let rule of fraudCheckResult.flaggedRules; let i = index" 
+                         class="accordion-item mb-2 border rounded">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                [attr.data-bs-toggle]="'collapse'" 
+                                [attr.data-bs-target]="'#rule' + i">
+                          <div class="d-flex align-items-center w-100">
+                            <span class="badge me-2" 
+                                  [class.bg-info]="rule.severity === 'LOW'"
+                                  [class.bg-warning]="rule.severity === 'MEDIUM'"
+                                  [class.bg-danger]="rule.severity === 'HIGH'"
+                                  style="min-width: 70px;">
+                              {{ rule.severity }}
+                            </span>
+                            <span class="badge bg-secondary me-2" style="min-width: 120px;">{{ rule.category }}</span>
+                            <span class="flex-grow-1 text-start">{{ rule.ruleName }}</span>
+                            <span class="badge bg-danger ms-2" *ngIf="rule.points">
+                              <i class="fas fa-minus-circle me-1"></i>{{ rule.points }} pts
+                            </span>
+                          </div>
+                        </button>
+                      </h2>
+                      <div [id]="'rule' + i" class="accordion-collapse collapse" 
+                           [attr.data-bs-parent]="'#fraudRulesAccordion'">
+                        <div class="accordion-body">
+                          <!-- Rule Details -->
+                          <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                              <div class="p-2 rounded" style="background-color: var(--bg-primary);">
+                                <small class="text-muted d-block mb-1">
+                                  <i class="fas fa-code me-1"></i>Rule Code
+                                </small>
+                                <strong>{{ rule.ruleCode || 'N/A' }}</strong>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="p-2 rounded" style="background-color: var(--bg-primary);">
+                                <small class="text-muted d-block mb-1">
+                                  <i class="fas fa-star me-1"></i>Points Deducted
+                                </small>
+                                <strong class="text-danger">-{{ rule.points || 0 }} points</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Rule Description -->
+                          <div class="mb-3">
+                            <small class="text-muted d-block mb-1">
+                              <i class="fas fa-info-circle me-1"></i>Description
+                            </small>
+                            <p class="mb-0">{{ rule.description }}</p>
+                          </div>
+
+                          <!-- Impact Analysis -->
+                          <div class="alert" 
+                               [class.alert-info]="rule.severity === 'LOW'"
+                               [class.alert-warning]="rule.severity === 'MEDIUM'"
+                               [class.alert-danger]="rule.severity === 'HIGH'"
+                               style="margin-bottom: 0;">
+                            <small>
+                              <strong><i class="fas fa-chart-line me-1"></i>Impact on Risk Score:</strong>
+                              <br>
+                              This {{ rule.severity }} severity rule contributed 
+                              <strong>{{ rule.points || 0 }} points</strong> to the total risk score.
+                              <span *ngIf="rule.severity === 'HIGH'">
+                                High severity violations significantly increase fraud risk.
+                              </span>
+                              <span *ngIf="rule.severity === 'MEDIUM'">
+                                Medium severity violations require careful review.
+                              </span>
+                              <span *ngIf="rule.severity === 'LOW'">
+                                Low severity violations have minimal impact on overall risk.
+                              </span>
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Summary Table -->
+                  <div class="mt-4">
+                    <h6 class="mb-3"><i class="fas fa-table me-2"></i>Rules Summary</h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                          <tr>
+                            <th>#</th>
+                            <th>Rule Name</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th class="text-end">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let rule of fraudCheckResult.flaggedRules; let i = index">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ rule.ruleName }}</td>
+                            <td><span class="badge bg-secondary">{{ rule.category }}</span></td>
+                            <td>
+                              <span class="badge" 
+                                    [class.bg-info]="rule.severity === 'LOW'"
+                                    [class.bg-warning]="rule.severity === 'MEDIUM'"
+                                    [class.bg-danger]="rule.severity === 'HIGH'">
+                                {{ rule.severity }}
+                              </span>
+                            </td>
+                            <td class="text-end text-danger"><strong>-{{ rule.points || 0 }}</strong></td>
+                          </tr>
+                          <tr class="table-light">
+                            <td colspan="4" class="text-end"><strong>Total Points Deducted:</strong></td>
+                            <td class="text-end text-danger">
+                              <strong>-{{ getTotalPointsDeducted() }}</strong>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Verification Tab -->
+
+    <!-- Final Decision Tab -->
+    <div *ngIf="activeTab === 'decision'">
+      <div class="row g-4">
+        
+        <!-- Document Verification Alert -->
+        <div class="col-12" *ngIf="!allDocumentsVerified()">
+          <div class="alert alert-warning shadow-sm">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Document Verification Required</strong>
+            <p class="mb-0 mt-2">All documents must be verified before you can make a final decision. Please complete document verification in the "Documents" tab.</p>
+          </div>
+        </div>
+
+        <!-- Decision Summary Card -->
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Decision Summary</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="text-muted small">Applicant</label>
+                  <h6>{{ loan.applicantName }}</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Loan Amount</label>
+                  <h6 class="text-success">{{ formatCurrency(loan.loanAmount) }}</h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Risk Score</label>
+                  <h6 [class.text-success]="loan.riskScore < 40"
+                      [class.text-warning]="loan.riskScore >= 40 && loan.riskScore < 70"
+                      [class.text-danger]="loan.riskScore >= 70">
+                    {{ loan.riskScore }}% - {{ loan.riskLevel }}
+                  </h6>
+                </div>
+                <div class="col-md-6">
+                  <label class="text-muted small">Documents Status</label>
+                  <h6>
+                    <span class="badge bg-success me-1">{{ getVerifiedDocumentsCount() }} Verified</span>
+                    <span class="badge bg-warning">{{ getPendingDocumentsCount() }} Pending</span>
+                  </h6>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compliance Verdict Section (for escalated loans) -->
+        <div class="col-12" *ngIf="loan.status === 'ESCALATED_TO_COMPLIANCE' || loan.status === 'COMPLIANCE_VERDICT_AVAILABLE'">
+          <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Compliance Officer Review</h5>
+            </div>
+            <div class="card-body">
+              <div *ngIf="loan.hasComplianceVerdict; else noVerdict">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="text-muted small">Compliance Verdict</label>
+                    <h6>
+                      <span class="badge" 
+                            [class.bg-success]="loan.complianceVerdict === 'APPROVED'"
+                            [class.bg-danger]="loan.complianceVerdict === 'REJECTED'"
+                            [class.bg-warning]="loan.complianceVerdict === 'FLAGGED'"
+                            [class.bg-info]="loan.complianceVerdict === 'CONDITIONAL_APPROVAL'">
+                        {{ loan.complianceVerdict }}
+                      </span>
+                    </h6>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Compliance Officer</label>
+                    <h6>{{ loan.complianceOfficerName }}</h6>
+                  </div>
+                  <div class="col-md-6" *ngIf="loan.complianceVerdictTimestamp">
+                    <label class="text-muted small">Review Date</label>
+                    <h6>{{ formatDate(loan.complianceVerdictTimestamp) }}</h6>
+                  </div>
+                  <div class="col-md-6" *ngIf="loan.nextAction">
+                    <label class="text-muted small">Next Action</label>
+                    <h6 class="text-primary">{{ loan.nextAction }}</h6>
+                  </div>
+                  <div class="col-12" *ngIf="loan.complianceVerdictReason">
+                    <label class="text-muted small">Verdict Reason</label>
+                    <p class="mb-2">{{ loan.complianceVerdictReason }}</p>
+                  </div>
+                  <div class="col-12" *ngIf="loan.complianceRemarks">
+                    <label class="text-muted small">Compliance Remarks</label>
+                    <p class="mb-0">{{ loan.complianceRemarks }}</p>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noVerdict>
+                <div class="alert alert-warning mb-0">
+                  <i class="fas fa-clock me-2"></i>
+                  <strong>Awaiting Compliance Review</strong>
+                  <p class="mb-0 mt-2">This loan has been escalated to a compliance officer. Please wait for their review before proceeding.</p>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm" style="background-color: var(--bg-primary);">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="fas fa-gavel me-2"></i>Make Your Decision</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> Your decision will be recorded and cannot be undone. Please review all information carefully.
+              </div>
+
+              <div class="d-grid gap-3">
+                <button class="btn btn-success btn-lg" 
+                        (click)="openActionModal('APPROVE')"
+                        [disabled]="!allDocumentsVerified() || isApproveDisabled()">
+                  <i class="fas fa-check-circle me-2"></i>
+                  <strong>Approve Loan</strong>
+                  <small class="d-block mt-1">Approve this loan application for disbursement</small>
+                </button>
+
+                <button class="btn btn-danger btn-lg" 
+                        (click)="openActionModal('REJECT')"
+                        [disabled]="!allDocumentsVerified() || isRejectDisabled()">
+                  <i class="fas fa-times-circle me-2"></i>
+                  <strong>Reject Loan</strong>
+                  <small class="d-block mt-1">Reject this loan application with reason</small>
+                </button>
+
+                <button class="btn btn-warning btn-lg" 
+                        (click)="openActionModal('ESCALATE_TO_COMPLIANCE')"
+                        [disabled]="!allDocumentsVerified() || isEscalateDisabled()">
+                  <i class="fas fa-arrow-up me-2"></i>
+                  <strong>Escalate to Compliance</strong>
+                  <small class="d-block mt-1">Send to compliance team for further review</small>
+                </button>
+
+                <hr>
+
+                <button class="btn btn-outline-secondary" (click)="goBack()">
+                  <i class="fas fa-arrow-left me-2"></i>Back to Assigned Loans
+                </button>
+              </div>
+
+              <div *ngIf="!loan.canApproveReject" class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>High Risk Application:</strong> This application has a high risk score and requires compliance officer approval.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Final Decision Tab -->
+    
+  </div>
+  <!-- End Tab Content -->
+
+</div>
+<!-- End Main Container -->
+
+<!-- Action Confirmation Modal -->
+<div class="modal fade" [class.show]="showActionModal" [style.display]="getModalDisplayStyle(showActionModal)" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas" 
+             [class.fa-check-circle]="actionType === 'APPROVE'"
+             [class.fa-times-circle]="actionType === 'REJECT'"
+             [class.fa-arrow-up]="actionType === 'ESCALATE_TO_COMPLIANCE'"
+             [class.text-success]="actionType === 'APPROVE'"
+             [class.text-danger]="actionType === 'REJECT'"
+             [class.text-warning]="actionType === 'ESCALATE_TO_COMPLIANCE'"></i>
+          {{ getActionModalTitle() }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeActionModal()" [disabled]="processing"></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-primary);">
+          {{ getActionModalMessage() }}
+        </p>
+
+        <!-- Rejection Reason (only for REJECT) -->
+        <div class="mb-3" *ngIf="actionType === 'REJECT'">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Rejection Reason *</label>
+          <textarea class="form-control" rows="3" 
+                    [(ngModel)]="rejectionReason"
+                    placeholder="Provide detailed reason for rejection..."
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+        </div>
+
+        <!-- Remarks (optional for all) -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Remarks (Optional)</label>
+          <textarea class="form-control" rows="3" 
+                    [(ngModel)]="remarks"
+                    placeholder="Add any additional comments..."
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeActionModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" 
+                class="btn"
+                [class.btn-success]="actionType === 'APPROVE'"
+                [class.btn-danger]="actionType === 'REJECT'"
+                [class.btn-warning]="actionType === 'ESCALATE_TO_COMPLIANCE'"
+                (click)="confirmAction()" 
+                [disabled]="processing || isActionRejectWithNoReason()">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          {{ getConfirmButtonText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showActionModal" *ngIf="showActionModal"></div>
+
+<!-- Documents Modal -->
+<div class="modal fade" [class.show]="showDocumentsModal" [style.display]="getModalDisplayStyle(showDocumentsModal)" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-file-alt me-2 text-primary"></i>Document Verification
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDocumentsModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="documents.length === 0" class="text-center text-muted py-5">
+          <i class="fas fa-folder-open fa-3x mb-3"></i>
+          <p>No documents available for verification</p>
+        </div>
+        <div *ngFor="let doc of documents" class="card mb-3" style="background-color: var(--bg-secondary);">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <h6 class="fw-semibold mb-1" style="color: var(--text-primary);">
+                  <i class="fas fa-file-pdf text-danger me-2"></i>{{ formatDocumentType(doc.documentType) }}
+                </h6>
+                <small class="text-muted">{{ doc.documentName }}</small>
+                <div class="mt-2">
+                  <span [class]="getDocumentStatusClass(doc.verificationStatus)">{{ doc.verificationStatus }}</span>
+                  <small class="text-muted ms-2">Uploaded: {{ formatDate(doc.uploadedAt) }}</small>
+                </div>
+              </div>
+              <div class="col-md-6 text-end">
+                <a [href]="doc.documentUrl" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                  <i class="fas fa-eye me-1"></i>View
+                </a>
+                <button class="btn btn-sm btn-success me-2" 
+                        (click)="verifyDocument(doc, 'VERIFIED')"
+                        [disabled]="isVerifyButtonDisabled(doc)">
+                  <i class="fas fa-check me-1"></i>Verify
+                </button>
+                <button class="btn btn-sm btn-danger" 
+                        (click)="verifyDocument(doc, 'REJECTED')"
+                        [disabled]="isRejectDocButtonDisabled(doc)">
+                  <i class="fas fa-times me-1"></i>Reject
+                </button>
+              </div>
+            </div>
+            <div class="mt-3" *ngIf="doc.remarks">
+              <small class="text-muted">Remarks: {{ doc.remarks }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeDocumentsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showDocumentsModal" *ngIf="showDocumentsModal"></div>
+
+<!-- Fraud Check Modal -->
+<div class="modal fade" [class.show]="showFraudCheckModal" [style.display]="getModalDisplayStyle(showFraudCheckModal)" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-shield-alt me-2 text-danger"></i>Trigger Fraud Screening
+        </h5>
+        <button type="button" class="btn-close" (click)="closeFraudCheckModal()" [disabled]="fraudCheckLoading"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          This will send applicant identifiers (PAN, Aadhaar, phone, email) to the External Authority API for fraud screening.
+        </div>
+        <p style="color: var(--text-primary);">Are you sure you want to trigger fraud screening for this application?</p>
+        <ul class="text-muted small">
+          <li>Applicant: <strong>{{ loan?.applicantName }}</strong></li>
+          <li>Loan ID: <strong>#{{ loan?.loanId }}</strong></li>
+          <li>Loan Amount: <strong>{{ formatCurrency(loan?.loanAmount || 0) }}</strong></li>
+        </ul>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeFraudCheckModal()" [disabled]="fraudCheckLoading">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger" (click)="triggerFraudCheck()" [disabled]="fraudCheckLoading">
+          <span *ngIf="fraudCheckLoading" class="spinner-border spinner-border-sm me-2"></span>
+          {{ getFraudCheckModalButtonText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showFraudCheckModal" *ngIf="showFraudCheckModal"></div>
+
+<!-- Document Resubmission Modal -->
+<div class="modal fade" [class.show]="showResubmissionModal" [style.display]="getModalDisplayStyle(showResubmissionModal)" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+      <div class="modal-header" style="border-color: var(--border-color);">
+        <h5 class="modal-title" style="color: var(--text-primary);">
+          <i class="fas fa-redo me-2 text-warning"></i>Request Document Resubmission
+        </h5>
+        <button type="button" class="btn-close" (click)="closeResubmissionModal()" [disabled]="processing"></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-primary);">Select documents that need to be resubmitted:</p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Document Types *</label>
+          <div class="row g-2">
+            <div *ngFor="let docType of availableDocumentTypes" class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" 
+                       [id]="'doc-' + docType"
+                       [checked]="selectedDocumentTypes.includes(docType)"
+                       (change)="toggleDocumentType(docType)">
+                <label class="form-check-label" [for]="'doc-' + docType" style="color: var(--text-primary);">
+                  {{ formatDocumentType(docType) }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="color: var(--text-primary);">Reason for Resubmission *</label>
+          <textarea class="form-control" rows="3" 
+                    [(ngModel)]="resubmissionReason"
+                    placeholder="Explain why these documents need to be resubmitted..."
+                    style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);"></textarea>
+        </div>
+
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          The applicant will receive an email alert to resubmit the selected documents.
+        </div>
+      </div>
+      <div class="modal-footer" style="border-color: var(--border-color);">
+        <button type="button" class="btn btn-secondary" (click)="closeResubmissionModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-warning" 
+                (click)="requestResubmission()" 
+                [disabled]="isResubmissionDisabled()">
+          <span *ngIf="processing" class="spinner-border spinner-border-sm me-2"></span>
+          {{ getResubmissionButtonText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="showResubmissionModal" *ngIf="showResubmissionModal"></div>

@@ -1,0 +1,40 @@
+<div class="loading-spinner-container" [class.fullscreen]="fullScreen" [class.inline]="!fullScreen">
+  <div class="loading-content" [ngClass]="'size-' + size">
+    <!-- Logo Container with Animation -->
+    <div class="logo-container">
+      <img src="assets/images/logo.jpeg" 
+           alt="FraudShield Logo" 
+           class="logo-spinner"
+           (error)="onImageError()"
+           *ngIf="!showFallback">
+      
+      <!-- Fallback SVG Logo -->
+      <div class="logo-fallback" *ngIf="showFallback">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <path d="M9 12l2 2 4-4"></path>
+        </svg>
+      </div>
+      
+      <!-- Animated Rings -->
+      <div class="spinner-ring ring-1"></div>
+      <div class="spinner-ring ring-2"></div>
+      <div class="spinner-ring ring-3"></div>
+    </div>
+    
+    <!-- Loading Text -->
+    <div class="loading-text">
+      <h3 class="loading-message">{{ message }}</h3>
+      <div class="loading-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+  </div>
+</div>

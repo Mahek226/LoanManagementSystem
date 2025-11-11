@@ -1,0 +1,295 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ComplianceOfficerService, ComplianceEscalation } from '../../../core/services/compliance-officer.service';
+
+@Component({
+  selector: 'app-escalations',
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule],
+  templateUrl: './escalations.component.html',
+  styleUrls: ['./escalations.component.css']
+})
+export class EscalationsComponent implements OnInit {
+  escalations: ComplianceEscalation[] = [];
+  filteredEscalations: ComplianceEscalation[] = [];
+  paginatedEscalations: ComplianceEscalation[] = [];
+  loading: boolean = true;
+  errorMessage: string = '';
+
+  // View mode
+  viewMode: 'grid' | 'list' = 'grid';
+
+  // Pagination
+  currentPage: number = 1;
+  itemsPerPage: number = 10;
+  totalPages: number = 0;
+  pageSizeOptions: number[] = [5, 10, 15, 20, 25];
+
+  // Filters
+  searchQuery: string = '';
+  selectedPriority: string = 'all';
+  selectedRiskLevel: string = 'all';
+  selectedStatus: string = 'all';
+  selectedLoanType: string = 'all';
+  selectedFraudFlag: string = 'all';
+
+  // Sort
+  sortBy: string = 'assignedAt';
+  sortOrder: 'asc' | 'desc' = 'desc';
+
+  constructor(private complianceService: ComplianceOfficerService) {}
+
+  ngOnInit(): void {
+    this.loadEscalations();
+  }
+
+  loadEscalations(): void {
+    this.loading = true;
+    this.complianceService.getEscalations().subscribe({
+      next: (escalations) => {
+        this.escalations = escalations;
+        this.applyFilters();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading escalations:', error);
+        this.errorMessage = 'Failed to load escalations. Please try again.';
+        this.loading = false;
+      }
+    });
+  }
+
+  applyFilters(): void {
+    let filtered = [...this.escalations];
+
+    // Search filter
+    if (this.searchQuery.trim()) {
+      const query = this.searchQuery.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.applicantName.toLowerCase().includes(query) ||
+        e.loanType.toLowerCase().includes(query) ||
+        e.applicantId.toString().includes(query) ||
+        e.loanId.toString().includes(query) ||
+        (e.fraudIndicators && e.fraudIndicators.some(flag => flag.toLowerCase().includes(query)))
+      );
+    }
+
+    // Priority filter
+    if (this.selectedPriority !== 'all') {
+      filtered = filtered.filter(e =>
+        this.complianceService.getPriorityLevel(e) === this.selectedPriority
+      );
+    }
+
+    // Risk level filter
+    if (this.selectedRiskLevel !== 'all') {
+      filtered = filtered.filter(e => e.riskLevel === this.selectedRiskLevel);
+    }
+
+    // Status filter
+    if (this.selectedStatus !== 'all') {
+      filtered = filtered.filter(e => e.status === this.selectedStatus);
+    }
+
+    // Loan type filter
+    if (this.selectedLoanType !== 'all') {
+      filtered = filtered.filter(e => e.loanType === this.selectedLoanType);
+    }
+
+    // Fraud flag filter
+    if (this.selectedFraudFlag !== 'all') {
+      filtered = filtered.filter(e => 
+        e.fraudIndicators && e.fraudIndicators.includes(this.selectedFraudFlag)
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (this.sortBy) {
+        case 'assignedAt':
+          aValue = new Date(a.assignedAt).getTime();
+          bValue = new Date(b.assignedAt).getTime();
+          break;
+        case 'loanAmount':
+          aValue = a.loanAmount;
+          bValue = b.loanAmount;
+          break;
+        case 'riskScore':
+          aValue = a.riskScore;
+          bValue = b.riskScore;
+          break;
+        case 'priority':
+          const priorities = { 'URGENT': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+          aValue = priorities[this.complianceService.getPriorityLevel(a) as keyof typeof priorities];
+          bValue = priorities[this.complianceService.getPriorityLevel(b) as keyof typeof priorities];
+          break;
+        default:
+          aValue = a.applicantName;
+          bValue = b.applicantName;
+      }
+
+      if (this.sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    this.filteredEscalations = filtered;
+    this.updatePagination();
+  }
+
+  onSearchChange(): void {
+    this.applyFilters();
+  }
+
+  onFilterChange(): void {
+    this.applyFilters();
+  }
+
+  onSortChange(): void {
+    this.applyFilters();
+  }
+
+  toggleSortOrder(): void {
+    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+    this.applyFilters();
+  }
+
+  setViewMode(mode: 'grid' | 'list'): void {
+    this.viewMode = mode;
+  }
+
+  clearFilters(): void {
+    this.searchQuery = '';
+    this.selectedPriority = 'all';
+    this.selectedRiskLevel = 'all';
+    this.selectedStatus = 'all';
+    this.selectedLoanType = 'all';
+    this.selectedFraudFlag = 'all';
+    this.sortBy = 'assignedAt';
+    this.sortOrder = 'desc';
+    this.currentPage = 1;
+    this.applyFilters();
+  }
+
+  // Pagination methods
+  updatePagination(): void {
+    this.totalPages = Math.ceil(this.filteredEscalations.length / this.itemsPerPage);
+    if (this.currentPage > this.totalPages && this.totalPages > 0) {
+      this.currentPage = this.totalPages;
+    }
+    this.updatePaginatedData();
+  }
+
+  updatePaginatedData(): void {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    this.paginatedEscalations = this.filteredEscalations.slice(startIndex, endIndex);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updatePaginatedData();
+    }
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePaginatedData();
+    }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.updatePaginatedData();
+    }
+  }
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.updatePagination();
+  }
+
+  getPageNumbers(): number[] {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  getPaginationInfo(): string {
+    const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.currentPage * this.itemsPerPage, this.filteredEscalations.length);
+    return `Showing ${start}-${end} of ${this.filteredEscalations.length} escalations`;
+  }
+
+  exportToCSV(): void {
+    this.complianceService.exportToCSV(this.filteredEscalations, 'compliance-escalations.csv');
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
+  formatDate(dateString: string): string {
+    return this.complianceService.formatDate(dateString);
+  }
+
+  getRiskBadgeClass(riskLevel: string): string {
+    return this.complianceService.getRiskBadgeClass(riskLevel);
+  }
+
+  getStatusBadgeClass(status: string): string {
+    return this.complianceService.getStatusBadgeClass(status);
+  }
+
+  getPriorityLevel(escalation: ComplianceEscalation): string {
+    return this.complianceService.getPriorityLevel(escalation);
+  }
+
+  getPriorityColor(priority: string): string {
+    return this.complianceService.getPriorityColor(priority);
+  }
+
+  getUniqueLoanTypes(): string[] {
+    return [...new Set(this.escalations.map(e => e.loanType))];
+  }
+
+  getUniqueFraudFlags(): string[] {
+    const allFlags = this.escalations
+      .filter(e => e.fraudIndicators && e.fraudIndicators.length > 0)
+      .flatMap(e => e.fraudIndicators!);
+    return [...new Set(allFlags)].sort();
+  }
+
+  getTotalFraudFlags(escalation: ComplianceEscalation): number {
+    return escalation.fraudIndicators ? escalation.fraudIndicators.length : 0;
+  }
+
+  hasFraudFlags(escalation: ComplianceEscalation): boolean {
+    return !!(escalation.fraudIndicators && escalation.fraudIndicators.length > 0);
+  }
+}

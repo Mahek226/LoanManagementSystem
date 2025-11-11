@@ -1,0 +1,1408 @@
+<div class="apply-loan-container">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn" (click)="goBack()">
+      <span class="back-icon">←</span>
+    </button>
+    <div class="header-content">
+      <h1>Apply for a New Loan</h1>
+      <p>Complete your loan application in simple steps. All fields marked with * are mandatory.</p>
+    </div>
+  </div>
+
+  <!-- Progress Steps -->
+  <div class="progress-steps">
+    <div class="steps-container">
+      <div 
+        *ngFor="let step of steps" 
+        class="step"
+        [class.active]="step.id === currentStep"
+        [class.completed]="step.id < currentStep"
+      >
+        <div class="step-circle">
+          <span *ngIf="step.id < currentStep" class="check-icon">✓</span>
+          <span *ngIf="step.id >= currentStep" class="step-icon">{{ step.icon }}</span>
+        </div>
+        <span class="step-title">{{ step.title }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Container -->
+  <div class="form-container">
+    <div class="form-card">
+      <h2 class="form-title">Home Loan Application Form</h2>
+
+      <!-- Step 1: Loan Type Selection -->
+      <div *ngIf="isCurrentStep(1)" class="form-step">
+        <h3 class="step-heading">Select Loan Type</h3>
+        <div class="loan-types-grid">
+          <div 
+            *ngFor="let loanType of loanTypes" 
+            class="loan-type-card"
+            [class.selected]="loanTypeForm.get('loanType')?.value === loanType.id"
+            (click)="onLoanTypeSelect(loanType.id)"
+          >
+            <div class="loan-type-icon">{{ loanType.icon }}</div>
+            <h4>{{ loanType.name }}</h4>
+            <p>{{ loanType.description }}</p>
+            <div class="loan-type-details">
+              <div class="detail-item">
+                <span class="label">Amount:</span>
+                <span class="value">₹{{ (loanType.minAmount / 100000) | number:'1.0-0' }}L - ₹{{ (loanType.maxAmount / 10000000) | number:'1.0-0' }}Cr</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Tenure:</span>
+                <span class="value">Up to {{ loanType.maxTenure / 12 | number:'1.0-0' }} years</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Interest:</span>
+                <span class="value">{{ loanType.interestRate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="loanTypeForm.get('loanType')?.invalid && loanTypeForm.get('loanType')?.touched" class="error-message">
+          Please select a loan type
+        </div>
+      </div>
+
+      <!-- Step 2: Personal Details -->
+      <div *ngIf="isCurrentStep(2)" class="step-content">
+          <form [formGroup]="personalDetailsForm" class="form-grid three-columns">
+            <!-- Applicant Details -->
+            <div class="section-title full-width">Applicant Information</div>
+          
+            <div class="form-group">
+            <label for="firstName">First Name *</label>
+            <input type="text" id="firstName" formControlName="firstName" class="form-control" placeholder="John"
+              [class.error]="personalDetailsForm.get('firstName')?.invalid && personalDetailsForm.get('firstName')?.touched">
+            <div *ngIf="personalDetailsForm.get('firstName')?.invalid && personalDetailsForm.get('firstName')?.touched" class="error-message">
+              First name is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="middleName">Middle Name</label>
+            <input type="text" id="middleName" formControlName="middleName" class="form-control" placeholder="Kumar">
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name *</label>
+            <input type="text" id="lastName" formControlName="lastName" class="form-control" placeholder="Sharma"
+              [class.error]="personalDetailsForm.get('lastName')?.invalid && personalDetailsForm.get('lastName')?.touched">
+            <div *ngIf="personalDetailsForm.get('lastName')?.invalid && personalDetailsForm.get('lastName')?.touched" class="error-message">
+              Last name is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="dateOfBirth">Date of Birth *</label>
+            <input type="date" id="dateOfBirth" formControlName="dateOfBirth" class="form-control"
+              [class.error]="personalDetailsForm.get('dateOfBirth')?.invalid && personalDetailsForm.get('dateOfBirth')?.touched">
+            <div *ngIf="personalDetailsForm.get('dateOfBirth')?.invalid && personalDetailsForm.get('dateOfBirth')?.touched" class="error-message">
+              Date of birth is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="gender">Gender *</label>
+            <select id="gender" formControlName="gender" class="form-control"
+              [class.error]="personalDetailsForm.get('gender')?.invalid && personalDetailsForm.get('gender')?.touched">
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            <div *ngIf="personalDetailsForm.get('gender')?.invalid && personalDetailsForm.get('gender')?.touched" class="error-message">
+              Gender is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="maritalStatus">Marital Status *</label>
+            <select id="maritalStatus" formControlName="maritalStatus" class="form-control"
+              [class.error]="personalDetailsForm.get('maritalStatus')?.invalid && personalDetailsForm.get('maritalStatus')?.touched">
+              <option value="">Select Status</option>
+              <option value="single">Single</option>
+              <option value="married">Married</option>
+              <option value="divorced">Divorced</option>
+              <option value="widowed">Widowed</option>
+            </select>
+            <div *ngIf="personalDetailsForm.get('maritalStatus')?.invalid && personalDetailsForm.get('maritalStatus')?.touched" class="error-message">
+              Marital status is required
+            </div>
+          </div>
+
+          <!-- Contact Details -->
+          <div class="section-title full-width">Contact Information</div>
+
+          <div class="form-group">
+            <label for="emailAddress">Email Address *</label>
+            <input type="email" id="emailAddress" formControlName="emailAddress" class="form-control" placeholder="john.sharma@email.com"
+              [class.error]="personalDetailsForm.get('emailAddress')?.invalid && personalDetailsForm.get('emailAddress')?.touched">
+            <div *ngIf="personalDetailsForm.get('emailAddress')?.invalid && personalDetailsForm.get('emailAddress')?.touched" class="error-message">
+              Valid email is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="mobileNumber">Mobile Number *</label>
+            <input type="tel" id="mobileNumber" formControlName="mobileNumber" class="form-control" placeholder="9876543210"
+              [class.error]="personalDetailsForm.get('mobileNumber')?.invalid && personalDetailsForm.get('mobileNumber')?.touched">
+            <div *ngIf="personalDetailsForm.get('mobileNumber')?.invalid && personalDetailsForm.get('mobileNumber')?.touched" class="error-message">
+              Valid mobile number is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="alternateNumber">Alternate Number</label>
+            <input type="tel" id="alternateNumber" formControlName="alternateNumber" class="form-control" placeholder="9876543211">
+          </div>
+
+          <!-- Current Address -->
+          <div class="section-title full-width">Current Address</div>
+
+          <div class="form-group full-width">
+            <label for="currentAddress">Address *</label>
+            <textarea id="currentAddress" formControlName="currentAddress" class="form-control" rows="3" placeholder="House No, Street, Area"
+              [class.error]="personalDetailsForm.get('currentAddress')?.invalid && personalDetailsForm.get('currentAddress')?.touched"></textarea>
+            <div *ngIf="personalDetailsForm.get('currentAddress')?.invalid && personalDetailsForm.get('currentAddress')?.touched" class="error-message">
+              Current address is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="currentCity">City *</label>
+            <input type="text" id="currentCity" formControlName="currentCity" class="form-control" placeholder="Mumbai"
+              [class.error]="personalDetailsForm.get('currentCity')?.invalid && personalDetailsForm.get('currentCity')?.touched">
+            <div *ngIf="personalDetailsForm.get('currentCity')?.invalid && personalDetailsForm.get('currentCity')?.touched" class="error-message">
+              City is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="currentState">State *</label>
+            <select id="currentState" formControlName="currentState" class="form-control"
+              [class.error]="personalDetailsForm.get('currentState')?.invalid && personalDetailsForm.get('currentState')?.touched">
+              <option value="">Select State</option>
+              <option value="Andhra Pradesh">Andhra Pradesh</option>
+              <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+              <option value="Assam">Assam</option>
+              <option value="Bihar">Bihar</option>
+              <option value="Chhattisgarh">Chhattisgarh</option>
+              <option value="Goa">Goa</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Haryana">Haryana</option>
+              <option value="Himachal Pradesh">Himachal Pradesh</option>
+              <option value="Jharkhand">Jharkhand</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Kerala">Kerala</option>
+              <option value="Madhya Pradesh">Madhya Pradesh</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Manipur">Manipur</option>
+              <option value="Meghalaya">Meghalaya</option>
+              <option value="Mizoram">Mizoram</option>
+              <option value="Nagaland">Nagaland</option>
+              <option value="Odisha">Odisha</option>
+              <option value="Punjab">Punjab</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Sikkim">Sikkim</option>
+              <option value="Tamil Nadu">Tamil Nadu</option>
+              <option value="Telangana">Telangana</option>
+              <option value="Tripura">Tripura</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
+              <option value="Uttarakhand">Uttarakhand</option>
+              <option value="West Bengal">West Bengal</option>
+              <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+              <option value="Chandigarh">Chandigarh</option>
+              <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+              <option value="Ladakh">Ladakh</option>
+              <option value="Lakshadweep">Lakshadweep</option>
+              <option value="Puducherry">Puducherry</option>
+            </select>
+            <div *ngIf="personalDetailsForm.get('currentState')?.invalid && personalDetailsForm.get('currentState')?.touched" class="error-message">
+              State is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="currentPincode">Pincode *</label>
+            <input type="text" id="currentPincode" formControlName="currentPincode" class="form-control" placeholder="400001"
+              [class.error]="personalDetailsForm.get('currentPincode')?.invalid && personalDetailsForm.get('currentPincode')?.touched">
+            <div *ngIf="personalDetailsForm.get('currentPincode')?.invalid && personalDetailsForm.get('currentPincode')?.touched" class="error-message">
+              Valid pincode is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="residenceType">Residence Type *</label>
+            <select id="residenceType" formControlName="residenceType" class="form-control"
+              [class.error]="personalDetailsForm.get('residenceType')?.invalid && personalDetailsForm.get('residenceType')?.touched">
+              <option value="">Select Type</option>
+              <option value="owned">Owned</option>
+              <option value="rented">Rented</option>
+              <option value="parental">Parental</option>
+              <option value="company_provided">Company Provided</option>
+            </select>
+            <div *ngIf="personalDetailsForm.get('residenceType')?.invalid && personalDetailsForm.get('residenceType')?.touched" class="error-message">
+              Residence type is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="yearsAtCurrentAddress">Years at Current Address *</label>
+            <input type="number" id="yearsAtCurrentAddress" formControlName="yearsAtCurrentAddress" class="form-control" placeholder="5"
+              [class.error]="personalDetailsForm.get('yearsAtCurrentAddress')?.invalid && personalDetailsForm.get('yearsAtCurrentAddress')?.touched">
+            <div *ngIf="personalDetailsForm.get('yearsAtCurrentAddress')?.invalid && personalDetailsForm.get('yearsAtCurrentAddress')?.touched" class="error-message">
+              Years at current address is required
+            </div>
+          </div>
+
+          <!-- Permanent Address -->
+          <div class="section-title full-width">Permanent Address</div>
+
+          <div class="form-group full-width">
+            <div class="checkbox-group">
+              <input type="checkbox" id="permanentAddressSame" formControlName="permanentAddressSame" 
+                (change)="onPermanentAddressChange(personalDetailsForm.get('permanentAddressSame')?.value)">
+              <label for="permanentAddressSame">Same as current address</label>
+            </div>
+          </div>
+
+          <div *ngIf="!personalDetailsForm.get('permanentAddressSame')?.value" class="permanent-address-fields full-width">
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="permanentAddress">Permanent Address</label>
+                <textarea id="permanentAddress" formControlName="permanentAddress" class="form-control" rows="3" placeholder="House No, Street, Area"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="permanentCity">City</label>
+                <input type="text" id="permanentCity" formControlName="permanentCity" class="form-control" placeholder="Mumbai">
+              </div>
+
+              <div class="form-group">
+                <label for="permanentState">State</label>
+                <select id="permanentState" formControlName="permanentState" class="form-control">
+                  <option value="">Select State</option>
+                  <option value="Andhra Pradesh">Andhra Pradesh</option>
+                  <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                  <option value="Assam">Assam</option>
+                  <option value="Bihar">Bihar</option>
+                  <option value="Chhattisgarh">Chhattisgarh</option>
+                  <option value="Goa">Goa</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Haryana">Haryana</option>
+                  <option value="Himachal Pradesh">Himachal Pradesh</option>
+                  <option value="Jharkhand">Jharkhand</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Kerala">Kerala</option>
+                  <option value="Madhya Pradesh">Madhya Pradesh</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Manipur">Manipur</option>
+                  <option value="Meghalaya">Meghalaya</option>
+                  <option value="Mizoram">Mizoram</option>
+                  <option value="Nagaland">Nagaland</option>
+                  <option value="Odisha">Odisha</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Rajasthan">Rajasthan</option>
+                  <option value="Sikkim">Sikkim</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Telangana">Telangana</option>
+                  <option value="Tripura">Tripura</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Uttarakhand">Uttarakhand</option>
+                  <option value="West Bengal">West Bengal</option>
+                  <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                  <option value="Chandigarh">Chandigarh</option>
+                  <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                  <option value="Ladakh">Ladakh</option>
+                  <option value="Lakshadweep">Lakshadweep</option>
+                  <option value="Puducherry">Puducherry</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="permanentPincode">Pincode</label>
+                <input type="text" id="permanentPincode" formControlName="permanentPincode" class="form-control" placeholder="400001">
+              </div>
+            </div>
+          </div>
+
+          <!-- Identity Details -->
+          <div class="section-title full-width">Identity Details</div>
+
+          <div class="form-group">
+            <label for="panNumber">PAN Number *</label>
+            <input type="text" id="panNumber" formControlName="panNumber" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase"
+              [class.error]="personalDetailsForm.get('panNumber')?.invalid && personalDetailsForm.get('panNumber')?.touched">
+            <div *ngIf="personalDetailsForm.get('panNumber')?.invalid && personalDetailsForm.get('panNumber')?.touched" class="error-message">
+              Valid PAN number is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="aadharNumber">Aadhar Number *</label>
+            <input type="text" id="aadharNumber" formControlName="aadharNumber" class="form-control" placeholder="123456789012"
+              [class.error]="personalDetailsForm.get('aadharNumber')?.invalid && personalDetailsForm.get('aadharNumber')?.touched">
+            <div *ngIf="personalDetailsForm.get('aadharNumber')?.invalid && personalDetailsForm.get('aadharNumber')?.touched" class="error-message">
+              Valid Aadhar number is required
+            </div>
+          </div>
+
+          <!-- Co-applicant Details -->
+          <div class="section-title full-width">Co-applicant Details (Optional)</div>
+
+          <div class="form-group full-width">
+            <div class="checkbox-group">
+              <input type="checkbox" id="hasCoApplicant" formControlName="hasCoApplicant" 
+                (change)="onCoApplicantChange(personalDetailsForm.get('hasCoApplicant')?.value)">
+              <label for="hasCoApplicant">Add Co-applicant</label>
+            </div>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="co-applicant-fields full-width">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="coApplicantName">Co-applicant Name</label>
+                <input type="text" id="coApplicantName" formControlName="coApplicantName" class="form-control" placeholder="Jane Sharma">
+              </div>
+
+              <div class="form-group">
+                <label for="coApplicantRelation">Relationship</label>
+                <select id="coApplicantRelation" formControlName="coApplicantRelation" class="form-control">
+                  <option value="">Select Relationship</option>
+                  <option value="spouse">Spouse</option>
+                  <option value="father">Father</option>
+                  <option value="mother">Mother</option>
+                  <option value="brother">Brother</option>
+                  <option value="sister">Sister</option>
+                  <option value="son">Son</option>
+                  <option value="daughter">Daughter</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="coApplicantPan">Co-applicant PAN</label>
+                <input type="text" id="coApplicantPan" formControlName="coApplicantPan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase">
+              </div>
+
+              <div class="form-group">
+                <label for="coApplicantAadhar">Co-applicant Aadhar</label>
+                <input type="text" id="coApplicantAadhar" formControlName="coApplicantAadhar" class="form-control" placeholder="123456789012">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 3: Loan Details -->
+      <div *ngIf="isCurrentStep(3)" class="form-step">
+        <h3 class="step-heading">Loan & Property Details</h3>
+        <form [formGroup]="loanDetailsForm" class="form-grid">
+          
+          <!-- Selected Loan Type Info -->
+          <div *ngIf="selectedLoanType" class="selected-loan-info full-width">
+            <div class="loan-info-card">
+              <div class="loan-info-header">
+                <span class="loan-icon">{{ selectedLoanType.icon }}</span>
+                <h4>{{ selectedLoanType.name }}</h4>
+              </div>
+              <div class="loan-info-details">
+                <span>Amount: ₹{{ (selectedLoanType.minAmount / 100000) | number:'1.0-0' }}L - ₹{{ (selectedLoanType.maxAmount / 10000000) | number:'1.0-0' }}Cr</span>
+                <span>Tenure: Up to {{ selectedLoanType.maxTenure / 12 | number:'1.0-0' }} years</span>
+                <span>Interest: {{ selectedLoanType.interestRate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loan Amount and Tenure -->
+          <div class="section-title full-width">Loan Requirements</div>
+
+          <div class="form-group">
+            <label for="loanAmount">Loan Amount Required *</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="loanAmount" formControlName="loanAmount" class="form-control" placeholder="5000000"
+                [class.error]="loanDetailsForm.get('loanAmount')?.invalid && loanDetailsForm.get('loanAmount')?.touched">
+            </div>
+            <small class="help-text" *ngIf="selectedLoanType">
+              Amount should be between ₹{{ selectedLoanType.minAmount | number }} and ₹{{ selectedLoanType.maxAmount | number }}
+            </small>
+            <div *ngIf="loanDetailsForm.get('loanAmount')?.invalid && loanDetailsForm.get('loanAmount')?.touched" class="error-message">
+              Valid loan amount is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="loanTenure">Loan Tenure (Months) *</label>
+            <select id="loanTenure" formControlName="loanTenure" class="form-control"
+              [class.error]="loanDetailsForm.get('loanTenure')?.invalid && loanDetailsForm.get('loanTenure')?.touched">
+              <option value="">Select Tenure</option>
+              <option value="60">5 years (60 months)</option>
+              <option value="84">7 years (84 months)</option>
+              <option value="120">10 years (120 months)</option>
+              <option value="180">15 years (180 months)</option>
+              <option value="240">20 years (240 months)</option>
+              <option value="300">25 years (300 months)</option>
+            </select>
+            <small class="help-text" *ngIf="selectedLoanType">
+              Maximum tenure: {{ selectedLoanType.maxTenure / 12 | number:'1.0-0' }} years
+            </small>
+            <div *ngIf="loanDetailsForm.get('loanTenure')?.invalid && loanDetailsForm.get('loanTenure')?.touched" class="error-message">
+              Loan tenure is required
+            </div>
+          </div>
+
+          <!-- EMI Calculator -->
+          <div class="emi-calculator full-width" *ngIf="loanDetailsForm.get('loanAmount')?.value && loanDetailsForm.get('loanTenure')?.value">
+            <div class="emi-card">
+              <h5>Estimated EMI</h5>
+              <div class="emi-amount">₹{{ calculateEmi() | number }}</div>
+              <small>*This is an approximate calculation</small>
+            </div>
+          </div>
+
+          <!-- Property Details -->
+          <div class="section-title full-width">Property Details</div>
+
+          <div class="form-group">
+            <label for="propertyType">Property Type *</label>
+            <select id="propertyType" formControlName="propertyType" class="form-control"
+              [class.error]="loanDetailsForm.get('propertyType')?.invalid && loanDetailsForm.get('propertyType')?.touched">
+              <option value="">Select Property Type</option>
+              <option value="apartment">Apartment/Flat</option>
+              <option value="independent_house">Independent House</option>
+              <option value="villa">Villa</option>
+              <option value="plot">Plot/Land</option>
+              <option value="commercial">Commercial Property</option>
+            </select>
+            <div *ngIf="loanDetailsForm.get('propertyType')?.invalid && loanDetailsForm.get('propertyType')?.touched" class="error-message">
+              Property type is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="propertyValue">Property Value *</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="propertyValue" formControlName="propertyValue" class="form-control" placeholder="8000000"
+                [class.error]="loanDetailsForm.get('propertyValue')?.invalid && loanDetailsForm.get('propertyValue')?.touched">
+            </div>
+            <div *ngIf="loanDetailsForm.get('propertyValue')?.invalid && loanDetailsForm.get('propertyValue')?.touched" class="error-message">
+              Property value is required
+            </div>
+          </div>
+
+          <!-- Property Address -->
+          <div class="form-group full-width">
+            <label for="propertyAddress">Property Address *</label>
+            <textarea id="propertyAddress" formControlName="propertyAddress" class="form-control" rows="3" 
+              placeholder="Complete address of the property"
+              [class.error]="loanDetailsForm.get('propertyAddress')?.invalid && loanDetailsForm.get('propertyAddress')?.touched"></textarea>
+            <div *ngIf="loanDetailsForm.get('propertyAddress')?.invalid && loanDetailsForm.get('propertyAddress')?.touched" class="error-message">
+              Property address is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="propertyCity">Property City *</label>
+            <input type="text" id="propertyCity" formControlName="propertyCity" class="form-control" placeholder="Mumbai"
+              [class.error]="loanDetailsForm.get('propertyCity')?.invalid && loanDetailsForm.get('propertyCity')?.touched">
+            <div *ngIf="loanDetailsForm.get('propertyCity')?.invalid && loanDetailsForm.get('propertyCity')?.touched" class="error-message">
+              Property city is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="propertyState">Property State *</label>
+            <select id="propertyState" formControlName="propertyState" class="form-control"
+              [class.error]="loanDetailsForm.get('propertyState')?.invalid && loanDetailsForm.get('propertyState')?.touched">
+              <option value="">Select State</option>
+              <option value="maharashtra">Maharashtra</option>
+              <option value="delhi">Delhi</option>
+              <option value="karnataka">Karnataka</option>
+              <option value="tamil_nadu">Tamil Nadu</option>
+              <option value="gujarat">Gujarat</option>
+              <option value="rajasthan">Rajasthan</option>
+              <option value="uttar_pradesh">Uttar Pradesh</option>
+              <option value="west_bengal">West Bengal</option>
+            </select>
+            <div *ngIf="loanDetailsForm.get('propertyState')?.invalid && loanDetailsForm.get('propertyState')?.touched" class="error-message">
+              Property state is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="propertyPincode">Property Pincode *</label>
+            <input type="text" id="propertyPincode" formControlName="propertyPincode" class="form-control" placeholder="400001"
+              [class.error]="loanDetailsForm.get('propertyPincode')?.invalid && loanDetailsForm.get('propertyPincode')?.touched">
+            <div *ngIf="loanDetailsForm.get('propertyPincode')?.invalid && loanDetailsForm.get('propertyPincode')?.touched" class="error-message">
+              Valid pincode is required
+            </div>
+          </div>
+
+          <!-- Construction/Purchase Details -->
+          <div class="section-title full-width" *ngIf="selectedLoanType?.id === 'construction_loan' || selectedLoanType?.id === 'home_loan'">
+            Construction/Purchase Details
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'construction_loan'" class="form-group">
+            <label for="constructionStage">Construction Stage</label>
+            <select id="constructionStage" formControlName="constructionStage" class="form-control">
+              <option value="">Select Stage</option>
+              <option value="foundation">Foundation</option>
+              <option value="plinth">Plinth Level</option>
+              <option value="lintel">Lintel Level</option>
+              <option value="roof">Roof Level</option>
+              <option value="finishing">Finishing</option>
+            </select>
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'home_loan' || selectedLoanType?.id === 'construction_loan'" class="form-group">
+            <label for="builderName">Builder/Developer Name</label>
+            <input type="text" id="builderName" formControlName="builderName" class="form-control" placeholder="ABC Developers">
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'home_loan'" class="form-group">
+            <label for="agreementValue">Agreement Value</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="agreementValue" formControlName="agreementValue" class="form-control" placeholder="7500000">
+            </div>
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'home_loan'" class="form-group">
+            <label for="stampDutyRegistration">Stamp Duty & Registration</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="stampDutyRegistration" formControlName="stampDutyRegistration" class="form-control" placeholder="500000">
+            </div>
+          </div>
+
+          <!-- Existing Loan Details (for balance transfer) -->
+          <div class="section-title full-width" *ngIf="selectedLoanType?.id === 'balance_transfer'">
+            Existing Loan Details
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'balance_transfer'" class="form-group">
+            <label for="existingLoanAmount">Outstanding Loan Amount</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingLoanAmount" formControlName="existingLoanAmount" class="form-control" placeholder="3000000">
+            </div>
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'balance_transfer'" class="form-group">
+            <label for="existingBankName">Current Bank/Lender</label>
+            <input type="text" id="existingBankName" formControlName="existingBankName" class="form-control" placeholder="XYZ Bank">
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'balance_transfer'" class="form-group">
+            <label for="existingEmi">Current EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingEmi" formControlName="existingEmi" class="form-control" placeholder="35000">
+            </div>
+          </div>
+
+          <div *ngIf="selectedLoanType?.id === 'balance_transfer'" class="form-group">
+            <label for="existingInterestRate">Current Interest Rate (%)</label>
+            <input type="number" id="existingInterestRate" formControlName="existingInterestRate" class="form-control" placeholder="10.5" step="0.1">
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 4: Financial Details -->
+      <div *ngIf="isCurrentStep(4)" class="form-step">
+        <h3 class="step-heading">Employment & Financial Details</h3>
+        <form [formGroup]="financialDetailsForm" class="form-grid">
+          
+          <!-- Employment Details -->
+          <div class="section-title full-width">Employment Information</div>
+
+          <div class="form-group">
+            <label for="employmentType">Employment Type *</label>
+            <select id="employmentType" formControlName="employmentType" class="form-control"
+              [class.error]="financialDetailsForm.get('employmentType')?.invalid && financialDetailsForm.get('employmentType')?.touched">
+              <option value="">Select Employment Type</option>
+              <option value="salaried">Salaried</option>
+              <option value="self_employed_professional">Self Employed Professional</option>
+              <option value="self_employed_business">Self Employed Business</option>
+              <option value="retired">Retired</option>
+            </select>
+            <div *ngIf="financialDetailsForm.get('employmentType')?.invalid && financialDetailsForm.get('employmentType')?.touched" class="error-message">
+              Employment type is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="companyName">Company/Business Name *</label>
+            <input type="text" id="companyName" formControlName="companyName" class="form-control" placeholder="ABC Technologies Pvt Ltd"
+              [class.error]="financialDetailsForm.get('companyName')?.invalid && financialDetailsForm.get('companyName')?.touched">
+            <div *ngIf="financialDetailsForm.get('companyName')?.invalid && financialDetailsForm.get('companyName')?.touched" class="error-message">
+              Company name is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="designation">Designation *</label>
+            <input type="text" id="designation" formControlName="designation" class="form-control" placeholder="Senior Software Engineer"
+              [class.error]="financialDetailsForm.get('designation')?.invalid && financialDetailsForm.get('designation')?.touched">
+            <div *ngIf="financialDetailsForm.get('designation')?.invalid && financialDetailsForm.get('designation')?.touched" class="error-message">
+              Designation is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="workExperience">Total Work Experience (Years) *</label>
+            <input type="number" id="workExperience" formControlName="workExperience" class="form-control" placeholder="8"
+              [class.error]="financialDetailsForm.get('workExperience')?.invalid && financialDetailsForm.get('workExperience')?.touched">
+            <div *ngIf="financialDetailsForm.get('workExperience')?.invalid && financialDetailsForm.get('workExperience')?.touched" class="error-message">
+              Work experience is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="currentJobExperience">Current Job Experience (Years) *</label>
+            <input type="number" id="currentJobExperience" formControlName="currentJobExperience" class="form-control" placeholder="3"
+              [class.error]="financialDetailsForm.get('currentJobExperience')?.invalid && financialDetailsForm.get('currentJobExperience')?.touched">
+            <div *ngIf="financialDetailsForm.get('currentJobExperience')?.invalid && financialDetailsForm.get('currentJobExperience')?.touched" class="error-message">
+              Current job experience is required
+            </div>
+          </div>
+
+          <!-- Office Address -->
+          <div class="section-title full-width">Office Address</div>
+
+          <div class="form-group full-width">
+            <label for="officeAddress">Office Address *</label>
+            <textarea id="officeAddress" formControlName="officeAddress" class="form-control" rows="3" 
+              placeholder="Office address"
+              [class.error]="financialDetailsForm.get('officeAddress')?.invalid && financialDetailsForm.get('officeAddress')?.touched"></textarea>
+            <div *ngIf="financialDetailsForm.get('officeAddress')?.invalid && financialDetailsForm.get('officeAddress')?.touched" class="error-message">
+              Office address is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="officeCity">Office City *</label>
+            <input type="text" id="officeCity" formControlName="officeCity" class="form-control" placeholder="Mumbai"
+              [class.error]="financialDetailsForm.get('officeCity')?.invalid && financialDetailsForm.get('officeCity')?.touched">
+            <div *ngIf="financialDetailsForm.get('officeCity')?.invalid && financialDetailsForm.get('officeCity')?.touched" class="error-message">
+              Office city is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="officeState">Office State *</label>
+            <select id="officeState" formControlName="officeState" class="form-control"
+              [class.error]="financialDetailsForm.get('officeState')?.invalid && financialDetailsForm.get('officeState')?.touched">
+              <option value="">Select State</option>
+              <option value="maharashtra">Maharashtra</option>
+              <option value="delhi">Delhi</option>
+              <option value="karnataka">Karnataka</option>
+              <option value="tamil_nadu">Tamil Nadu</option>
+              <option value="gujarat">Gujarat</option>
+              <option value="rajasthan">Rajasthan</option>
+              <option value="uttar_pradesh">Uttar Pradesh</option>
+              <option value="west_bengal">West Bengal</option>
+            </select>
+            <div *ngIf="financialDetailsForm.get('officeState')?.invalid && financialDetailsForm.get('officeState')?.touched" class="error-message">
+              Office state is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="officePincode">Office Pincode *</label>
+            <input type="text" id="officePincode" formControlName="officePincode" class="form-control" placeholder="400001"
+              [class.error]="financialDetailsForm.get('officePincode')?.invalid && financialDetailsForm.get('officePincode')?.touched">
+            <div *ngIf="financialDetailsForm.get('officePincode')?.invalid && financialDetailsForm.get('officePincode')?.touched" class="error-message">
+              Valid office pincode is required
+            </div>
+          </div>
+
+          <!-- Income Details -->
+          <div class="section-title full-width">Income Details</div>
+
+          <div class="form-group">
+            <label for="grossMonthlyIncome">Gross Monthly Income *</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="grossMonthlyIncome" formControlName="grossMonthlyIncome" class="form-control" placeholder="100000"
+                [class.error]="financialDetailsForm.get('grossMonthlyIncome')?.invalid && financialDetailsForm.get('grossMonthlyIncome')?.touched">
+            </div>
+            <div *ngIf="financialDetailsForm.get('grossMonthlyIncome')?.invalid && financialDetailsForm.get('grossMonthlyIncome')?.touched" class="error-message">
+              Gross monthly income is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="netMonthlyIncome">Net Monthly Income *</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="netMonthlyIncome" formControlName="netMonthlyIncome" class="form-control" placeholder="85000"
+                [class.error]="financialDetailsForm.get('netMonthlyIncome')?.invalid && financialDetailsForm.get('netMonthlyIncome')?.touched">
+            </div>
+            <div *ngIf="financialDetailsForm.get('netMonthlyIncome')?.invalid && financialDetailsForm.get('netMonthlyIncome')?.touched" class="error-message">
+              Net monthly income is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="otherIncome">Other Monthly Income</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="otherIncome" formControlName="otherIncome" class="form-control" placeholder="15000">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="otherIncomeSource">Other Income Source</label>
+            <input type="text" id="otherIncomeSource" formControlName="otherIncomeSource" class="form-control" placeholder="Rental Income, Freelancing, etc.">
+          </div>
+
+          <!-- Existing EMIs and Liabilities -->
+          <div class="section-title full-width">Existing EMIs & Liabilities</div>
+
+          <div class="form-group">
+            <label for="existingHomeLoanEmi">Existing Home Loan EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingHomeLoanEmi" formControlName="existingHomeLoanEmi" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="existingPersonalLoanEmi">Personal Loan EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingPersonalLoanEmi" formControlName="existingPersonalLoanEmi" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="existingCarLoanEmi">Car Loan EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingCarLoanEmi" formControlName="existingCarLoanEmi" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="existingCreditCardEmi">Credit Card EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="existingCreditCardEmi" formControlName="existingCreditCardEmi" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="otherEmi">Other EMI</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="otherEmi" formControlName="otherEmi" class="form-control" placeholder="0">
+            </div>
+          </div>
+
+          <!-- Bank Details -->
+          <div class="section-title full-width">Primary Bank Account Details</div>
+
+          <div class="form-group">
+            <label for="bankName">Bank Name *</label>
+            <select id="bankName" formControlName="bankName" class="form-control"
+              [class.error]="financialDetailsForm.get('bankName')?.invalid && financialDetailsForm.get('bankName')?.touched">
+              <option value="">Select Bank</option>
+              <option value="sbi">State Bank of India</option>
+              <option value="hdfc">HDFC Bank</option>
+              <option value="icici">ICICI Bank</option>
+              <option value="axis">Axis Bank</option>
+              <option value="kotak">Kotak Mahindra Bank</option>
+              <option value="pnb">Punjab National Bank</option>
+              <option value="bob">Bank of Baroda</option>
+              <option value="canara">Canara Bank</option>
+              <option value="union">Union Bank of India</option>
+              <option value="other">Other</option>
+            </select>
+            <div *ngIf="financialDetailsForm.get('bankName')?.invalid && financialDetailsForm.get('bankName')?.touched" class="error-message">
+              Bank name is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="accountNumber">Account Number *</label>
+            <input type="text" id="accountNumber" formControlName="accountNumber" class="form-control" placeholder="123456789012345"
+              [class.error]="financialDetailsForm.get('accountNumber')?.invalid && financialDetailsForm.get('accountNumber')?.touched">
+            <div *ngIf="financialDetailsForm.get('accountNumber')?.invalid && financialDetailsForm.get('accountNumber')?.touched" class="error-message">
+              Valid account number is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="ifscCode">IFSC Code *</label>
+            <input type="text" id="ifscCode" formControlName="ifscCode" class="form-control" placeholder="SBIN0001234" style="text-transform: uppercase"
+              [class.error]="financialDetailsForm.get('ifscCode')?.invalid && financialDetailsForm.get('ifscCode')?.touched">
+            <div *ngIf="financialDetailsForm.get('ifscCode')?.invalid && financialDetailsForm.get('ifscCode')?.touched" class="error-message">
+              Valid IFSC code is required
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="accountType">Account Type *</label>
+            <select id="accountType" formControlName="accountType" class="form-control"
+              [class.error]="financialDetailsForm.get('accountType')?.invalid && financialDetailsForm.get('accountType')?.touched">
+              <option value="">Select Account Type</option>
+              <option value="savings">Savings Account</option>
+              <option value="current">Current Account</option>
+              <option value="salary">Salary Account</option>
+            </select>
+            <div *ngIf="financialDetailsForm.get('accountType')?.invalid && financialDetailsForm.get('accountType')?.touched" class="error-message">
+              Account type is required
+            </div>
+          </div>
+
+          <!-- Co-applicant Financial Details -->
+          <div class="section-title full-width" *ngIf="personalDetailsForm.get('hasCoApplicant')?.value">
+            Co-applicant Financial Details
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="form-group">
+            <label for="coApplicantIncome">Co-applicant Monthly Income</label>
+            <div class="input-with-prefix">
+              <span class="prefix">₹</span>
+              <input type="number" id="coApplicantIncome" formControlName="coApplicantIncome" class="form-control" placeholder="50000">
+            </div>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="form-group">
+            <label for="coApplicantEmployment">Co-applicant Employment Type</label>
+            <select id="coApplicantEmployment" formControlName="coApplicantEmployment" class="form-control">
+              <option value="">Select Employment Type</option>
+              <option value="salaried">Salaried</option>
+              <option value="self_employed">Self Employed</option>
+              <option value="business">Business</option>
+              <option value="housewife">Housewife</option>
+              <option value="retired">Retired</option>
+            </select>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="form-group">
+            <label for="coApplicantCompany">Co-applicant Company Name</label>
+            <input type="text" id="coApplicantCompany" formControlName="coApplicantCompany" class="form-control" placeholder="XYZ Company">
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 5: Documents -->
+      <div *ngIf="isCurrentStep(5)" class="form-step">
+        <h3 class="step-heading">Document Upload</h3>
+        <form [formGroup]="documentsForm" class="documents-grid">
+          
+          <!-- Identity Documents -->
+          <div class="document-section full-width">
+            <h4 class="document-section-title">Identity Documents</h4>
+          </div>
+
+          <div class="document-upload">
+            <label>PAN Card *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('panCard')?.value">
+              <input type="file" (change)="onFileSelected($event, 'panCard')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">🆔</span>
+                <p>Upload PAN Card</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('panCard')?.invalid && documentsForm.get('panCard')?.touched" class="error-message">
+              PAN Card is required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Aadhar Card *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('aadharCard')?.value">
+              <input type="file" (change)="onFileSelected($event, 'aadharCard')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">🆔</span>
+                <p>Upload Aadhar Card</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('aadharCard')?.invalid && documentsForm.get('aadharCard')?.touched" class="error-message">
+              Aadhar Card is required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Passport (Optional)</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('passport')?.value">
+              <input type="file" (change)="onFileSelected($event, 'passport')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">📘</span>
+                <p>Upload Passport</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Proof -->
+          <div class="document-section full-width">
+            <h4 class="document-section-title">Address Proof</h4>
+          </div>
+
+          <div class="document-upload">
+            <label>Address Proof *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('addressProof')?.value">
+              <input type="file" (change)="onFileSelected($event, 'addressProof')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">🏠</span>
+                <p>Utility Bill / Bank Statement</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('addressProof')?.invalid && documentsForm.get('addressProof')?.touched" class="error-message">
+              Address proof is required
+            </div>
+          </div>
+
+          <!-- Income Documents -->
+          <div class="document-section full-width">
+            <h4 class="document-section-title">Income Documents</h4>
+          </div>
+
+          <div class="document-upload">
+            <label>Salary Slips (Last 3 months) *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('salarySlips')?.value">
+              <input type="file" (change)="onFileSelected($event, 'salarySlips')" accept=".pdf,.jpg,.jpeg,.png" multiple>
+              <div class="upload-content">
+                <span class="upload-icon">💰</span>
+                <p>Upload Salary Slips</p>
+                <small>PDF, JPG, PNG (Max 5MB each)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('salarySlips')?.invalid && documentsForm.get('salarySlips')?.touched" class="error-message">
+              Salary slips are required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Bank Statements (Last 6 months) *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('bankStatements')?.value">
+              <input type="file" (change)="onFileSelected($event, 'bankStatements')" accept=".pdf,.jpg,.jpeg,.png" multiple>
+              <div class="upload-content">
+                <span class="upload-icon">🏦</span>
+                <p>Upload Bank Statements</p>
+                <small>PDF, JPG, PNG (Max 5MB each)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('bankStatements')?.invalid && documentsForm.get('bankStatements')?.touched" class="error-message">
+              Bank statements are required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>ITR (Last 2 years) *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('itr')?.value">
+              <input type="file" (change)="onFileSelected($event, 'itr')" accept=".pdf,.jpg,.jpeg,.png" multiple>
+              <div class="upload-content">
+                <span class="upload-icon">📊</span>
+                <p>Upload ITR Documents</p>
+                <small>PDF, JPG, PNG (Max 5MB each)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('itr')?.invalid && documentsForm.get('itr')?.touched" class="error-message">
+              ITR documents are required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Form 16 (Optional)</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('form16')?.value">
+              <input type="file" (change)="onFileSelected($event, 'form16')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">📋</span>
+                <p>Upload Form 16</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Documents -->
+          <div class="document-section full-width">
+            <h4 class="document-section-title">Property Documents</h4>
+          </div>
+
+          <div class="document-upload">
+            <label>Property Documents</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('propertyDocuments')?.value">
+              <input type="file" (change)="onFileSelected($event, 'propertyDocuments')" accept=".pdf,.jpg,.jpeg,.png" multiple>
+              <div class="upload-content">
+                <span class="upload-icon">🏘️</span>
+                <p>Sale Deed / Title Documents</p>
+                <small>PDF, JPG, PNG (Max 5MB each)</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Agreement Copy</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('agreementCopy')?.value">
+              <input type="file" (change)="onFileSelected($event, 'agreementCopy')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">📄</span>
+                <p>Sale/Construction Agreement</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Approved Plan</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('approvedPlan')?.value">
+              <input type="file" (change)="onFileSelected($event, 'approvedPlan')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">📐</span>
+                <p>Approved Building Plan</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Documents -->
+          <div class="document-section full-width">
+            <h4 class="document-section-title">Additional Documents</h4>
+          </div>
+
+          <div class="document-upload">
+            <label>Photograph *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('photograph')?.value">
+              <input type="file" (change)="onFileSelected($event, 'photograph')" accept=".jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">📷</span>
+                <p>Upload Passport Size Photo</p>
+                <small>JPG, PNG (Max 2MB)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('photograph')?.invalid && documentsForm.get('photograph')?.touched" class="error-message">
+              Photograph is required
+            </div>
+          </div>
+
+          <div class="document-upload">
+            <label>Signature *</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('signature')?.value">
+              <input type="file" (change)="onFileSelected($event, 'signature')" accept=".jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">✍️</span>
+                <p>Upload Signature</p>
+                <small>JPG, PNG (Max 1MB)</small>
+              </div>
+            </div>
+            <div *ngIf="documentsForm.get('signature')?.invalid && documentsForm.get('signature')?.touched" class="error-message">
+              Signature is required
+            </div>
+          </div>
+
+          <!-- Co-applicant Documents -->
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="document-section full-width">
+            <h4 class="document-section-title">Co-applicant Documents</h4>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="document-upload">
+            <label>Co-applicant PAN Card</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('coApplicantPan')?.value">
+              <input type="file" (change)="onFileSelected($event, 'coApplicantPan')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">🆔</span>
+                <p>Co-applicant PAN Card</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="document-upload">
+            <label>Co-applicant Aadhar Card</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('coApplicantAadhar')?.value">
+              <input type="file" (change)="onFileSelected($event, 'coApplicantAadhar')" accept=".pdf,.jpg,.jpeg,.png">
+              <div class="upload-content">
+                <span class="upload-icon">🆔</span>
+                <p>Co-applicant Aadhar Card</p>
+                <small>PDF, JPG, PNG (Max 5MB)</small>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="document-upload">
+            <label>Co-applicant Income Documents</label>
+            <div class="upload-area" [class.uploaded]="documentsForm.get('coApplicantIncomeDocs')?.value">
+              <input type="file" (change)="onFileSelected($event, 'coApplicantIncomeDocs')" accept=".pdf,.jpg,.jpeg,.png" multiple>
+              <div class="upload-content">
+                <span class="upload-icon">💰</span>
+                <p>Co-applicant Income Proof</p>
+                <small>PDF, JPG, PNG (Max 5MB each)</small>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 6: Review -->
+      <div *ngIf="isCurrentStep(6)" class="form-step">
+        <h3 class="step-heading">Review & Submit Application</h3>
+        <div class="review-section">
+          
+          <!-- Loan Type Review -->
+          <div class="review-card">
+            <h4>Selected Loan Type</h4>
+            <div class="review-item">
+              <span class="label">Loan Type:</span>
+              <span class="value">{{ selectedLoanType?.name }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Interest Rate:</span>
+              <span class="value">{{ selectedLoanType?.interestRate }}</span>
+            </div>
+          </div>
+
+          <!-- Personal Details Review -->
+          <div class="review-card">
+            <h4>Personal Details</h4>
+            <div class="review-item">
+              <span class="label">Full Name:</span>
+              <span class="value">{{ personalDetailsForm.get('firstName')?.value }} {{ personalDetailsForm.get('middleName')?.value }} {{ personalDetailsForm.get('lastName')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Date of Birth:</span>
+              <span class="value">{{ personalDetailsForm.get('dateOfBirth')?.value | date }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Email:</span>
+              <span class="value">{{ personalDetailsForm.get('emailAddress')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Mobile:</span>
+              <span class="value">{{ personalDetailsForm.get('mobileNumber')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">PAN:</span>
+              <span class="value">{{ personalDetailsForm.get('panNumber')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Current Address:</span>
+              <span class="value">{{ personalDetailsForm.get('currentAddress')?.value }}, {{ personalDetailsForm.get('currentCity')?.value }}, {{ personalDetailsForm.get('currentState')?.value }} - {{ personalDetailsForm.get('currentPincode')?.value }}</span>
+            </div>
+          </div>
+
+          <!-- Loan Details Review -->
+          <div class="review-card">
+            <h4>Loan & Property Details</h4>
+            <div class="review-item">
+              <span class="label">Loan Amount:</span>
+              <span class="value">₹{{ loanDetailsForm.get('loanAmount')?.value | number }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Tenure:</span>
+              <span class="value">{{ loanDetailsForm.get('loanTenure')?.value }} months ({{ loanDetailsForm.get('loanTenure')?.value / 12 | number:'1.0-0' }} years)</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Estimated EMI:</span>
+              <span class="value">₹{{ calculateEmi() | number }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Property Type:</span>
+              <span class="value">{{ loanDetailsForm.get('propertyType')?.value | titlecase }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Property Value:</span>
+              <span class="value">₹{{ loanDetailsForm.get('propertyValue')?.value | number }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Property Address:</span>
+              <span class="value">{{ loanDetailsForm.get('propertyAddress')?.value }}, {{ loanDetailsForm.get('propertyCity')?.value }}, {{ loanDetailsForm.get('propertyState')?.value }} - {{ loanDetailsForm.get('propertyPincode')?.value }}</span>
+            </div>
+          </div>
+
+          <!-- Financial Details Review -->
+          <div class="review-card">
+            <h4>Employment & Financial Details</h4>
+            <div class="review-item">
+              <span class="label">Employment Type:</span>
+              <span class="value">{{ financialDetailsForm.get('employmentType')?.value | titlecase }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Company:</span>
+              <span class="value">{{ financialDetailsForm.get('companyName')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Designation:</span>
+              <span class="value">{{ financialDetailsForm.get('designation')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Gross Monthly Income:</span>
+              <span class="value">₹{{ financialDetailsForm.get('grossMonthlyIncome')?.value | number }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Net Monthly Income:</span>
+              <span class="value">₹{{ financialDetailsForm.get('netMonthlyIncome')?.value | number }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Work Experience:</span>
+              <span class="value">{{ financialDetailsForm.get('workExperience')?.value }} years</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Bank:</span>
+              <span class="value">{{ financialDetailsForm.get('bankName')?.value | titlecase }}</span>
+            </div>
+          </div>
+
+          <!-- Co-applicant Details (if applicable) -->
+          <div *ngIf="personalDetailsForm.get('hasCoApplicant')?.value" class="review-card">
+            <h4>Co-applicant Details</h4>
+            <div class="review-item">
+              <span class="label">Co-applicant Name:</span>
+              <span class="value">{{ personalDetailsForm.get('coApplicantName')?.value }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Relationship:</span>
+              <span class="value">{{ personalDetailsForm.get('coApplicantRelation')?.value | titlecase }}</span>
+            </div>
+            <div class="review-item">
+              <span class="label">Co-applicant PAN:</span>
+              <span class="value">{{ personalDetailsForm.get('coApplicantPan')?.value }}</span>
+            </div>
+            <div *ngIf="financialDetailsForm.get('coApplicantIncome')?.value" class="review-item">
+              <span class="label">Co-applicant Income:</span>
+              <span class="value">₹{{ financialDetailsForm.get('coApplicantIncome')?.value | number }}</span>
+            </div>
+          </div>
+
+          <!-- Document Status -->
+          <div class="review-card">
+            <h4>Document Upload Status</h4>
+            <div class="document-status-grid">
+              <div class="status-item" [class.uploaded]="documentsForm.get('panCard')?.value">
+                <span class="status-icon">{{ documentsForm.get('panCard')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">PAN Card</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('aadharCard')?.value">
+                <span class="status-icon">{{ documentsForm.get('aadharCard')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Aadhar Card</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('addressProof')?.value">
+                <span class="status-icon">{{ documentsForm.get('addressProof')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Address Proof</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('salarySlips')?.value">
+                <span class="status-icon">{{ documentsForm.get('salarySlips')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Salary Slips</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('bankStatements')?.value">
+                <span class="status-icon">{{ documentsForm.get('bankStatements')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Bank Statements</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('itr')?.value">
+                <span class="status-icon">{{ documentsForm.get('itr')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">ITR Documents</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('photograph')?.value">
+                <span class="status-icon">{{ documentsForm.get('photograph')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Photograph</span>
+              </div>
+              <div class="status-item" [class.uploaded]="documentsForm.get('signature')?.value">
+                <span class="status-icon">{{ documentsForm.get('signature')?.value ? '✅' : '❌' }}</span>
+                <span class="status-text">Signature</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms and Declaration -->
+          <form [formGroup]="reviewForm" class="terms-section">
+            <div class="checkbox-group">
+              <input type="checkbox" id="termsAccepted" formControlName="termsAccepted">
+              <label for="termsAccepted">
+                I agree to the <a href="#" target="_blank">Terms and Conditions</a> and <a href="#" target="_blank">Privacy Policy</a>
+              </label>
+            </div>
+            <div *ngIf="reviewForm.get('termsAccepted')?.invalid && reviewForm.get('termsAccepted')?.touched" class="error-message">
+              You must accept the terms and conditions
+            </div>
+
+            <div class="checkbox-group">
+              <input type="checkbox" id="declarationAccepted" formControlName="declarationAccepted">
+              <label for="declarationAccepted">
+                I hereby declare that all the information provided above is true and correct to the best of my knowledge. I understand that any false information may lead to rejection of my loan application.
+              </label>
+            </div>
+            <div *ngIf="reviewForm.get('declarationAccepted')?.invalid && reviewForm.get('declarationAccepted')?.touched" class="error-message">
+              You must accept the declaration
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Auto-save Indicator -->
+      <div class="auto-save-indicator mb-3 text-center" *ngIf="currentDraftId">
+        <small class="text-muted">
+          <i class="fas fa-save me-1 text-success"></i>
+          Auto-saving enabled - Your progress is being saved automatically
+        </small>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="form-navigation">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <!-- Left side buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              *ngIf="currentStep > 1" 
+              type="button" 
+              class="btn btn-secondary" 
+              (click)="previousStep()"
+            >
+              <i class="fas fa-arrow-left me-1"></i> Back
+            </button>
+          </div>
+          
+          <!-- Center - Save as Draft button -->
+          <div>
+            <button 
+              type="button" 
+              class="btn btn-outline-warning" 
+              (click)="saveAsDraft()"
+              title="Save your progress and continue later"
+            >
+              <i class="fas fa-save me-1"></i> Save as Draft
+            </button>
+          </div>
+          
+          <!-- Right side buttons -->
+          <div class="d-flex gap-2">
+            <button 
+              *ngIf="currentStep < totalSteps" 
+              type="button" 
+              class="btn btn-primary" 
+              (click)="nextStep()"
+            >
+              Next <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+            
+            <button 
+              *ngIf="currentStep === totalSteps" 
+              type="button" 
+              class="btn btn-success" 
+              (click)="submitApplication()"
+              [disabled]="!isAllFormsValid()"
+            >
+              <i class="fas fa-paper-plane me-1"></i> Submit Application
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

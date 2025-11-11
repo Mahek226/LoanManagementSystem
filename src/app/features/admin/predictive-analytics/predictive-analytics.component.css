@@ -1,0 +1,390 @@
+/* Predictive Analytics Dashboard Styles */
+
+/* Animation Keyframes */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Component Animations */
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 20s linear infinite;
+}
+
+/* Card Enhancements */
+.card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+  border-bottom: 2px solid var(--border-color);
+}
+
+.nav-link {
+  border: none !important;
+  border-radius: 8px 8px 0 0;
+  padding: 12px 20px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  background-color: var(--bg-primary) !important;
+  border-bottom: 3px solid var(--primary-color) !important;
+  color: var(--primary-color) !important;
+  font-weight: 600;
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 500px;
+}
+
+.tab-pane {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Circular Progress Indicators */
+.risk-circle,
+.prediction-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.risk-circle:hover,
+.prediction-circle:hover {
+  transform: scale(1.05);
+}
+
+.risk-circle-inner,
+.prediction-circle-inner {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart Containers */
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.chart-container {
+  position: relative;
+  height: 400px;
+  width: 100%;
+}
+
+/* Insight Cards */
+.insight-card {
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.insight-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Metric Cards */
+.metric-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.1);
+}
+
+/* Progress Bars */
+.progress {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.progress-bar {
+  border-radius: 4px;
+  transition: width 0.6s ease;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Badges */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.badge.bg-success {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.badge.bg-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+}
+
+.badge.bg-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+}
+
+.badge.bg-info {
+  background: linear-gradient(135deg, #06b6d4, #0891b2) !important;
+}
+
+.badge.bg-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+}
+
+/* Icon Containers */
+.icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  font-size: 1.1rem;
+}
+
+/* Filters */
+.form-select {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+}
+
+.btn-outline-primary {
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+/* Loading State */
+.spinner-border {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .risk-circle,
+  .prediction-circle {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .risk-circle-inner,
+  .prediction-circle-inner {
+    width: 75px;
+    height: 75px;
+  }
+  
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .chart-container {
+    height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  
+  .nav-link {
+    white-space: nowrap;
+    min-width: 120px;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+}
+
+/* Dark Mode Adjustments */
+[data-theme="dark"] .card {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .nav-link {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .nav-link.active {
+  color: #3b82f6 !important;
+  background-color: #1f2937 !important;
+}
+
+[data-theme="dark"] .form-select {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .progress {
+  background-color: #374151;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up,
+  .animate-pulse,
+  .animate-rotate,
+  .card,
+  .btn,
+  .progress-bar {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Focus States */
+.btn:focus,
+.form-select:focus,
+.nav-link:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .card {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .badge {
+    border: 1px solid var(--text-primary);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .btn,
+  .nav-tabs {
+    display: none !important;
+  }
+  
+  .card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+  }
+}

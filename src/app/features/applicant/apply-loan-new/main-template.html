@@ -1,0 +1,46 @@
+<div class="apply-loan-container">
+  <!-- Progress Bar -->
+  <div class="progress-section">
+    <div class="steps-indicator">
+      <div class="step" *ngFor="let step of [1,2,3,4,5]" 
+           [class.active]="currentStep === step"
+           [class.completed]="isStepCompleted(step)"
+           (click)="goToStep(step)">
+        <div class="step-circle">
+          <i class="fas" [ngClass]="getStepIcon(step)"></i>
+        </div>
+        <span>{{ getStepTitle(step) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error/Success Messages -->
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <!-- Step Content (Include partial templates) -->
+  <div class="form-container">
+    <!-- Steps 1-5 content goes here - use ng-container to include partials -->
+    <ng-container *ngIf="currentStep === 1">
+      <!-- Include step1-basic.html content -->
+    </ng-container>
+    <!-- Repeat for steps 2-5 -->
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="form-actions">
+    <button class="btn btn-secondary" (click)="previousStep()" *ngIf="currentStep > 1">
+      <i class="fas fa-arrow-left me-2"></i>Previous
+    </button>
+    <button class="btn btn-outline-danger" (click)="cancelApplication()">
+      Cancel
+    </button>
+    <button class="btn btn-primary" (click)="nextStep()" *ngIf="currentStep < 5">
+      Next<i class="fas fa-arrow-right ms-2"></i>
+    </button>
+    <button class="btn btn-success" (click)="submitApplication()" 
+            *ngIf="currentStep === 5" [disabled]="submitting">
+      <i class="fas fa-check me-2"></i>{{ submitting ? 'Submitting...' : 'Submit Application' }}
+    </button>
+  </div>
+</div>
