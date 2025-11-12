@@ -1,0 +1,269 @@
+/* Admin Header Styles */
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo-container {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.fallback-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+}
+
+/* Admin Navigation Styles */
+.admin-nav {
+  position: sticky;
+  top: 73px; /* Height of header */
+  z-index: 1010;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nav-pills .nav-link {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.nav-pills .nav-link::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.nav-pills .nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: transparent;
+  transform: translateY(-2px);
+}
+
+.nav-pills .nav-link:hover::before {
+  width: 80%;
+}
+
+.nav-pills .nav-link.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  animation: navActivate 0.3s ease-out;
+}
+
+.nav-pills .nav-link.active::before {
+  width: 100%;
+}
+
+@keyframes navActivate {
+  from {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Dropdown in navigation */
+.nav-item.dropdown .nav-link.dropdown-toggle {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item.dropdown .nav-link.dropdown-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border-color: transparent;
+  transform: translateY(-2px);
+}
+
+.nav-item.dropdown .nav-link.dropdown-toggle.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+.nav-item.dropdown .dropdown-menu {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 0;
+  border-radius: 8px;
+}
+
+.nav-item.dropdown .dropdown-item {
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin: 2px 4px;
+}
+
+.nav-item.dropdown .dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+  color: #3b82f6;
+  transform: translateX(5px);
+}
+
+.nav-item.dropdown .dropdown-item.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.nav-item.dropdown .dropdown-item i {
+  width: 20px;
+  text-align: center;
+}
+
+/* Badge styles */
+.badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Main content area */
+.admin-main {
+  min-height: calc(100vh - 146px); /* Subtract header + nav height */
+  background-color: var(--bg-secondary);
+  padding: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .nav-text {
+    display: none;
+  }
+  
+  .nav-pills .nav-link {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .admin-nav {
+    top: 65px; /* Smaller header on mobile */
+  }
+  
+  .admin-main {
+    min-height: calc(100vh - 130px);
+  }
+}
+
+@media (max-width: 576px) {
+  .nav-pills .nav-link {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* Header dropdown styles */
+.dropdown-menu {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+}
+
+.dropdown-item {
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin: 2px 4px;
+}
+
+.dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+  color: #3b82f6;
+}
+
+.dropdown-item.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.dropdown-item.text-danger:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Button styles */
+.btn-outline-secondary {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-outline-primary {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.btn-outline-primary:hover {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}

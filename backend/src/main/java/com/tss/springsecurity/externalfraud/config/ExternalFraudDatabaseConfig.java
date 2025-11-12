@@ -34,7 +34,7 @@ public class ExternalFraudDatabaseConfig {
                 .url("jdbc:mysql://localhost:3306/external_lms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata")
                 .username("root")
                 // .password("Rishit91@#15") // Original password - didn't work
-                .password("Root@123")
+                .password("Rishit91@#15")
                 .driverClassName("com.mysql.cj.jdbc.Driver")
                 .build();
     }
