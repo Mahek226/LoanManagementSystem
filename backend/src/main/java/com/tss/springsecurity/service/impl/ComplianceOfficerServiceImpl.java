@@ -779,11 +779,13 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     public List<DocumentResponse> getLoanDocuments(Long loanId) {
         log.info("Getting documents for loan ID: {}", loanId);
         
+        // Verify loan exists
         ApplicantLoanDetails loanDetails = loanDetailsRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
         
+        // Fetch documents directly by loan ID instead of applicant ID
         List<UploadedDocument> documents = uploadedDocumentRepository
-                .findByApplicant_ApplicantId(loanDetails.getApplicant().getApplicantId());
+                .findByLoan_LoanId(loanId);
         
         return documents.stream()
                 .map(this::mapToDocumentResponse)
