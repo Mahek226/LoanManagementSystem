@@ -227,36 +227,81 @@
                   </div>
                   
                   <div class="application-list" *ngIf="!loading.applications && activeApplications.length > 0">
-                    <div class="application-item" *ngFor="let app of activeApplications.slice(0, 3)">
-                      <div class="row align-items-center">
-                        <div class="col-md-8">
-                          <div class="d-flex align-items-center mb-2">
-                            <span class="loan-type-badge">{{ app.loanType }}</span>
-                            <span class="badge ms-2" [ngClass]="'bg-' + getStatusColor(app.loanStatus)">
-                              {{ app.loanStatus }}
-                            </span>
+                    <div class="application-card" *ngFor="let app of activeApplications.slice(0, 3)">
+                      <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body p-4">
+                          <div class="row align-items-center">
+                            <div class="col-md-8">
+                              <!-- Header with Loan Type and Status -->
+                              <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="d-flex align-items-center">
+                                  <div class="loan-type-icon me-3">
+                                    <i class="fas {{ getLoanTypeIcon(app.loanType) }} fa-2x text-primary"></i>
+                                  </div>
+                                  <div>
+                                    <h5 class="mb-1 fw-bold text-dark">{{ app.loanType }} Loan</h5>
+                                    <span class="badge" [ngClass]="'bg-' + getStatusColor(app.loanStatus)">
+                                      <i class="fas fa-circle me-1" style="font-size: 0.6em;"></i>{{ app.loanStatus }}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- Dummy Loan ID Display -->
+                              <div class="mb-3">
+                                <div class="d-flex align-items-center">
+                                  <i class="fas fa-id-card text-muted me-2"></i>
+                                  <div>
+                                    <small class="text-muted d-block">Loan ID</small>
+                                    <strong class="text-dark">{{ generateDummyLoanId(app.loanId) }}</strong>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- Loan Details Grid -->
+                              <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                  <div class="detail-item">
+                                    <i class="fas fa-coins text-success me-2"></i>
+                                    <div>
+                                      <small class="text-muted d-block">Loan Amount</small>
+                                      <strong class="text-success">{{ formatCurrency(app.loanAmount) }}</strong>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div class="col-sm-6">
+                                  <div class="detail-item">
+                                    <i class="fas fa-calendar-alt text-info me-2"></i>
+                                    <div>
+                                      <small class="text-muted d-block">Tenure</small>
+                                      <strong class="text-info">{{ getTenureDisplay(app) }} months</strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- Application Date -->
+                              <div class="d-flex align-items-center text-muted">
+                                <i class="fas fa-clock me-2"></i>
+                                <small>Applied on {{ formatDate(app.applicationDate) }}</small>
+                              </div>
+                            </div>
+                            
+                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                              <div class="d-flex flex-column gap-2">
+                                <button class="btn btn-primary btn-sm" (click)="viewApplication(app.loanId)">
+                                  <i class="fas fa-eye me-2"></i>View Details
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" (click)="downloadApplicationPDF(app.loanId)">
+                                  <i class="fas fa-download me-2"></i>Download
+                                </button>
+                                <div class="mt-2">
+                                  <small class="text-muted d-block">Interest Rate</small>
+                                  <strong class="text-warning">{{ getInterestRate(app) }}% p.a.</strong>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          
-                          <!-- Loan ID Display -->
-                          <div class="mb-2">
-                            <app-loan-id-display 
-                              [internalLoanId]="app.loanId"
-                              displayType="inline"
-                              size="small"
-                              label="Loan ID"
-                              [showCopyButton]="true">
-                            </app-loan-id-display>
-                          </div>
-                          
-                          <h6 class="mb-1">{{ formatCurrency(app.loanAmount) }} for {{ app.loanTenure }} months</h6>
-                          <small class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}
-                          </small>
-                        </div>
-                        <div class="col-md-4 text-md-end mt-2 mt-md-0">
-                          <button class="btn btn-sm btn-outline-primary" (click)="viewApplication(app.loanId)">
-                            <i class="fas fa-eye me-1"></i>View Details
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -356,7 +401,7 @@
                               <i class="fas {{ getDocumentIcon(request.requestedDocuments) }} fa-2x me-3 text-danger"></i>
                               <div>
                                 <h6 class="card-title mb-0 text-dark fw-bold">{{ getDocumentDisplayName(request.requestedDocuments) }}</h6>
-                                <small class="text-muted">Loan ID: LNID{{ (100000 + request.loanId).toString().padStart(6, '0') }}</small>
+                                <small class="text-muted">Loan ID: {{ generateDummyLoanId(request.loanId) }}</small>
                               </div>
                             </div>
                             <span class="badge bg-{{ getResubmissionStatusColor(request.status) }}">{{ request.status }}</span>
@@ -629,7 +674,7 @@
             <div class="row">
               <div class="col-md-6">
                 <small class="text-muted d-block">Loan ID</small>
-                <strong>LNID{{ (100000 + selectedResubmissionRequest.loanId).toString().padStart(6, '0') }}</strong>
+                <strong>{{ generateDummyLoanId(selectedResubmissionRequest.loanId) }}</strong>
               </div>
               <div class="col-md-6">
                 <small class="text-muted d-block">Due Date</small>

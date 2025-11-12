@@ -637,13 +637,19 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
   getLoanTypeIcon(loanType: string): string {
     const iconMap: { [key: string]: string } = {
       'Personal Loan': 'fa-user',
+      'PERSONAL': 'fa-user',
       'Home Loan': 'fa-home',
+      'HOME': 'fa-home',
       'Car Loan': 'fa-car',
+      'VEHICLE': 'fa-car',
       'Business Loan': 'fa-briefcase',
+      'BUSINESS': 'fa-briefcase',
       'Education Loan': 'fa-graduation-cap',
-      'Gold Loan': 'fa-coins'
+      'EDUCATION': 'fa-graduation-cap',
+      'Gold Loan': 'fa-coins',
+      'GOLD': 'fa-coins'
     };
-    return iconMap[loanType] || 'fa-money-bill';
+    return iconMap[loanType] || 'fa-money-bill-wave';
   }
 
   getLoanTypeIconClass(loanType: string): string {
@@ -860,5 +866,43 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
         this.router.navigate(['/applicant/applications']);
         break;
     }
+  }
+
+  // Get tenure display with fallback
+  getTenureDisplay(app: LoanApplication): string {
+    const tenure = app.tenureMonths || app.loanTenure || 12; // Default to 12 months if not available
+    return tenure.toString();
+  }
+
+  // Generate dummy loan ID in LNID format
+  generateDummyLoanId(loanId: number): string {
+    // Generate a consistent dummy ID based on the actual loan ID
+    const baseNumber = 100000 + (loanId % 900000); // Ensures 6-digit number
+    return `LNID${baseNumber.toString().padStart(6, '0')}`;
+  }
+
+  // Get interest rate for display
+  getInterestRate(app: LoanApplication): string {
+    return (app.interestRate || this.getDefaultInterestRate(app.loanType)).toFixed(1);
+  }
+
+  // Get default interest rate based on loan type
+  private getDefaultInterestRate(loanType: string): number {
+    const rates: { [key: string]: number } = {
+      'PERSONAL': 14.5,
+      'HOME': 9.5,
+      'VEHICLE': 11.5,
+      'EDUCATION': 11.0,
+      'BUSINESS': 13.5,
+      'GOLD': 10.5
+    };
+    return rates[loanType] || 12.0;
+  }
+
+  // Download application PDF
+  downloadApplicationPDF(loanId: number): void {
+    // Implementation for PDF download
+    console.log('Downloading PDF for loan:', loanId);
+    // You can implement the actual PDF download logic here
   }
 }

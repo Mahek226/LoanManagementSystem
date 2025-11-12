@@ -672,3 +672,112 @@
     display: none;
   }
 }
+
+/* Enhanced Application Cards */
+.application-card .card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.application-card .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.loan-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid rgba(59, 130, 246, 0.1);
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(248, 249, 250, 0.5);
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.detail-item:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-left-color: var(--bs-primary);
+}
+
+.detail-item i {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.detail-item div {
+  flex: 1;
+}
+
+.detail-item small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Enhanced buttons */
+.application-card .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.application-card .btn:hover {
+  transform: translateY(-1px);
+}
+
+.application-card .btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+}
+
+.application-card .btn-outline-secondary {
+  border-color: rgba(108, 117, 125, 0.3);
+}
+
+.application-card .btn-outline-secondary:hover {
+  background: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Status badges */
+.badge {
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .loan-type-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .detail-item {
+    padding: 0.5rem;
+  }
+  
+  .application-card .card-body {
+    padding: 1.5rem !important;
+  }
+}

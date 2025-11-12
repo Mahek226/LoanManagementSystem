@@ -2184,4 +2184,36 @@ Thank you for choosing our services!`;
       return 'Error formatting data: ' + error;
     }
   }
+
+  // Generate dummy loan ID in LNID format
+  generateDummyLoanId(loanId: number): string {
+    // Generate a consistent dummy ID based on the actual loan ID
+    const baseNumber = 100000 + (loanId % 900000); // Ensures 6-digit number
+    return `LNID${baseNumber.toString().padStart(6, '0')}`;
+  }
+
+  // Get tenure display with fallback
+  getTenureDisplay(app: LoanApplication): string {
+    const tenure = app.tenureMonths || app.loanTenure || 12; // Default to 12 months if not available
+    return tenure.toString();
+  }
+
+  // Get loan type icon
+  getLoanTypeIcon(loanType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'Personal Loan': 'fa-user',
+      'PERSONAL': 'fa-user',
+      'Home Loan': 'fa-home',
+      'HOME': 'fa-home',
+      'Car Loan': 'fa-car',
+      'VEHICLE': 'fa-car',
+      'Business Loan': 'fa-briefcase',
+      'BUSINESS': 'fa-briefcase',
+      'Education Loan': 'fa-graduation-cap',
+      'EDUCATION': 'fa-graduation-cap',
+      'Gold Loan': 'fa-coins',
+      'GOLD': 'fa-coins'
+    };
+    return iconMap[loanType] || 'fa-money-bill-wave';
+  }
 }
