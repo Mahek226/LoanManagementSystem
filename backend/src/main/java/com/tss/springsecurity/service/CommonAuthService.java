@@ -265,10 +265,13 @@ import com.tss.springsecurity.repository.ComplianceOfficerRepository;
 import com.tss.springsecurity.repository.PasswordResetTokenRepository;
 import com.tss.springsecurity.entity.PasswordResetToken;
 import com.tss.springsecurity.service.EmailService;
+import com.tss.springsecurity.service.CaptchaService;
 import com.tss.springsecurity.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -276,6 +279,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CommonAuthService {
 
     private final AdminRepository adminRepository;
@@ -405,6 +409,7 @@ public class CommonAuthService {
         return "Reset password link has been shared to you in email.";
     }
     
+    @Transactional
     public String resetPassword(ResetPasswordRequest request) {
         // Validate password confirmation
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
@@ -428,28 +433,28 @@ public class CommonAuthService {
             case "ADMIN":
                 Admin admin = adminRepository.findByEmail(request.getEmail())
                         .orElseThrow(() -> new RuntimeException("User not found"));
-                admin.setPasswordHash(encodedPassword);
+                admin.setPassword(encodedPassword);
                 adminRepository.save(admin);
                 break;
                 
             case "APPLICANT":
                 Applicant applicant = applicantRepository.findByEmail(request.getEmail())
                         .orElseThrow(() -> new RuntimeException("User not found"));
-                applicant.setPasswordHash(encodedPassword);
+                applicant.setPassword(encodedPassword);
                 applicantRepository.save(applicant);
                 break;
                 
             case "LOAN_OFFICER":
                 LoanOfficer loanOfficer = loanOfficerRepository.findByEmail(request.getEmail())
                         .orElseThrow(() -> new RuntimeException("User not found"));
-                loanOfficer.setPasswordHash(encodedPassword);
+                loanOfficer.setPassword(encodedPassword);
                 loanOfficerRepository.save(loanOfficer);
                 break;
                 
             case "COMPLIANCE_OFFICER":
                 ComplianceOfficer complianceOfficer = complianceOfficerRepository.findByEmail(request.getEmail())
                         .orElseThrow(() -> new RuntimeException("User not found"));
-                complianceOfficer.setPasswordHash(encodedPassword);
+                complianceOfficer.setPassword(encodedPassword);
                 complianceOfficerRepository.save(complianceOfficer);
                 break;
                 
@@ -462,8 +467,13 @@ public class CommonAuthService {
         resetToken.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(resetToken);
         
-        // Send password change confirmation email
-        emailService.sendPasswordChangeConfirmationEmail(resetToken.getEmail());
+        // Send password change confirmation email (non-blocking)
+        try {
+            emailService.sendPasswordChangeConfirmationEmail(resetToken.getEmail());
+        } catch (Exception e) {
+            // Log email error but don't fail the password reset
+            log.error("Failed to send password change confirmation email, but password reset was successful", e);
+        }
         
         return "Password reset successfully. You can now login with your new password.";
     }
