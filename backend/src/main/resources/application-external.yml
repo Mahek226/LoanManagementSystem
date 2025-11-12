@@ -4,7 +4,7 @@
 #    primary:
 #      url: jdbc:mysql://localhost:3306/lms
 #      username: root
-#      password: Rishit91@#15
+#      password: Root@12391@#15
 #      driver-class-name: com.mysql.cj.jdbc.Driver
 #    
 #    # External fraud database

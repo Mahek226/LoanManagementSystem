@@ -50,10 +50,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   resubmissionRequested: Set<number> = new Set(); // Track which documents have resubmission requested
   resubmissionSubmitting = false;
   
-  // Document extraction state
-  extracting = false;
-  extractionCache: Map<number, any> = new Map();
-  extractedDocumentIds: Set<number> = new Set();
+  // Document extraction state removed for compliance officer
   successMessage = '';
   
   // Forms
@@ -379,15 +376,8 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.selectedDocument = document;
     this.showDocumentModal = true;
     
-    // Check if we already have extracted data for this document
-    if (this.extractedDocumentIds.has(document.documentId)) {
-      const cachedData = this.extractionCache.get(document.documentId);
-      if (cachedData) {
-        this.extractedData = cachedData;
-      }
-    } else {
-      this.extractedData = null;
-    }
+    // Extraction functionality removed for compliance officer
+    this.extractedData = null;
   }
   
   closeDocumentModal(): void {
@@ -417,70 +407,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     this.closeDocumentModal();
   }
 
-  extractDocumentData(document: any): void {
-    // Check if already extracted
-    if (this.extractedDocumentIds.has(document.documentId)) {
-      this.error = 'This document has already been extracted. Using cached data.';
-      setTimeout(() => this.error = '', 3000);
-      return;
-    }
-    
-    this.extracting = true;
-    this.error = '';
-    this.extractedData = null;
-    
-    // Check if we have the document file
-    if (!document['fileUrl'] && !document['cloudinaryUrl'] && !document['documentUrl']) {
-      this.error = 'Document file not available for extraction.';
-      this.extracting = false;
-      setTimeout(() => this.error = '', 5000);
-      return;
-    }
-
-    // Get the document URL
-    const documentUrl = document['fileUrl'] || document['cloudinaryUrl'] || document['documentUrl'];
-    
-    // Convert URL to File object for extraction
-    fetch(documentUrl)
-      .then(response => response.blob())
-      .then(blob => {
-        const file = new File([blob], document.documentName || 'document.jpg', { type: blob.type });
-        
-        // Call FastAPI extraction service through compliance officer service
-        this.complianceService.extractSingleDocument(
-          document['applicantId'] || this.escalation?.applicantId || 1,
-          document.documentType,
-          file
-        ).subscribe({
-          next: (response: any) => {
-            console.log('FastAPI Response:', response);
-            this.extractedData = response;
-            
-            // Cache the extracted data
-            if (this.extractedData) {
-              this.extractionCache.set(document.documentId, this.extractedData);
-              this.extractedDocumentIds.add(document.documentId);
-            }
-            
-            this.extracting = false;
-            this.successMessage = 'Document data extracted successfully using AI!';
-            setTimeout(() => this.successMessage = '', 3000);
-          },
-          error: (err: any) => {
-            console.error('Error extracting document with FastAPI:', err);
-            this.extracting = false;
-            this.error = 'Failed to extract document data. Please try again.';
-            setTimeout(() => this.error = '', 5000);
-          }
-        });
-      })
-      .catch(err => {
-        console.error('Error fetching document file:', err);
-        this.extracting = false;
-        this.error = 'Failed to load document file for extraction.';
-        setTimeout(() => this.error = '', 5000);
-      });
-  }
+  // Extraction functionality removed for compliance officer
   
   // ==================== Document Resubmission ====================
   
@@ -918,18 +845,22 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if document has been extracted
+   * Get document image URL for the simple viewer
    */
-  isExtracted(document: any): boolean {
-    return this.extractedDocumentIds.has(document.documentId);
+  getDocumentImageUrl(doc: any): string {
+    return doc.cloudinaryUrl || doc.documentUrl || doc.fileUrl || doc.imageUrl || '';
   }
 
   /**
-   * Check if document can be extracted
+   * Handle image loading errors
    */
-  canExtract(document: any): boolean {
-    return this.hasDocumentUrl(document) && !this.extracting;
+  onImageError(event: any): void {
+    console.error('Error loading document image:', event);
+    this.error = 'Failed to load document image.';
+    setTimeout(() => this.error = '', 3000);
   }
+
+  // Extraction check methods removed for compliance officer
 
   /**
    * Get count of verified documents (for progress tracking)

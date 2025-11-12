@@ -871,20 +871,38 @@
   </div>
 </div>
 
-<!-- Document Viewer Component -->
-<app-document-viewer
-  [document]="selectedDocument"
-  [show]="showDocumentModal"
-  [extractedData]="extractedData"
-  [extracting]="extracting"
-  [canExtract]="true"
-  [canVerify]="true"
-  themeColor="danger"
-  (close)="closeDocumentModal()"
-  (extract)="extractDocumentData($event)"
-  (approve)="approveDocument($event)"
-  (reject)="rejectDocument($event)">
-</app-document-viewer>
+<!-- Simple Document Viewer Modal for Compliance Officer -->
+<div class="modal fade show d-block" *ngIf="showDocumentModal && selectedDocument" 
+     style="background-color: rgba(0,0,0,0.8);" 
+     (click)="closeDocumentModal()">
+  <div class="modal-dialog modal-fullscreen" (click)="$event.stopPropagation()">
+    <div class="modal-content" style="background-color: #000;">
+      <!-- Modal Header -->
+      <div class="modal-header border-0" style="background-color: rgba(0,0,0,0.8);">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-file me-2"></i>{{ selectedDocument.documentType?.replace('_', ' ') | titlecase }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeDocumentModal()"></button>
+      </div>
+      
+      <!-- Document Image Only -->
+      <div class="modal-body p-0 d-flex align-items-center justify-content-center" style="height: calc(100vh - 120px);">
+        <img [src]="getDocumentImageUrl(selectedDocument)" 
+             [alt]="selectedDocument.documentName || selectedDocument.originalFilename"
+             class="img-fluid"
+             style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in;"
+             (error)="onImageError($event)">
+      </div>
+      
+      <!-- Simple Footer -->
+      <div class="modal-footer border-0" style="background-color: rgba(0,0,0,0.8);">
+        <button type="button" class="btn btn-outline-light" (click)="closeDocumentModal()">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Screening Details Modal -->
 <div class="modal fade show d-block" *ngIf="showScreeningDetailsModal && enhancedScreeningData" 

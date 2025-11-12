@@ -11,7 +11,6 @@
 npm-debug.log
 yarn-error.log
 
-<<<<<<< HEAD
 # Spring Boot / Java Backend
 backend/target/
 backend/build/
@@ -38,7 +37,6 @@ frontend/.nyc_output/
 .env*
 backend/.env*
 frontend/.env*
-=======
 # IDEs and editors
 .idea/
 .project
@@ -52,7 +50,6 @@ backend/.metadata/
 frontend/.angular/
 frontend/dist/
 frontend/node_modules/
->>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 
 # Database files
 *.db
@@ -79,7 +76,6 @@ logs/
 ehthumbs.db
 Thumbs.db
 
-<<<<<<< HEAD
 # IDE files
 .idea/
 .vscode/
@@ -102,7 +98,6 @@ build/
 out/
 bin/
 tmp/
-=======
 # Spring Boot / Java Backend
 backend/target/
 backend/build/
@@ -251,12 +246,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
->>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 
 # Temporary files
 *.tmp
 *.temp
-<<<<<<< HEAD
 *.bak
 *.swp
 *.swo
@@ -268,18 +261,15 @@ venv.bak/
 *.war
 *.ear
 *.class
-=======
 *.swp
 *.swo
 *~
 
 # Package files
->>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 *.7z
 *.dmg
 *.gz
 *.iso
-<<<<<<< HEAD
 *.rar
 *.tar
 *.zip
@@ -292,7 +282,6 @@ env/
 
 # Documentation
 docs/_build/
-=======
 *.jar
 *.rar
 *.tar
@@ -305,4 +294,3 @@ docs/_build/
 # Documentation
 docs/_build/
 backend/extraction/.env
->>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
