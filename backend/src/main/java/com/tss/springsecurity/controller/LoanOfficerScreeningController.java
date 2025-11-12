@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/loan-officer")
@@ -958,5 +959,72 @@ public class LoanOfficerScreeningController {
                     .body(new MessageResponse("Failed to process document resubmission request: " + e.getMessage()));
         }
     }
+    
+    /**
+     * Get resubmitted documents for a loan officer
+     */
+    @GetMapping("/{officerId}/resubmitted-documents")
+    public ResponseEntity<?> getResubmittedDocuments(@PathVariable Long officerId) {
+        try {
+            log.info("Fetching resubmitted documents for officer: {}", officerId);
+            
+            // Get documents that are resubmissions and assigned to this officer
+            List<Map<String, Object>> resubmittedDocuments = loanOfficerDocumentService.getResubmittedDocumentsForOfficer(officerId);
+            
+            return ResponseEntity.ok(resubmittedDocuments);
+            
+        } catch (Exception e) {
+            log.error("Error fetching resubmitted documents for officer {}: {}", officerId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch resubmitted documents: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Process a resubmitted document (approve, reject, or forward to compliance)
+     */
+    @PostMapping("/process-resubmission")
+    public ResponseEntity<?> processResubmittedDocument(@RequestBody Map<String, Object> request) {
+        try {
+            Long documentId = Long.valueOf(request.get("documentId").toString());
+            String action = request.get("action").toString();
+            String remarks = (String) request.get("remarks");
+            String forwardReason = (String) request.get("forwardReason");
+            Long officerId = Long.valueOf(request.get("officerId").toString());
+            Long assignmentId = request.get("assignmentId") != null ? Long.valueOf(request.get("assignmentId").toString()) : null;
+            
+            log.info("Processing resubmitted document - DocumentId: {}, Action: {}, OfficerId: {}", 
+                    documentId, action, officerId);
+            
+            Map<String, Object> result = loanOfficerDocumentService.processResubmittedDocument(
+                    documentId, action, remarks, forwardReason, officerId, assignmentId);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            log.error("Error processing resubmitted document: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to process resubmitted document: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get document resubmission requests from compliance officers
+     */
+//    @GetMapping("/{officerId}/document-resubmission-requests")
+//    public ResponseEntity<?> getDocumentResubmissionRequests(@PathVariable Long officerId) {
+//        try {
+//            log.info("Fetching document resubmission requests for officer: {}", officerId);
+//            
+//            List<Map<String, Object>> requests = loanOfficerDocumentService.getDocumentResubmissionRequestsForOfficer(officerId);
+//            
+//            return ResponseEntity.ok(requests);
+//            
+//        } catch (Exception e) {
+//            log.error("Error fetching document resubmission requests for officer {}: {}", officerId, e.getMessage(), e);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body(Map.of("error", "Failed to fetch document resubmission requests: " + e.getMessage()));
+//        }
+//    }
     
 }

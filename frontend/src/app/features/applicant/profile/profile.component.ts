@@ -39,7 +39,6 @@ export class ProfileComponent implements OnInit {
   passwordSuccess = '';
   
   passwordForm = {
-    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   };
@@ -162,7 +161,6 @@ export class ProfileComponent implements OnInit {
   closeChangePasswordModal(): void {
     this.showChangePasswordModal = false;
     this.passwordForm = {
-      currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     };
@@ -171,25 +169,12 @@ export class ProfileComponent implements OnInit {
   }
 
   isPasswordFormValid(): boolean {
-    return this.passwordForm.currentPassword.length > 0 &&
-           this.passwordForm.newPassword.length >= 6 &&
-           this.passwordForm.confirmPassword.length > 0 &&
-           this.passwordForm.newPassword === this.passwordForm.confirmPassword;
+    return !!this.profile?.email;
   }
 
   changePassword(): void {
-    if (!this.isPasswordFormValid()) {
-      this.passwordError = 'Please fill all fields correctly and ensure passwords match';
-      return;
-    }
-
-    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-      this.passwordError = 'New passwords do not match';
-      return;
-    }
-
-    if (this.passwordForm.newPassword.length < 6) {
-      this.passwordError = 'New password must be at least 6 characters long';
+    if (!this.profile?.email) {
+      this.passwordError = 'Email not found. Please try again later.';
       return;
     }
 
@@ -197,28 +182,21 @@ export class ProfileComponent implements OnInit {
     this.passwordError = '';
     this.passwordSuccess = '';
 
-    // Call API to change password
-    const changePasswordData = {
-      currentPassword: this.passwordForm.currentPassword,
-      newPassword: this.passwordForm.newPassword
-    };
-
-    // For now, simulate the password change since we don't have the API endpoint
-    // In a real implementation, you would call the backend API
-    setTimeout(() => {
-      // Simulate API call
-      if (this.passwordForm.currentPassword === 'wrongpassword') {
-        this.passwordError = 'Current password is incorrect';
-        this.changingPassword = false;
-      } else {
-        this.passwordSuccess = 'Password changed successfully!';
+    // Trigger forgot password to send reset email
+    this.authService.forgotPassword({ email: this.profile.email }).subscribe({
+      next: (response) => {
+        this.passwordSuccess = 'Password reset email sent! Please check your email and follow the instructions to set your new password.';
         this.changingPassword = false;
         
-        // Close modal after 2 seconds
+        // Close modal after 3 seconds
         setTimeout(() => {
           this.closeChangePasswordModal();
-        }, 2000);
+        }, 3000);
+      },
+      error: (err) => {
+        this.passwordError = 'Failed to initiate password reset: ' + (err.error?.message || 'Please try again later');
+        this.changingPassword = false;
       }
-    }, 1000);
+    });
   }
 }

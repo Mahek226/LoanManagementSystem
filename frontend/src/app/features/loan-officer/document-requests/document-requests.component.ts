@@ -20,11 +20,16 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
   // Data
   documentRequests: ComplianceDocumentResubmissionRequest[] = [];
   filteredRequests: ComplianceDocumentResubmissionRequest[] = [];
+  resubmittedDocuments: any[] = [];
+  filteredResubmittedDocuments: any[] = [];
   
   // UI State
   loading = false;
   error: string | null = null;
   success: string | null = null;
+  
+  // Tab management
+  activeTab: 'requests' | 'resubmitted' = 'requests';
   
   // Filters
   searchTerm = '';
@@ -74,32 +79,55 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
     const officerId = this.getOfficerId();
     console.log('Loading document requests for officer ID:', officerId);
     
-    const sub = this.loanOfficerService.getDocumentResubmissionRequests(officerId).subscribe({
+    // Load both document resubmission requests and resubmitted documents
+    const requestsSub = this.loanOfficerService.getDocumentResubmissionRequests(officerId).subscribe({
       next: (requests) => {
         console.log('Received document requests:', requests);
         console.log('Number of requests:', requests.length);
         this.documentRequests = requests || [];
         this.applyFilters();
-        this.loading = false;
-        
-        // Show success message if requests are found
-        if (requests && requests.length > 0) {
-          this.success = `Loaded ${requests.length} document resubmission request(s)`;
-          setTimeout(() => this.success = null, 3000);
-        }
+        this.checkLoadingComplete();
       },
       error: (error) => {
         console.error('Error loading document requests:', error);
-        console.error('Error details:', error.error);
-        console.error('Status:', error.status);
         this.error = `Failed to load document requests. ${error.error?.message || 'Please try again.'}`;
         this.documentRequests = [];
         this.applyFilters();
-        this.loading = false;
+        this.checkLoadingComplete();
       }
     });
     
-    this.subscriptions.push(sub);
+    // Load resubmitted documents
+    const resubmittedSub = this.loanOfficerService.getResubmittedDocuments(officerId).subscribe({
+      next: (documents) => {
+        console.log('Received resubmitted documents:', documents);
+        console.log('Number of resubmitted documents:', documents.length);
+        this.resubmittedDocuments = documents || [];
+        this.applyResubmittedFilters();
+        this.checkLoadingComplete();
+      },
+      error: (error) => {
+        console.error('Error loading resubmitted documents:', error);
+        this.resubmittedDocuments = [];
+        this.applyResubmittedFilters();
+        this.checkLoadingComplete();
+      }
+    });
+    
+    this.subscriptions.push(requestsSub, resubmittedSub);
+  }
+  
+  private checkLoadingComplete(): void {
+    // Check if both requests have completed (success or error)
+    if (this.documentRequests !== undefined && this.resubmittedDocuments !== undefined) {
+      this.loading = false;
+      
+      const totalItems = this.documentRequests.length + this.resubmittedDocuments.length;
+      if (totalItems > 0) {
+        this.success = `Loaded ${this.documentRequests.length} request(s) and ${this.resubmittedDocuments.length} resubmitted document(s)`;
+        setTimeout(() => this.success = null, 3000);
+      }
+    }
   }
   
   private getOfficerId(): number {
@@ -163,6 +191,44 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
     if (this.currentPage > this.totalPages) {
       this.currentPage = 1;
     }
+  }
+  
+  applyResubmittedFilters(): void {
+    let filtered = [...this.resubmittedDocuments];
+    
+    // Search filter
+    if (this.searchTerm.trim()) {
+      const term = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(doc => 
+        doc.applicantName.toLowerCase().includes(term) ||
+        doc.documentType.toLowerCase().includes(term) ||
+        doc.loanType.toLowerCase().includes(term)
+      );
+    }
+    
+    // Status filter
+    if (this.statusFilter) {
+      filtered = filtered.filter(doc => doc.status === this.statusFilter);
+    }
+    
+    // Sorting
+    filtered.sort((a, b) => {
+      let aValue: any = a.resubmittedAt;
+      let bValue: any = b.resubmittedAt;
+      
+      if (this.sortBy === 'resubmittedAt') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+      
+      if (this.sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    this.filteredResubmittedDocuments = filtered;
   }
   
   get paginatedRequests(): ComplianceDocumentResubmissionRequest[] {
@@ -240,6 +306,19 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sub);
   }
   
+  // ==================== Tab Management ====================
+  
+  switchTab(tab: 'requests' | 'resubmitted'): void {
+    this.activeTab = tab;
+    this.currentPage = 1; // Reset pagination when switching tabs
+  }
+  
+  get paginatedResubmittedDocuments(): any[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    return this.filteredResubmittedDocuments.slice(startIndex, endIndex);
+  }
+  
   // ==================== Utility Methods ====================
   
   formatDate(dateString: string): string {
@@ -285,8 +364,53 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
       case 'REQUESTED': return 'badge bg-warning';
       case 'FORWARDED_TO_APPLICANT': return 'badge bg-success';
       case 'REJECTED_BY_LOAN_OFFICER': return 'badge bg-danger';
+      case 'PENDING': return 'badge bg-warning';
+      case 'VERIFIED': return 'badge bg-success';
+      case 'REJECTED': return 'badge bg-danger';
       default: return 'badge bg-secondary';
     }
+  }
+  
+  // ==================== Resubmitted Documents Methods ====================
+  
+  viewDocument(document: any): void {
+    // Open document in new tab
+    if (document.documentUrl) {
+      window.open(document.documentUrl, '_blank');
+    }
+  }
+  
+  processDocument(document: any, action: 'APPROVE' | 'REJECT'): void {
+    const officerId = this.getOfficerId();
+    const remarks = action === 'APPROVE' ? 'Document approved after resubmission' : 'Document rejected after resubmission';
+    
+    const request = {
+      documentId: document.documentId,
+      action: action,
+      remarks: remarks,
+      officerId: officerId,
+      assignmentId: document.assignmentId
+    };
+    
+    this.loanOfficerService.processResubmittedDocument(request).subscribe({
+      next: (response) => {
+        this.success = `Document ${action.toLowerCase()}d successfully!`;
+        
+        // Update local document status
+        const docIndex = this.resubmittedDocuments.findIndex(d => d.documentId === document.documentId);
+        if (docIndex !== -1) {
+          this.resubmittedDocuments[docIndex].status = action === 'APPROVE' ? 'VERIFIED' : 'REJECTED';
+        }
+        
+        this.applyResubmittedFilters();
+        setTimeout(() => this.success = null, 3000);
+      },
+      error: (error) => {
+        console.error('Error processing document:', error);
+        this.error = error.error?.message || 'Failed to process document. Please try again.';
+        setTimeout(() => this.error = null, 5000);
+      }
+    });
   }
   
   getStatusLabel(status: string): string {

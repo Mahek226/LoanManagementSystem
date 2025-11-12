@@ -56,18 +56,18 @@
             
             <!-- Status Badges -->
             <div class="d-flex flex-column gap-2 align-items-center">
-              <span class="badge bg-{{ getVerificationBadge() }}">
+              <!-- <span class="badge bg-{{ getVerificationBadge() }}">
                 <i class="fas fa-envelope me-1"></i>
                 {{ profile.isEmailVerified ? 'Email Verified' : 'Email Not Verified' }}
-              </span>
+              </span> -->
               <span class="badge bg-{{ getApprovalBadge() }}">
                 <i class="fas fa-check-circle me-1"></i>
                 {{ profile.isApproved ? 'Account Approved' : 'Pending Approval' }}
               </span>
-              <span class="badge bg-{{ getApprovalStatusColor() }}">
+              <!-- <span class="badge bg-{{ getApprovalStatusColor() }}">
                 <i class="fas fa-info-circle me-1"></i>
                 {{ profile.approvalStatus }}
-              </span>
+              </span> -->
             </div>
           </div>
 
@@ -79,13 +79,7 @@
                 <strong>{{ formatDate(profile.createdAt) }}</strong>
               </div>
             </div>
-            <div class="stat-item">
-              <i class="fas fa-id-card text-primary"></i>
-              <div>
-                <small>Applicant ID</small>
-                <strong>#{{ profile.applicantId }}</strong>
-              </div>
-            </div>
+            
           </div>
         </div>
 
@@ -296,25 +290,17 @@
         <button type="button" class="btn-close" (click)="closeChangePasswordModal()"></button>
       </div>
       <div class="modal-body">
+        <div class="alert alert-info mb-4">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Password Reset Process:</strong> We'll send a password reset link to your registered email address. You can then follow the instructions in the email to set your new password securely.
+        </div>
+        
         <form (ngSubmit)="changePassword()">
           <div class="mb-3">
-            <label class="form-label fw-semibold" style="color: var(--text-primary);">Current Password</label>
-            <input type="password" class="form-control" [(ngModel)]="passwordForm.currentPassword" 
-                   name="currentPassword" required
-                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="color: var(--text-primary);">New Password</label>
-            <input type="password" class="form-control" [(ngModel)]="passwordForm.newPassword" 
-                   name="newPassword" required minlength="6"
-                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
-            <small class="text-muted">Password must be at least 6 characters long</small>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm New Password</label>
-            <input type="password" class="form-control" [(ngModel)]="passwordForm.confirmPassword" 
-                   name="confirmPassword" required
-                   style="background-color: var(--bg-secondary); border-color: var(--border-color); color: var(--text-primary);">
+            <label class="form-label fw-semibold" style="color: var(--text-primary);">Your Email</label>
+            <input type="email" class="form-control" [value]="profile?.email" readonly
+                   style="background-color: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-muted);">
+            <small class="text-muted">Password reset instructions will be sent to this email</small>
           </div>
           
           <div *ngIf="passwordError" class="alert alert-danger">
@@ -329,10 +315,10 @@
       <div class="modal-footer" style="border-color: var(--border-color);">
         <button type="button" class="btn btn-secondary" (click)="closeChangePasswordModal()">Cancel</button>
         <button type="button" class="btn btn-primary" (click)="changePassword()" 
-                [disabled]="changingPassword || !isPasswordFormValid()">
+                [disabled]="changingPassword || !profile?.email">
           <span *ngIf="changingPassword" class="spinner-border spinner-border-sm me-1"></span>
-          <i *ngIf="!changingPassword" class="fas fa-save me-1"></i>
-          {{ changingPassword ? 'Changing...' : 'Change Password' }}
+          <i *ngIf="!changingPassword" class="fas fa-envelope me-1"></i>
+          {{ changingPassword ? 'Sending Reset Email...' : 'Send Password Reset Email' }}
         </button>
       </div>
     </div>

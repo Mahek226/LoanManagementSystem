@@ -300,4 +300,87 @@ public class DocumentUploadServiceImpl implements DocumentUploadService {
     private String generateDocumentName(String documentType, Long applicantId) {
         return documentType.toUpperCase() + "_" + applicantId + "_" + System.currentTimeMillis();
     }
+    
+    @Override
+    public Map<String, Object> uploadDocumentResubmission(Long applicantId, Long loanId, 
+                                                        MultipartFile file, String documentType, 
+                                                        Long notificationId, Long assignmentId, 
+                                                        String applicantComments) throws IOException {
+        
+        log.info("Processing document resubmission - ApplicantId: {}, LoanId: {}, DocumentType: {}, NotificationId: {}, AssignmentId: {}", 
+                applicantId, loanId, documentType, notificationId, assignmentId);
+        
+        // Validate applicant exists
+        Applicant applicant = applicantRepository.findById(applicantId)
+                .orElseThrow(() -> new RuntimeException("Applicant not found with ID: " + applicantId));
+        
+        // Validate loan exists
+        ApplicantLoanDetails loanDetails = null;
+        if (loanId != null) {
+            loanDetails = loanDetailsRepository.findById(loanId)
+                    .orElseThrow(() -> new RuntimeException("Loan not found with ID: " + loanId));
+        }
+        
+        // Validate file
+        if (file.isEmpty()) {
+            throw new RuntimeException("File cannot be empty");
+        }
+        
+        if (!isValidFileType(file.getContentType())) {
+            throw new RuntimeException("Invalid file type. Only PDF, JPG, JPEG, and PNG files are allowed.");
+        }
+        
+        if (!isValidFileExtension(file.getOriginalFilename())) {
+            throw new RuntimeException("Invalid file extension. Only .pdf, .jpg, .jpeg, and .png files are allowed.");
+        }
+        
+        try {
+            // Upload to Cloudinary using the correct method signature
+            Map<String, Object> uploadResult = cloudinaryService.uploadDocumentWithDetails(file, documentType, applicantId.toString());
+            String cloudinaryUrl = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
+            
+            // Create document record
+            UploadedDocument document = new UploadedDocument();
+            document.setApplicant(applicant);
+            document.setLoan(loanDetails);
+            document.setDocumentType(documentType);
+            document.setDocumentName(generateDocumentName(documentType, applicantId));
+            document.setOriginalFilename(file.getOriginalFilename());
+            document.setCloudinaryUrl(cloudinaryUrl);
+            document.setCloudinaryPublicId(publicId);
+            document.setFileSize(file.getSize());
+            document.setUploadStatus(UploadedDocument.UploadStatus.UPLOADED);
+            document.setVerificationStatus(UploadedDocument.VerificationStatus.PENDING);
+            document.setUploadedAt(LocalDateTime.now());
+            
+            // Mark as resubmission and link to notification/assignment
+            document.setIsResubmission(true);
+            document.setOriginalNotificationId(notificationId);
+            document.setAssignmentId(assignmentId);
+            document.setApplicantComments(applicantComments);
+            
+            // Save document
+            UploadedDocument savedDocument = uploadedDocumentRepository.save(document);
+            
+            log.info("Document resubmission uploaded successfully - DocumentId: {}, CloudinaryUrl: {}", 
+                    savedDocument.getDocumentId(), cloudinaryUrl);
+            
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("documentId", savedDocument.getDocumentId());
+            response.put("documentName", savedDocument.getDocumentName());
+            response.put("cloudinaryUrl", cloudinaryUrl);
+            response.put("uploadedAt", savedDocument.getUploadedAt());
+            response.put("verificationStatus", savedDocument.getVerificationStatus());
+            response.put("isResubmission", true);
+            response.put("assignmentId", assignmentId);
+            
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error uploading document resubmission: {}", e.getMessage(), e);
+            throw new IOException("Failed to upload document resubmission: " + e.getMessage(), e);
+        }
+    }
 }
