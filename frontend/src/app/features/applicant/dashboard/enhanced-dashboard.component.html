@@ -85,345 +85,329 @@
       </div>
     </div>
 
-    <!-- Pre-Qualification Status -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card pre-qualification-card" [ngClass]="getPreQualificationClass()">
-          <div class="card-body">
-            <div class="row align-items-center">
-              <div class="col-md-8">
-                <div class="d-flex align-items-center mb-3">
-                  <div class="pre-qual-icon">
-                    <i class="fas" [ngClass]="getPreQualificationIcon()"></i>
-                  </div>
-                  <div class="ms-3">
-                    <h4 class="mb-1 text-white">Pre-Qualification Status</h4>
-                    <p class="mb-0 text-white-50" *ngIf="preQualification">{{ preQualification.message }}</p>
-                  </div>
-                </div>
-                
-                <div class="verified-fields" *ngIf="preQualification">
-                  <h6 class="text-white mb-2">Verified Fields:</h6>
-                  <div class="d-flex flex-wrap gap-2">
-                    <span class="field-badge" [class.verified]="preQualification.verifiedFields.email">
-                      <i class="fas fa-envelope me-1"></i> Email
-                    </span>
-                    <span class="field-badge" [class.verified]="preQualification.verifiedFields.phone">
-                      <i class="fas fa-phone me-1"></i> Phone
-                    </span>
-                    <span class="field-badge" [class.verified]="preQualification.verifiedFields.identity">
-                      <i class="fas fa-id-card me-1"></i> Identity
-                    </span>
-                    <span class="field-badge" [class.verified]="preQualification.verifiedFields.income">
-                      <i class="fas fa-money-bill me-1"></i> Income
-                    </span>
-                    <span class="field-badge" [class.verified]="preQualification.verifiedFields.employment">
-                      <i class="fas fa-briefcase me-1"></i> Employment
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col-md-4 text-center">
-                <div class="estimated-loan" *ngIf="preQualification">
-                  <small class="d-block text-white-50 mb-1">Estimated Max Loan</small>
-                  <h2 class="text-white mb-3">{{ formatCurrency(preQualification.estimatedMaxLoan) }}</h2>
-                  <button class="btn btn-light btn-sm" (click)="navigateToLoanTypes()" *ngIf="preQualification.isEligible">
-                    <i class="fas fa-arrow-right me-2"></i>Apply Now
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Required Documents -->
-            <div class="required-docs mt-3" *ngIf="preQualification && preQualification.requiredDocuments.length > 0">
-              <h6 class="text-white mb-2">Required Documents:</h6>
-              <div class="d-flex flex-wrap gap-2">
-                <span class="doc-badge" *ngFor="let doc of preQualification.requiredDocuments">
-                  <i class="fas fa-file-alt me-1"></i>{{ doc }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    
 
-    <!-- Quick Stats -->
-    <div class="row mb-4">
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="stat-card stat-card-primary">
-          <div class="stat-icon">
-            <i class="fas fa-file-alt"></i>
-          </div>
-          <div class="stat-content">
-            <h3>{{ applications.length }}</h3>
-            <p>Total Applications</p>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="stat-card stat-card-warning">
-          <div class="stat-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="stat-content">
-            <h3>{{ activeApplications.length }}</h3>
-            <p>Active Applications</p>
+    <!-- Enhanced Statistics Cards - Properly Aligned -->
+    <div class="row g-4 mb-4">
+      <div class="col-xl-3 col-md-6 col-sm-6">
+        <div class="card border-0 shadow-sm h-100 stat-card-enhanced">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="stat-content">
+                <div class="stat-icon-wrapper bg-primary bg-opacity-10 rounded-circle p-3 mb-3">
+                  <i class="fas fa-file-alt text-primary fs-3"></i>
+                </div>
+                <h6 class="text-muted mb-2 fw-normal">Total Applications</h6>
+                <h2 class="mb-1 fw-bold text-primary">{{ applications.length }}</h2>
+                <small class="text-muted">
+                  <i class="fas fa-chart-line me-1"></i>All time
+                </small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="stat-card stat-card-success">
-          <div class="stat-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="stat-content">
-            <h3>{{ applicationHistory.length }}</h3>
-            <p>Completed</p>
+
+      <div class="col-xl-3 col-md-6 col-sm-6">
+        <div class="card border-0 shadow-sm h-100 stat-card-enhanced">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="stat-content">
+                <div class="stat-icon-wrapper bg-warning bg-opacity-10 rounded-circle p-3 mb-3">
+                  <i class="fas fa-hourglass-half text-warning fs-3"></i>
+                </div>
+                <h6 class="text-muted mb-2 fw-normal">Active Applications</h6>
+                <h2 class="mb-1 fw-bold text-warning">{{ activeApplications.length }}</h2>
+                <small class="text-muted">
+                  <i class="fas fa-clock me-1"></i>In Progress
+                </small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
+
+      <div class="col-xl-3 col-md-6 col-sm-6">
+        <div class="card border-0 shadow-sm h-100 stat-card-enhanced">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="stat-content">
+                <div class="stat-icon-wrapper bg-success bg-opacity-10 rounded-circle p-3 mb-3">
+                  <i class="fas fa-check-circle text-success fs-3"></i>
+                </div>
+                <h6 class="text-muted mb-2 fw-normal">Completed</h6>
+                <h2 class="mb-1 fw-bold text-success">{{ applicationHistory.length }}</h2>
+                <small class="text-muted">
+                  <i class="fas fa-thumbs-up me-1"></i>Success
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-md-6 col-sm-6">
+        <div class="card border-0 shadow-sm h-100 stat-card-enhanced">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="stat-content">
+                <div class="stat-icon-wrapper bg-info bg-opacity-10 rounded-circle p-3 mb-3">
+                  <i class="fas fa-coins text-info fs-3"></i>
+                </div>
+                <h6 class="text-muted mb-2 fw-normal">Total Amount</h6>
+                <h2 class="mb-1 fw-bold text-info">{{ formatCurrency(getTotalAppliedAmount()) }}</h2>
+                <small class="text-muted">
+                  <i class="fas fa-money-bill-wave me-1"></i>Applied
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Main Content Row -->
     <div class="row">
       <!-- Active Applications & History -->
       <div class="col-lg-8 mb-4">
-        <!-- Draft Applications -->
-        <div class="card mb-4">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-edit me-2 text-warning"></i>Draft Applications
-              <span class="badge bg-warning text-dark ms-2">{{ draftApplications.length }}</span>
-            </h5>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-warning" (click)="toggleDraftsVisibility()">
-                <i class="fas" [class.fa-eye]="!showDrafts" [class.fa-eye-slash]="showDrafts"></i>
-                {{ showDrafts ? 'Hide' : 'Show' }}
-              </button>
-              <button class="btn btn-sm btn-outline-danger" (click)="clearAllDrafts()" *ngIf="draftApplications.length > 1">
-                <i class="fas fa-trash me-1"></i>Clear All
-              </button>
-            </div>
-          </div>
-          <div class="card-body" *ngIf="showDrafts">
-            <!-- No Drafts Message -->
-            <div *ngIf="draftApplications.length === 0" class="empty-state">
-              <i class="fas fa-edit"></i>
-              <p>No Draft Applications</p>
-              <small class="text-muted d-block mb-3">Start a new loan application and save it as draft to see it here.</small>
-              <button class="btn btn-warning btn-sm" (click)="navigateToLoanTypes()">
-                <i class="fas fa-plus me-1"></i>Start New Application
-              </button>
-            </div>
-            
-            <!-- Draft Cards -->
-            <div class="row g-3" *ngIf="draftApplications.length > 0">
-              <div class="col-md-6 col-xl-4" *ngFor="let draft of draftApplications">
-                <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f39c12 !important;">
-                  <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h6 class="card-title mb-0 text-dark fw-bold">{{ draft.title }}</h6>
-                      <button class="btn btn-sm btn-outline-danger" (click)="deleteDraft(draft.id)" title="Delete Draft">
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </div>
-                    <p class="card-text small text-muted mb-2">{{ draft.description }}</p>
-                    
-                    <!-- Progress Bar -->
-                    <div class="mb-3">
-                      <div class="d-flex justify-content-between small mb-1">
-                        <span class="text-muted">Progress</span>
-                        <span class="fw-bold text-warning">{{ draft.completionPercentage }}%</span>
-                      </div>
-                      <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-warning" 
-                             role="progressbar" 
-                             [style.width.%]="draft.completionPercentage"
-                             [attr.aria-valuenow]="draft.completionPercentage"
-                             aria-valuemin="0" 
-                             aria-valuemax="100"></div>
-                      </div>
-                    </div>
-                    
-                    <!-- Draft Info -->
-                    <div class="row g-2 mb-3">
-                      <div class="col-6">
-                        <small class="text-muted d-block">Current Step</small>
-                        <strong class="text-dark">{{ getStepName(draft.currentStep) }}</strong>
-                      </div>
-                      <div class="col-6">
-                        <small class="text-muted d-block">Last Saved</small>
-                        <strong class="text-dark">{{ getTimeSinceLastSaved(draft.lastSaved) }}</strong>
-                      </div>
-                    </div>
-                    
-                    <!-- Action Button -->
-                    <button class="btn btn-warning w-100" (click)="resumeDraft(draft.id)">
-                      <i class="fas fa-play me-2"></i>Resume Application
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Document Resubmission Requests -->
+        <!-- Applications Management with Tabs -->
         <div class="card mb-4">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-              <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Document Resubmission Required
-              <span class="badge bg-danger ms-2">{{ documentResubmissionRequests.length }}</span>
-            </h5>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-danger" (click)="toggleResubmissionRequestsVisibility()">
-                <i class="fas" [class.fa-eye]="!showResubmissionRequests" [class.fa-eye-slash]="showResubmissionRequests"></i>
-                {{ showResubmissionRequests ? 'Hide' : 'Show' }}
-              </button>
-            </div>
-          </div>
-          <div class="card-body" *ngIf="showResubmissionRequests">
-            <div class="alert alert-warning mb-3">
-              <i class="fas fa-info-circle me-2"></i>
-              <strong>Action Required:</strong> The following documents need to be resubmitted as requested by your loan officer.
-            </div>
-            
-            <!-- Empty state when no requests -->
-            <div *ngIf="documentResubmissionRequests.length === 0" class="text-center py-4">
-              <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-              <h6 class="text-muted">No Document Resubmission Requests</h6>
-              <p class="small text-muted mb-0">All your documents are currently approved. No action required.</p>
-            </div>
-            
-            <!-- Requests list -->
-            <div class="row g-3" *ngIf="documentResubmissionRequests.length > 0">
-              <div class="col-md-6 col-xl-4" *ngFor="let request of documentResubmissionRequests">
-                <div class="card border-0 shadow-sm h-100" 
-                     [class]="'border-start border-4 border-' + getResubmissionStatusColor(request.status)"
-                     style="background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);">
-                  <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <div class="d-flex align-items-center">
-                        <i class="fas {{ getDocumentIcon(request.requestedDocuments) }} fa-2x me-3 text-danger"></i>
-                        <div>
-                          <h6 class="card-title mb-0 text-dark fw-bold">{{ getDocumentDisplayName(request.requestedDocuments) }}</h6>
-                          <small class="text-muted">Loan ID: LNID{{ (100000 + request.loanId).toString().padStart(6, '0') }}</small>
-                        </div>
-                      </div>
-                      <span class="badge bg-{{ getResubmissionStatusColor(request.status) }}">{{ request.status }}</span>
-                    </div>
-                    
-                    <!-- Rejection Reason -->
-                    <div class="mb-3">
-                      <small class="text-muted d-block mb-1">Reason for Resubmission:</small>
-                      <p class="small text-dark mb-0">{{ request.message }}</p>
-                    </div>
-                    
-                    <!-- Request Details -->
-                    <div class="mb-3">
-                      <small class="text-muted d-block">Requested On</small>
-                      <strong class="small text-dark">{{ formatResubmissionDate(request.requestedAt) }}</strong>
-                    </div>
-                    
-                    <!-- Due Date Warning -->
-                    <div class="mb-3">
-                      <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Due Date:</small>
-                        <span class="small fw-bold" 
-                              [class]="isOverdue(request.dueDate) ? 'text-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'text-warning' : 'text-success')">
-                          <i class="fas fa-clock me-1"></i>
-                          <span *ngIf="!isOverdue(request.dueDate)">{{ getDaysRemaining(request.dueDate) }} days left</span>
-                          <span *ngIf="isOverdue(request.dueDate)">{{ getAbsoluteDays(getDaysRemaining(request.dueDate)) }} days overdue</span>
-                        </span>
-                      </div>
-                      <div class="progress mt-1" style="height: 4px;">
-                        <div class="progress-bar" 
-                             [class]="isOverdue(request.dueDate) ? 'bg-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'bg-warning' : 'bg-success')"
-                             [style.width.%]="getProgressBarWidth(request.dueDate)"></div>
-                      </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-danger btn-sm flex-fill" 
-                              data-bs-toggle="modal" 
-                              data-bs-target="#resubmissionModal"
-                              (click)="openResubmissionModal(request)">
-                        <i class="fas fa-upload me-1"></i>Resubmit Document
-                      </button>
-                      <button class="btn btn-outline-secondary btn-sm" (click)="dismissResubmissionRequest(request.notificationId)" 
-                              title="Dismiss this request">
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Active Applications -->
-        <div class="card mb-4">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fas fa-tasks me-2"></i>Active Applications
+              <i class="fas fa-folder-open me-2"></i>Applications Management
             </h5>
             <button class="btn btn-sm btn-primary" (click)="navigateToApplications()">
               View All <i class="fas fa-arrow-right ms-1"></i>
             </button>
           </div>
-          <div class="card-body">
-            <div *ngIf="loading.applications" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
-            </div>
+          
+          <!-- Application Tabs -->
+          <div class="card-body p-0">
+            <ul class="nav nav-tabs nav-tabs-enhanced" id="applicationTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-applications" 
+                        type="button" role="tab" aria-controls="active-applications" aria-selected="true">
+                  <i class="fas fa-tasks me-2"></i>Active Applications
+                  <span class="badge bg-primary ms-2">{{ activeApplications.length }}</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#draft-applications" 
+                        type="button" role="tab" aria-controls="draft-applications" aria-selected="false">
+                  <i class="fas fa-edit me-2"></i>Drafts
+                  <span class="badge bg-warning ms-2">{{ draftApplications.length }}</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="resubmission-tab" data-bs-toggle="tab" data-bs-target="#document-resubmission" 
+                        type="button" role="tab" aria-controls="document-resubmission" aria-selected="false">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Document Resubmission
+                  <span class="badge bg-danger ms-2">{{ documentResubmissionRequests.length }}</span>
+                </button>
+              </li>
+            </ul>
             
-            <div *ngIf="!loading.applications && activeApplications.length === 0" class="empty-state">
-              <i class="fas fa-inbox"></i>
-              <p>No active applications</p>
-              <button class="btn btn-primary btn-sm" (click)="navigateToLoanTypes()">
-                <i class="fas fa-plus me-2"></i>Start New Application
-              </button>
-            </div>
-            
-            <div class="application-list" *ngIf="!loading.applications && activeApplications.length > 0">
-              <div class="application-item" *ngFor="let app of activeApplications.slice(0, 3)">
-                <div class="row align-items-center">
-                  <div class="col-md-8">
-                    <div class="d-flex align-items-center mb-2">
-                      <span class="loan-type-badge">{{ app.loanType }}</span>
-                      <span class="badge ms-2" [ngClass]="'bg-' + getStatusColor(app.loanStatus)">
-                        {{ app.loanStatus }}
-                      </span>
+            <div class="tab-content" id="applicationTabContent">
+              <!-- Active Applications Tab -->
+              <div class="tab-pane fade show active" id="active-applications" role="tabpanel" aria-labelledby="active-tab">
+                <div class="p-4">
+                  <div *ngIf="loading.applications" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
                     </div>
-                    
-                    <!-- Loan ID Display -->
-                    <div class="mb-2">
-                      <app-loan-id-display 
-                        [internalLoanId]="app.loanId"
-                        displayType="inline"
-                        size="small"
-                        label="Loan ID"
-                        [showCopyButton]="true">
-                      </app-loan-id-display>
-                    </div>
-                    
-                    <h6 class="mb-1">{{ formatCurrency(app.loanAmount) }} for {{ app.loanTenure }} months</h6>
-                    <small class="text-muted">
-                      <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}
-                    </small>
                   </div>
-                  <div class="col-md-4 text-md-end mt-2 mt-md-0">
-                    <button class="btn btn-sm btn-outline-primary" (click)="viewApplication(app.loanId)">
-                      <i class="fas fa-eye me-1"></i>View Details
+                  
+                  <div *ngIf="!loading.applications && activeApplications.length === 0" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No active applications</p>
+                    <button class="btn btn-primary btn-sm" (click)="navigateToLoanTypes()">
+                      <i class="fas fa-plus me-2"></i>Start New Application
                     </button>
+                  </div>
+                  
+                  <div class="application-list" *ngIf="!loading.applications && activeApplications.length > 0">
+                    <div class="application-item" *ngFor="let app of activeApplications.slice(0, 3)">
+                      <div class="row align-items-center">
+                        <div class="col-md-8">
+                          <div class="d-flex align-items-center mb-2">
+                            <span class="loan-type-badge">{{ app.loanType }}</span>
+                            <span class="badge ms-2" [ngClass]="'bg-' + getStatusColor(app.loanStatus)">
+                              {{ app.loanStatus }}
+                            </span>
+                          </div>
+                          
+                          <!-- Loan ID Display -->
+                          <div class="mb-2">
+                            <app-loan-id-display 
+                              [internalLoanId]="app.loanId"
+                              displayType="inline"
+                              size="small"
+                              label="Loan ID"
+                              [showCopyButton]="true">
+                            </app-loan-id-display>
+                          </div>
+                          
+                          <h6 class="mb-1">{{ formatCurrency(app.loanAmount) }} for {{ app.loanTenure }} months</h6>
+                          <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>Applied: {{ formatDate(app.applicationDate) }}
+                          </small>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                          <button class="btn btn-sm btn-outline-primary" (click)="viewApplication(app.loanId)">
+                            <i class="fas fa-eye me-1"></i>View Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Draft Applications Tab -->
+              <div class="tab-pane fade" id="draft-applications" role="tabpanel" aria-labelledby="drafts-tab">
+                <div class="p-4">
+                  <!-- No Drafts Message -->
+                  <div *ngIf="draftApplications.length === 0" class="empty-state">
+                    <i class="fas fa-edit"></i>
+                    <p>No Draft Applications</p>
+                    <small class="text-muted d-block mb-3">Start a new loan application and save it as draft to see it here.</small>
+                    <button class="btn btn-warning btn-sm" (click)="navigateToLoanTypes()">
+                      <i class="fas fa-plus me-1"></i>Start New Application
+                    </button>
+                  </div>
+                  
+                  <!-- Draft Cards -->
+                  <div class="row g-3" *ngIf="draftApplications.length > 0">
+                    <div class="col-md-6 col-xl-4" *ngFor="let draft of draftApplications">
+                      <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left: 4px solid #f39c12 !important;">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0 text-dark fw-bold">{{ draft.title }}</h6>
+                            <button class="btn btn-sm btn-outline-danger" (click)="deleteDraft(draft.id)" title="Delete Draft">
+                              <i class="fas fa-times"></i>
+                            </button>
+                          </div>
+                          <p class="card-text small text-muted mb-2">{{ draft.description }}</p>
+                          
+                          <!-- Progress Bar -->
+                          <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                              <span class="text-muted">Progress</span>
+                              <span class="fw-bold text-warning">{{ draft.completionPercentage }}%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                              <div class="progress-bar bg-warning" 
+                                   role="progressbar" 
+                                   [style.width.%]="draft.completionPercentage"
+                                   [attr.aria-valuenow]="draft.completionPercentage"
+                                   aria-valuemin="0" 
+                                   aria-valuemax="100"></div>
+                            </div>
+                          </div>
+                          
+                          <!-- Draft Info -->
+                          <div class="row g-2 mb-3">
+                            <div class="col-6">
+                              <small class="text-muted d-block">Current Step</small>
+                              <strong class="text-dark">{{ getStepName(draft.currentStep) }}</strong>
+                            </div>
+                            <div class="col-6">
+                              <small class="text-muted d-block">Last Saved</small>
+                              <strong class="text-dark">{{ getTimeSinceLastSaved(draft.lastSaved) }}</strong>
+                            </div>
+                          </div>
+                          
+                          <!-- Action Button -->
+                          <button class="btn btn-warning w-100" (click)="resumeDraft(draft.id)">
+                            <i class="fas fa-play me-2"></i>Resume Application
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Document Resubmission Tab -->
+              <div class="tab-pane fade" id="document-resubmission" role="tabpanel" aria-labelledby="resubmission-tab">
+                <div class="p-4">
+                  <div class="alert alert-warning mb-3" *ngIf="documentResubmissionRequests.length > 0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Action Required:</strong> The following documents need to be resubmitted as requested by your loan officer.
+                  </div>
+                  
+                  <!-- Empty state when no requests -->
+                  <div *ngIf="documentResubmissionRequests.length === 0" class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-muted">No Document Resubmission Requests</h6>
+                    <p class="small text-muted mb-0">All your documents are currently approved. No action required.</p>
+                  </div>
+                  
+                  <!-- Requests list -->
+                  <div class="row g-3" *ngIf="documentResubmissionRequests.length > 0">
+                    <div class="col-md-6 col-xl-4" *ngFor="let request of documentResubmissionRequests">
+                      <div class="card border-0 shadow-sm h-100" 
+                           [class]="'border-start border-4 border-' + getResubmissionStatusColor(request.status)"
+                           style="background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                              <i class="fas {{ getDocumentIcon(request.requestedDocuments) }} fa-2x me-3 text-danger"></i>
+                              <div>
+                                <h6 class="card-title mb-0 text-dark fw-bold">{{ getDocumentDisplayName(request.requestedDocuments) }}</h6>
+                                <small class="text-muted">Loan ID: LNID{{ (100000 + request.loanId).toString().padStart(6, '0') }}</small>
+                              </div>
+                            </div>
+                            <span class="badge bg-{{ getResubmissionStatusColor(request.status) }}">{{ request.status }}</span>
+                          </div>
+                          
+                          <!-- Rejection Reason -->
+                          <div class="mb-3">
+                            <small class="text-muted d-block mb-1">Reason for Resubmission:</small>
+                            <p class="small text-dark mb-0">{{ request.message }}</p>
+                          </div>
+                          
+                          <!-- Request Details -->
+                          <div class="mb-3">
+                            <small class="text-muted d-block">Requested On</small>
+                            <strong class="small text-dark">{{ formatResubmissionDate(request.requestedAt) }}</strong>
+                          </div>
+                          
+                          <!-- Due Date Warning -->
+                          <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <small class="text-muted">Due Date:</small>
+                              <span class="small fw-bold" 
+                                    [class]="isOverdue(request.dueDate) ? 'text-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'text-warning' : 'text-success')">
+                                <i class="fas fa-clock me-1"></i>
+                                <span *ngIf="!isOverdue(request.dueDate)">{{ getDaysRemaining(request.dueDate) }} days left</span>
+                                <span *ngIf="isOverdue(request.dueDate)">{{ getAbsoluteDays(getDaysRemaining(request.dueDate)) }} days overdue</span>
+                              </span>
+                            </div>
+                            <div class="progress mt-1" style="height: 4px;">
+                              <div class="progress-bar" 
+                                   [class]="isOverdue(request.dueDate) ? 'bg-danger' : (getDaysRemaining(request.dueDate) <= 2 ? 'bg-warning' : 'bg-success')"
+                                   [style.width.%]="getProgressBarWidth(request.dueDate)"></div>
+                            </div>
+                          </div>
+                          
+                          <!-- Action Buttons -->
+                          <div class="d-flex gap-2">
+                            <button class="btn btn-danger btn-sm flex-fill" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#resubmissionModal"
+                                    (click)="openResubmissionModal(request)">
+                              <i class="fas fa-upload me-1"></i>Resubmit Document
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" (click)="dismissResubmissionRequest(request.notificationId)" 
+                                    title="Dismiss this request">
+                              <i class="fas fa-times"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -495,7 +479,7 @@
                   <h6 class="mb-0">{{ formatCurrency(getTotalAppliedAmount()) }}</h6>
                 </div>
                 <div class="summary-icon bg-primary">
-                  <i class="fas fa-rupee-sign text-white"></i>
+                  <i class="fas fa-coins text-white"></i>
                 </div>
               </div>
             </div>
@@ -507,7 +491,7 @@
                   <h6 class="mb-0 text-success">{{ formatCurrency(getApprovedAmount()) }}</h6>
                 </div>
                 <div class="summary-icon bg-success">
-                  <i class="fas fa-check text-white"></i>
+                  <i class="fas fa-check-circle text-white"></i>
                 </div>
               </div>
             </div>
@@ -519,7 +503,7 @@
                   <h6 class="mb-0">{{ getAverageInterestRate() }}% p.a.</h6>
                 </div>
                 <div class="summary-icon bg-info">
-                  <i class="fas fa-percentage text-white"></i>
+                  <i class="fas fa-chart-line text-white"></i>
                 </div>
               </div>
             </div>
@@ -531,7 +515,7 @@
                   <h6 class="mb-0 text-primary">{{ getSuccessRate() }}%</h6>
                 </div>
                 <div class="summary-icon bg-warning">
-                  <i class="fas fa-trophy text-white"></i>
+                  <i class="fas fa-award text-white"></i>
                 </div>
               </div>
             </div>
