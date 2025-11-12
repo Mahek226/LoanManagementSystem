@@ -176,7 +176,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + applicantName + ",\n\n" +
                 "Your loan application has been successfully submitted!\n\n" +
                 "Application Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Loan Type: " + loanType + "\n" +
                 "- Loan Amount: ₹" + loanAmount + "\n" +
                 "- Submission Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")) + "\n\n" +
@@ -238,7 +238,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + applicantName + ",\n\n" +
                 "Congratulations! Your loan application has been APPROVED!\n\n" +
                 "Approved Loan Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Loan Type: " + loanType + "\n" +
                 "- Approved Amount: ₹" + loanAmount + "\n" +
                 "- Interest Rate: " + interestRate + "% per annum\n" +
@@ -273,7 +273,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + applicantName + ",\n\n" +
                 "We regret to inform you that your loan application has been declined.\n\n" +
                 "Application Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Status: REJECTED\n" +
                 "- Decision Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")) + "\n\n" +
                 (rejectionReason != null && !rejectionReason.isEmpty() ? 
@@ -307,7 +307,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + applicantName + ",\n\n" +
                 "Great news! Your loan has been successfully disbursed.\n\n" +
                 "Disbursement Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Disbursed Amount: ₹" + disbursedAmount + "\n" +
                 "- Account Number: " + accountNumber + "\n" +
                 "- Disbursement Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy")) + "\n\n" +
@@ -407,7 +407,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + officerName + ",\n\n" +
                 "A new loan application has been assigned to you for review.\n\n" +
                 "Assignment Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Applicant Name: " + applicantName + "\n" +
                 "- Loan Type: " + loanType + "\n" +
                 "- Assignment Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")) + "\n\n" +
@@ -434,7 +434,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + officerName + ",\n\n" +
                 "A loan application has been escalated to compliance for review.\n\n" +
                 "Escalation Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Applicant Name: " + applicantName + "\n" +
                 "- Escalation Reason: " + escalationReason + "\n" +
                 "- Escalation Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")) + "\n\n" +
@@ -461,7 +461,7 @@ public class EmailServiceImpl implements EmailService {
                 "Dear " + officerName + ",\n\n" +
                 "A compliance verdict is now available for your review.\n\n" +
                 "Verdict Details:\n" +
-                "- Loan ID: " + loanId + "\n" +
+//                "- Loan ID: " + loanId + "\n" +
                 "- Compliance Verdict: " + verdict + "\n" +
                 "- Verdict Date: " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")) + "\n\n" +
                 (remarks != null && !remarks.isEmpty() ? 
