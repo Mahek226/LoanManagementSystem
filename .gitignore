@@ -11,6 +11,7 @@
 npm-debug.log
 yarn-error.log
 
+<<<<<<< HEAD
 # Spring Boot / Java Backend
 backend/target/
 backend/build/
@@ -37,6 +38,21 @@ frontend/.nyc_output/
 .env*
 backend/.env*
 frontend/.env*
+=======
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.metadata/
+backend/.metadata/
+frontend/.angular/
+frontend/dist/
+frontend/node_modules/
+>>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 
 # Database files
 *.db
@@ -63,6 +79,7 @@ logs/
 ehthumbs.db
 Thumbs.db
 
+<<<<<<< HEAD
 # IDE files
 .idea/
 .vscode/
@@ -85,10 +102,161 @@ build/
 out/
 bin/
 tmp/
+=======
+# Spring Boot / Java Backend
+backend/target/
+backend/build/
+backend/out/
+backend/*.jar
+backend/*.war
+backend/*.ear
+backend/*.class
+backend/.gradle/
+backend/gradle/
+backend/gradlew
+backend/gradlew.bat
+backend/bin/
+backend/logs/
+backend/temp/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Angular Frontend
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+frontend/.angular/
+frontend/node_modules/
+frontend/npm-debug.log
+frontend/yarn-error.log
+frontend/package-lock.json.bak
+frontend/.nyc_output/
+frontend/coverage/
+frontend/e2e/reports/
+frontend/.browserslistrc.bak
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+backend/.env.local
+backend/.env.development.local
+backend/.env.test.local
+backend/.env.production.local
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+h2/
+hsqldb/
+
+# Logs
+logs/
+*.log
+backend/logs/
+frontend/logs/
+
+# Cache
+.cache/
+*.cache
+.npm/
+.yarn/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# STS (Spring Tool Suite)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+# Python (if any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+>>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 
 # Temporary files
 *.tmp
 *.temp
+<<<<<<< HEAD
 *.bak
 *.swp
 *.swo
@@ -100,10 +268,18 @@ tmp/
 *.war
 *.ear
 *.class
+=======
+*.swp
+*.swo
+*~
+
+# Package files
+>>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3
 *.7z
 *.dmg
 *.gz
 *.iso
+<<<<<<< HEAD
 *.rar
 *.tar
 *.zip
@@ -116,3 +292,17 @@ env/
 
 # Documentation
 docs/_build/
+=======
+*.jar
+*.rar
+*.tar
+*.zip
+*.war
+*.ear
+*.sar
+*.class
+
+# Documentation
+docs/_build/
+backend/extraction/.env
+>>>>>>> 308d846a9ddfa1eeec94ba4e534b2aacee0ce4f3

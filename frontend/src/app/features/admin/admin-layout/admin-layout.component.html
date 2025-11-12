@@ -1,0 +1,214 @@
+<!-- Admin Header -->
+<header class="admin-header" style="background-color: var(--bg-primary); border-bottom: 1px solid var(--border-color);">
+  <div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center py-3">
+      
+      <!-- Logo and Brand -->
+      <div class="d-flex align-items-center">
+        <div class="logo-container me-3">
+          <img 
+            *ngIf="!showFallbackLogo" 
+            src="assets/images/logo.png" 
+            alt="LoanPro Logo" 
+            class="logo-img"
+            (error)="onImageError()">
+          <div *ngIf="showFallbackLogo" class="fallback-logo">
+            <i class="fas fa-university"></i>
+          </div>
+        </div>
+        <div>
+          <h4 class="mb-0 fw-bold" style="color: var(--text-primary);">LoanPro Admin</h4>
+          <small class="text-muted">Administrative Dashboard</small>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="d-flex align-items-center gap-3">
+        
+        <!-- Notifications -->
+        <!-- <div class="position-relative">
+          <button class="btn btn-outline-secondary btn-sm position-relative" type="button">
+            <i class="fas fa-bell"></i>
+            <span *ngIf="notificationCount > 0" 
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {{ notificationCount }}
+            </span>
+          </button>
+        </div> -->
+
+        <!-- Theme Selector -->
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                  type="button" 
+                  data-bs-toggle="dropdown" 
+                  aria-expanded="false">
+            <i class="fas" [ngClass]="getThemeIcon()"></i>
+            <span class="d-none d-md-inline ms-2">{{ getThemeLabel() }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2" 
+                      (click)="setTheme('light')"
+                      [class.active]="currentTheme === 'light'">
+                <i class="fas fa-sun"></i>
+                Light
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2" 
+                      (click)="setTheme('dark')"
+                      [class.active]="currentTheme === 'dark'">
+                <i class="fas fa-moon"></i>
+                Dark
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2" 
+                      (click)="setTheme('system')"
+                      [class.active]="currentTheme === 'system'">
+                <i class="fas fa-desktop"></i>
+                System
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- User Menu -->
+        <div class="dropdown">
+          <button class="btn btn-outline-primary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
+                  type="button" 
+                  data-bs-toggle="dropdown" 
+                  aria-expanded="false">
+            <div class="user-avatar">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <span class="d-none d-md-inline">Admin</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2">
+                <i class="fas fa-user-cog"></i>
+                Profile Settings
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2">
+                <i class="fas fa-cog"></i>
+                System Settings
+              </button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2 text-danger" 
+                      (click)="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Admin Navigation -->
+<nav class="admin-nav border-b" style="background-color: var(--bg-primary); border-color: var(--border-color);">
+  <div class="container-fluid px-4">
+    <ul class="nav nav-pills nav-fill">
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('dashboard')"
+                (click)="navigateTo('dashboard')">
+          <i class="fas fa-chart-line me-2"></i>
+          <span class="nav-text">Dashboard</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('applicants')"
+                (click)="navigateTo('applicants')">
+          <i class="fas fa-users me-2"></i>
+          <span class="nav-text">Applicants</span>
+          <span class="badge bg-warning text-dark ms-2" *ngIf="stats?.pendingApplications">
+            {{ stats?.pendingApplications }}
+          </span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('loans')"
+                (click)="navigateTo('loans')">
+          <i class="fas fa-money-check-alt me-2"></i>
+          <span class="nav-text">Loans</span>
+        </button>
+      </li>
+      <li class="nav-item dropdown">
+        <button class="nav-link dropdown-toggle" 
+                [class.active]="isActiveRoute('loan-officers') || isActiveRoute('compliance-officers')"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+          <i class="fas fa-users-cog me-2"></i>
+          <span class="nav-text">Officers</span>
+        </button>
+        <ul class="dropdown-menu">
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" 
+                    (click)="navigateTo('loan-officers')"
+                    [class.active]="isActiveRoute('loan-officers')">
+              <i class="fas fa-user-tie"></i>
+              Loan Officers
+            </button>
+          </li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2" 
+                    (click)="navigateTo('compliance-officers')"
+                    [class.active]="isActiveRoute('compliance-officers')">
+              <i class="fas fa-user-shield"></i>
+              Compliance Officers
+            </button>
+          </li>
+        </ul>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('reports')"
+                (click)="navigateTo('reports')">
+          <i class="fas fa-chart-bar me-2"></i>
+          <span class="nav-text">Reports</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('activity-logs')"
+                (click)="navigateTo('activity-logs')">
+          <i class="fas fa-history me-2"></i>
+          <span class="nav-text">Activity</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('fraud-rules')"
+                (click)="navigateTo('fraud-rules')">
+          <i class="fas fa-shield-alt me-2"></i>
+          <span class="nav-text">Fraud Rules</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" 
+                [class.active]="isActiveRoute('predictive-analytics')"
+                (click)="navigateTo('predictive-analytics')">
+          <i class="fas fa-brain me-2"></i>
+          <span class="nav-text">Analytics</span>
+          <span class="badge bg-success text-white ms-2">AI</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Main Content Area -->
+<main class="admin-main">
+  <router-outlet></router-outlet>
+</main>
