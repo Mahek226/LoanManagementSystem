@@ -3,11 +3,13 @@ package com.tss.springsecurity.controller;
 import com.tss.springsecurity.entity.ApplicantNotification;
 import com.tss.springsecurity.entity.ApplicantNotification.*;
 import com.tss.springsecurity.service.ApplicantNotificationService;
+import com.tss.springsecurity.service.DocumentUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class ApplicantNotificationController {
     
     private final ApplicantNotificationService notificationService;
+    private final DocumentUploadService documentUploadService;
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     
     /**
@@ -165,6 +168,48 @@ public class ApplicantNotificationController {
         }
     }
     
+    /**
+     * Submit document resubmission
+     */
+    @PostMapping("/documents/resubmit")
+    public ResponseEntity<?> submitDocumentResubmission(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("loanId") Long loanId,
+            @RequestParam("documentType") String documentType,
+            @RequestParam("notificationId") Long notificationId,
+            @RequestParam("assignmentId") Long assignmentId,
+            @RequestParam(value = "applicantComments", required = false) String applicantComments,
+            @RequestParam("isResubmission") boolean isResubmission,
+            @RequestParam("applicantId") Long applicantId) {
+        
+        try {
+            log.info("Document resubmission request - ApplicantId: {}, LoanId: {}, DocumentType: {}, NotificationId: {}, AssignmentId: {}", 
+                    applicantId, loanId, documentType, notificationId, assignmentId);
+            
+            // Call document upload service to handle the file upload
+            // This will create a new document entry linked to the loan and applicant
+            Map<String, Object> uploadResult = documentUploadService.uploadDocumentResubmission(
+                    applicantId, loanId, file, documentType, notificationId, assignmentId, applicantComments);
+            
+            // Create notification for loan officer about the resubmission
+            notificationService.createDocumentResubmissionNotification(
+                    loanId, assignmentId, documentType, applicantId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Document resubmitted successfully. Your loan officer will review it shortly.");
+            response.put("documentId", uploadResult.get("documentId"));
+            response.put("uploadedAt", uploadResult.get("uploadedAt"));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error submitting document resubmission: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to submit document resubmission: " + e.getMessage()));
+        }
+    }
+
     /**
      * Helper method to convert entity to map
      */

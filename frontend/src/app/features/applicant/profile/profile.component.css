@@ -1,5 +1,6 @@
-/* Profile Styles - Using CSS Variables for Theme Support */
+/* Modern Interactive Profile Styles */
 
+/* Avatar with hover effects */
 .profile-avatar {
   width: 120px;
   height: 120px;
@@ -12,17 +13,53 @@
   font-size: 3rem;
   color: white;
   box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
+.profile-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4);
+}
+
+.profile-avatar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.profile-avatar:hover::before {
+  left: 100%;
+}
+
+/* Interactive stat items */
 .stat-item {
   display: flex;
   gap: 1rem;
   align-items: center;
-  padding: 1rem;
+  padding: 1.25rem;
   background: var(--bg-tertiary);
-  border-radius: 0.5rem;
+  border-radius: 12px;
   margin-bottom: 1rem;
   border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(59, 130, 246, 0.05) 100%);
 }
 
 .stat-item:last-child {
@@ -31,47 +68,175 @@
 
 .stat-item i {
   font-size: 1.5rem;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.stat-item:hover i {
+  transform: scale(1.1);
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .stat-item small {
   display: block;
   font-size: 0.75rem;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .stat-item strong {
   display: block;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: var(--text-primary);
-}
-
-.detail-value {
   font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1rem;
-  padding: 0.75rem;
-  background: var(--bg-tertiary);
-  border-radius: 0.375rem;
-  border: 1px solid var(--border-color);
+  transition: color 0.3s ease;
 }
 
-.security-item {
+.stat-item:hover strong {
+  color: #3b82f6;
+}
+
+/* Enhanced detail values */
+.detail-value {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 1rem;
   padding: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
   background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.detail-value:hover {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(59, 130, 246, 0.05) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Interactive security items */
+.security-item {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.security-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
 }
 
 .security-item h6 {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
+/* Card enhancements */
+.card {
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Button enhancements */
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Badge improvements */
+.badge {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+}
+
+/* Form input enhancements */
+.form-control {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
   .profile-avatar {
     width: 100px;
     height: 100px;
     font-size: 2.5rem;
+  }
+  
+  .stat-item {
+    padding: 1rem;
+  }
+  
+  .security-item {
+    padding: 1rem;
+  }
+  
+  .detail-value {
+    padding: 0.75rem;
   }
 }

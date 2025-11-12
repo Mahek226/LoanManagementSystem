@@ -35,16 +35,44 @@
     </div>
   </div>
 
-  <!-- Filters Section -->
+  <!-- Tab Navigation -->
   <div class="row mb-4">
     <div class="col-12">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="row g-3">
-            <!-- Search -->
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Search</label>
-              <div class="input-group">
+      <ul class="nav nav-tabs nav-fill">
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'requests'"
+                  (click)="switchTab('requests')">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Resubmission Requests
+            <span class="badge bg-primary ms-2" *ngIf="documentRequests.length > 0">{{ documentRequests.length }}</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'resubmitted'"
+                  (click)="switchTab('resubmitted')">
+            <i class="fas fa-file-upload me-2"></i>
+            Resubmitted Documents
+            <span class="badge bg-success ms-2" *ngIf="resubmittedDocuments.length > 0">{{ resubmittedDocuments.length }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Resubmission Requests Tab Content -->
+  <div *ngIf="activeTab === 'requests'">
+    <!-- Filters Section -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Search -->
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Search</label>
+                <div class="input-group">
                 <span class="input-group-text bg-light border-end-0">
                   <i class="fas fa-search text-muted"></i>
                 </span>
@@ -287,6 +315,89 @@
       </nav>
     </div>
   </div>
+  </div> <!-- End of Resubmission Requests Tab -->
+
+  <!-- Resubmitted Documents Tab Content -->
+  <div *ngIf="activeTab === 'resubmitted'">
+    <!-- Loading State -->
+    <div class="row" *ngIf="loading">
+      <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading resubmitted documents...</p>
+      </div>
+    </div>
+
+    <!-- Resubmitted Documents List -->
+    <div class="row" *ngIf="!loading">
+      <div class="col-12">
+        <!-- Results Summary -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted">
+            Showing {{ paginatedResubmittedDocuments.length }} of {{ filteredResubmittedDocuments.length }} resubmitted documents
+          </span>
+        </div>
+
+        <!-- Documents Cards -->
+        <div class="row g-3" *ngIf="filteredResubmittedDocuments.length > 0">
+          <div class="col-md-6 col-lg-4" *ngFor="let doc of paginatedResubmittedDocuments">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <div>
+                    <h6 class="card-title mb-1 text-primary fw-bold">{{ doc.documentType }}</h6>
+                    <small class="text-muted">{{ doc.applicantName }}</small>
+                  </div>
+                  <span class="badge" [class]="getStatusClass(doc.status)">{{ doc.status }}</span>
+                </div>
+                
+                <div class="mb-3">
+                  <small class="text-muted d-block">Loan ID:</small>
+                  <strong class="small">LNID{{ (100000 + doc.loanId).toString().padStart(6, '0') }}</strong>
+                </div>
+                
+                <div class="mb-3">
+                  <small class="text-muted d-block">Resubmitted:</small>
+                  <strong class="small">{{ formatDate(doc.resubmittedAt) }}</strong>
+                </div>
+                
+                <div class="mb-3" *ngIf="doc.applicantComments">
+                  <small class="text-muted d-block">Applicant Comments:</small>
+                  <p class="small mb-0">{{ doc.applicantComments }}</p>
+                </div>
+                
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-primary btn-sm flex-fill" 
+                          (click)="viewDocument(doc)">
+                    <i class="fas fa-eye me-1"></i>View
+                  </button>
+                  <button class="btn btn-success btn-sm flex-fill" 
+                          (click)="processDocument(doc, 'APPROVE')"
+                          *ngIf="doc.status === 'PENDING'">
+                    <i class="fas fa-check me-1"></i>Approve
+                  </button>
+                  <button class="btn btn-danger btn-sm flex-fill" 
+                          (click)="processDocument(doc, 'REJECT')"
+                          *ngIf="doc.status === 'PENDING'">
+                    <i class="fas fa-times me-1"></i>Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Documents Message -->
+        <div class="text-center py-5" *ngIf="filteredResubmittedDocuments.length === 0">
+          <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">No Resubmitted Documents Found</h5>
+          <p class="text-muted">There are no resubmitted documents to review at this time.</p>
+        </div>
+      </div>
+    </div>
+  </div> <!-- End of Resubmitted Documents Tab -->
+
 </div>
 
 <!-- Process Request Modal -->

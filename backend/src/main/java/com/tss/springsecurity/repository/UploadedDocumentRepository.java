@@ -65,4 +65,19 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
     default List<UploadedDocument> findByLoanId(Long loanId) {
         return findByLoan_LoanId(loanId);
     }
+    
+    /**
+     * Find documents by assignment ID and resubmission status
+     */
+    List<UploadedDocument> findByAssignmentIdAndIsResubmission(Long assignmentId, Boolean isResubmission);
+    
+    /**
+     * Find all resubmitted documents
+     */
+    List<UploadedDocument> findByIsResubmissionTrue();
+    
+    /**
+     * Find resubmitted documents by applicant
+     */
+    List<UploadedDocument> findByApplicant_ApplicantIdAndIsResubmissionTrue(Long applicantId);
 }

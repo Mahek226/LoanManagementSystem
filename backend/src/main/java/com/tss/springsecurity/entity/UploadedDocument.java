@@ -86,6 +86,19 @@ public class UploadedDocument {
     @Column(name = "resubmission_instructions", columnDefinition = "TEXT")
     private String resubmissionInstructions;
     
+    // New resubmission tracking fields
+    @Column(name = "is_resubmission")
+    private Boolean isResubmission = false;
+    
+    @Column(name = "original_notification_id")
+    private Long originalNotificationId;
+    
+    @Column(name = "assignment_id")
+    private Long assignmentId;
+    
+    @Column(name = "applicant_comments", columnDefinition = "TEXT")
+    private String applicantComments;
+    
     // Relationship to extracted fields
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ExtractedField> extractedFields;

@@ -398,11 +398,21 @@ export class ApplicantService {
 
   // Mark notification as resolved (dismiss)
   markNotificationAsResolved(notificationId: number): Observable<any> {
-    const url = `${this.API_URL}/applicant/notification/${notificationId}/resolve`;
-    console.log('Making API call to mark notification as resolved:', url);
+    const url = `${this.API_URL}/applicant/notifications/${notificationId}/resolve`;
+    console.log('Marking notification as resolved:', url);
     return this.http.put(url, {});
   }
 
+  // Submit document resubmission
+  submitDocumentResubmission(formData: FormData): Observable<any> {
+    const url = `${this.API_URL}/applicant/documents/resubmit`;
+    console.log('Submitting document resubmission to:', url);
+    console.log('FormData contents:');
+    formData.forEach((value, key) => {
+      console.log(`${key}:`, value);
+    });
+    return this.http.post(url, formData);
+  }
 
   // Get application progress
   getApplicationProgress(loanId: number): Observable<ApplicationProgress> {

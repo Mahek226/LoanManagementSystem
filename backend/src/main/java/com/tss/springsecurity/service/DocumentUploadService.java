@@ -35,6 +35,23 @@ public interface DocumentUploadService {
                                   MultipartFile file, String documentType) throws IOException;
     
     /**
+     * Upload document resubmission
+     * @param applicantId Applicant ID
+     * @param loanId Loan ID
+     * @param file File to upload
+     * @param documentType Document type
+     * @param notificationId Notification ID that triggered this resubmission
+     * @param assignmentId Assignment ID for routing to correct officer
+     * @param applicantComments Optional comments from applicant
+     * @return Map with upload result details
+     * @throws IOException if upload fails
+     */
+    Map<String, Object> uploadDocumentResubmission(Long applicantId, Long loanId, 
+                                                 MultipartFile file, String documentType, 
+                                                 Long notificationId, Long assignmentId, 
+                                                 String applicantComments) throws IOException;
+    
+    /**
      * Get all documents for an applicant
      * @param applicantId Applicant ID
      * @return List of uploaded documents

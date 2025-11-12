@@ -5,6 +5,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { ApplicantService, PreQualificationStatus, LoanApplication, ApplicantProfile, Notification, DocumentResubmissionNotification } from '@core/services/applicant.service';
 import { DraftService, DraftApplication } from '@core/services/draft.service';
+import { ToastService } from '@core/services/toast.service';
 
 import { Subscription } from 'rxjs';
 import { DashboardWidgetComponent } from '../../../shared/components/dashboard-widget/dashboard-widget.component';
@@ -85,7 +86,8 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     private draftService: DraftService,
     private router: Router,
     private notificationService: EnhancedNotificationService,
-    private loadingService: LoadingService
+    private loadingService: LoadingService,
+    private toastService: ToastService
   ) {
     const user = this.authService.currentUserValue;
     this.userName = user?.firstName && user?.lastName 
@@ -413,42 +415,61 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     formData.append('assignmentId', this.selectedResubmissionRequest.assignmentId.toString());
     formData.append('applicantComments', this.applicantComments || '');
     formData.append('isResubmission', 'true');
+    formData.append('applicantId', this.applicantId.toString());
 
-    // TODO: Replace with actual document upload service
-    // For now, simulate upload
-    setTimeout(() => {
-      console.log('Document uploaded successfully (simulated)');
-      
-      // Mark notification as resolved
-      this.applicantService.markNotificationAsResolved(this.selectedResubmissionRequest!.notificationId).subscribe({
-        next: () => {
-          console.log('Notification marked as resolved');
-          // Remove from local array
-          this.documentResubmissionRequests = this.documentResubmissionRequests.filter(
-            req => req.notificationId !== this.selectedResubmissionRequest!.notificationId
-          );
-          
-          this.isUploading = false;
-          
-          // Close modal
-          const modal = document.getElementById('resubmissionModal');
-          if (modal) {
-            const bootstrapModal = (window as any).bootstrap?.Modal?.getInstance(modal);
-            if (bootstrapModal) {
-              bootstrapModal.hide();
+    // Use the real document resubmission API
+    this.applicantService.submitDocumentResubmission(formData).subscribe({
+      next: (response) => {
+        console.log('Document uploaded successfully:', response);
+        
+        // Mark notification as resolved
+        this.applicantService.markNotificationAsResolved(this.selectedResubmissionRequest!.notificationId).subscribe({
+          next: () => {
+            console.log('Notification marked as resolved');
+            // Remove from local array
+            this.documentResubmissionRequests = this.documentResubmissionRequests.filter(
+              req => req.notificationId !== this.selectedResubmissionRequest!.notificationId
+            );
+            
+            this.isUploading = false;
+            
+            // Close modal
+            const modal = document.getElementById('resubmissionModal');
+            if (modal) {
+              const bootstrapModal = (window as any).bootstrap?.Modal?.getInstance(modal);
+              if (bootstrapModal) {
+                bootstrapModal.hide();
+              }
             }
+            
+            // Show success message with toast
+            this.toastService.showSuccess(
+              '📄 Document Resubmitted Successfully!',
+              `Your ${this.getDocumentDisplayName(this.selectedResubmissionRequest!.requestedDocuments)} has been submitted and will be reviewed by your assigned loan officer shortly.`,
+              5000
+            );
+          },
+          error: (error) => {
+            console.error('Error marking notification as resolved:', error);
+            this.isUploading = false;
+            this.toastService.showError(
+              'Upload Status Error',
+              'Document uploaded but there was an error updating the status. Please contact support.',
+              6000
+            );
           }
-          
-          // Show success message
-          alert('Document submitted successfully! Your loan officer will review it shortly.');
-        },
-        error: (error) => {
-          console.error('Error marking notification as resolved:', error);
-          this.isUploading = false;
-          alert('Document uploaded but there was an error updating the status. Please contact support.');
-        }
-      });
-    }, 2000); // Simulate 2 second upload
+        });
+      },
+      error: (error) => {
+        console.error('Error uploading document:', error);
+        this.isUploading = false;
+        this.toastService.showError(
+          'Document Upload Failed',
+          error.error?.message || 'Failed to upload document. Please try again or contact support.',
+          6000
+        );
+      }
+    });
   }
 
   dismissResubmissionRequest(notificationId: number): void {

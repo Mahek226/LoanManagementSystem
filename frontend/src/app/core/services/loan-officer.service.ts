@@ -788,4 +788,18 @@ export class LoanOfficerService {
     console.log('Forwarding document to compliance:', request);
     return this.http.post<any>(url, request);
   }
+
+  // Get notifications for loan officer (including document resubmissions)
+  getOfficerNotifications(officerId: number): Observable<any[]> {
+    const url = `${this.apiUrl}/${officerId}/notifications`;
+    console.log('Fetching officer notifications:', url);
+    return this.http.get<any[]>(url);
+  }
+
+  // Mark officer notification as read
+  markOfficerNotificationAsRead(officerId: number, notificationId: number): Observable<any> {
+    const url = `${this.apiUrl}/${officerId}/notifications/${notificationId}/read`;
+    console.log('Marking officer notification as read:', url);
+    return this.http.put(url, {});
+  }
 }
