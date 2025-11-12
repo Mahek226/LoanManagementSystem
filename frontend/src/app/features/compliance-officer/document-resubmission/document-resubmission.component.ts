@@ -26,6 +26,16 @@ interface DocumentResubmissionRequestData {
   requestedByOfficerId: number;
 }
 
+interface DocumentData {
+  documentId: number;
+  documentType: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: string;
+  applicantId: number;
+  loanId: number;
+}
+
 @Component({
   selector: 'app-document-resubmission',
   standalone: true,
@@ -59,6 +69,12 @@ export class DocumentResubmissionComponent implements OnInit, OnDestroy {
   currentPage = 1;
   itemsPerPage = 10;
   totalPages = 1;
+  
+  // Document viewing
+  selectedDocument: DocumentData | null = null;
+  documentViewerVisible = false;
+  documentsForRequest: DocumentData[] = [];
+  loadingDocuments = false;
   
   private subscriptions: Subscription[] = [];
 
@@ -320,8 +336,41 @@ export class DocumentResubmissionComponent implements OnInit, OnDestroy {
   }
 
   viewRequestDetails(request: DocumentResubmissionRequestData): void {
-    // Navigate to comprehensive review with the assignment ID
-    this.router.navigate(['/compliance-officer/comprehensive-review', request.assignmentId]);
+    console.log('Viewing documents for request:', request);
+    this.loadingDocuments = true;
+    this.documentsForRequest = [];
+    
+    // Fetch documents for this loan
+    this.complianceService.getLoanDocuments(request.loanId).subscribe({
+      next: (documents: any[]) => {
+        console.log('Received documents for loan:', documents);
+        this.documentsForRequest = documents.map(doc => ({
+          documentId: doc.documentId,
+          documentType: doc.documentType,
+          fileName: doc.fileName || doc.originalFileName,
+          fileUrl: doc.fileUrl || doc.filePath,
+          uploadedAt: doc.uploadedAt,
+          applicantId: doc.applicantId,
+          loanId: doc.loanId
+        }));
+        
+        // If documents exist, show the first one
+        if (this.documentsForRequest.length > 0) {
+          this.selectedDocument = this.documentsForRequest[0];
+          this.documentViewerVisible = true;
+        } else {
+          this.error = 'No documents found for this request.';
+          setTimeout(() => this.error = null, 3000);
+        }
+        this.loadingDocuments = false;
+      },
+      error: (error) => {
+        console.error('Error loading documents:', error);
+        this.error = 'Failed to load documents. Please try again.';
+        setTimeout(() => this.error = null, 3000);
+        this.loadingDocuments = false;
+      }
+    });
   }
 
   continueWithApplication(request: any): void {
@@ -336,15 +385,70 @@ export class DocumentResubmissionComponent implements OnInit, OnDestroy {
 
   proceedToReview(request: any): void {
     console.log('Proceeding to review for forwarded document:', request);
-    // Navigate to the comprehensive review page for this loan
-    if (request.loanId) {
+    // Navigate to the comprehensive review page using assignment ID
+    if (request.assignmentId) {
+      this.router.navigate(['/compliance-officer/comprehensive-review', request.assignmentId]);
+    } else if (request.loanId) {
+      // Fallback to loan ID if assignment ID is not available
       this.router.navigate(['/compliance-officer/comprehensive-review', request.loanId]);
     } else {
-      console.error('No loan ID found in forwarded document:', request);
+      console.error('No assignment ID or loan ID found in forwarded document:', request);
+      this.error = 'Unable to navigate to application review. Missing required identifiers.';
+      setTimeout(() => this.error = null, 3000);
     }
   }
 
   refreshData(): void {
     this.loadDocumentResubmissionData();
+  }
+
+  // ==================== Document Viewer Methods ====================
+
+  closeDocumentViewer(): void {
+    this.documentViewerVisible = false;
+    this.selectedDocument = null;
+    this.documentsForRequest = [];
+  }
+
+  selectDocument(document: DocumentData): void {
+    this.selectedDocument = document;
+  }
+
+  getDocumentImageUrl(document: DocumentData): string {
+    if (!document) return '';
+    
+    // Handle different possible URL formats
+    if (document.fileUrl) {
+      // If it's already a full URL, return as is
+      if (document.fileUrl.startsWith('http')) {
+        return document.fileUrl;
+      }
+      // If it's a relative path, prepend the API base URL
+      return `http://localhost:8080${document.fileUrl}`;
+    }
+    
+    // Fallback: construct URL from document ID
+    return `http://localhost:8080/api/documents/${document.documentId}/view`;
+  }
+
+  onImageError(event: any): void {
+    console.error('Error loading document image:', event);
+    // You could set a placeholder image here
+    event.target.src = 'assets/images/document-error.png';
+  }
+
+  getDocumentTypeIcon(documentType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'INCOME_PROOF': 'fa-file-invoice-dollar',
+      'IDENTITY_PROOF': 'fa-id-card',
+      'ADDRESS_PROOF': 'fa-home',
+      'BANK_STATEMENT': 'fa-university',
+      'EMPLOYMENT_PROOF': 'fa-briefcase',
+      'AADHAAR': 'fa-id-card',
+      'PAN': 'fa-id-card',
+      'PASSPORT': 'fa-passport',
+      'OTHER': 'fa-file-alt'
+    };
+    return iconMap[documentType] || 'fa-file-alt';
   }
 }

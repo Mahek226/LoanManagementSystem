@@ -325,6 +325,41 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     this.isUploading = false;
   }
 
+  closeResubmissionModal(): void {
+    // Reset modal state
+    this.selectedResubmissionRequest = null;
+    this.selectedFile = null;
+    this.applicantComments = '';
+    this.isUploading = false;
+    
+    // Close modal using Bootstrap API
+    const modal = document.getElementById('resubmissionModal');
+    if (modal) {
+      const bootstrapModal = (window as any).bootstrap?.Modal?.getInstance(modal);
+      if (bootstrapModal) {
+        bootstrapModal.hide();
+      } else {
+        // Fallback: create new modal instance and hide it
+        try {
+          const newModal = new (window as any).bootstrap.Modal(modal);
+          newModal.hide();
+        } catch (error) {
+          console.error('Error closing modal:', error);
+          // Last resort: manually remove modal classes
+          modal.classList.remove('show');
+          modal.style.display = 'none';
+          document.body.classList.remove('modal-open');
+          
+          // Remove backdrop if it exists
+          const backdrop = document.querySelector('.modal-backdrop');
+          if (backdrop) {
+            backdrop.remove();
+          }
+        }
+      }
+    }
+  }
+
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
@@ -417,48 +452,71 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
     formData.append('isResubmission', 'true');
     formData.append('applicantId', this.applicantId.toString());
 
+    // Store reference for cleanup
+    const currentRequest = this.selectedResubmissionRequest;
+
     // Use the real document resubmission API
     this.applicantService.submitDocumentResubmission(formData).subscribe({
       next: (response) => {
         console.log('Document uploaded successfully:', response);
         
-        // Mark notification as resolved
-        this.applicantService.markNotificationAsResolved(this.selectedResubmissionRequest!.notificationId).subscribe({
+        // Mark notification as resolved (but don't wait for it to complete the UI flow)
+        this.applicantService.markNotificationAsResolved(currentRequest.notificationId).subscribe({
           next: () => {
             console.log('Notification marked as resolved');
-            // Remove from local array
-            this.documentResubmissionRequests = this.documentResubmissionRequests.filter(
-              req => req.notificationId !== this.selectedResubmissionRequest!.notificationId
-            );
-            
-            this.isUploading = false;
-            
-            // Close modal
-            const modal = document.getElementById('resubmissionModal');
-            if (modal) {
-              const bootstrapModal = (window as any).bootstrap?.Modal?.getInstance(modal);
-              if (bootstrapModal) {
-                bootstrapModal.hide();
-              }
-            }
-            
-            // Show success message with toast
-            this.toastService.showSuccess(
-              '📄 Document Resubmitted Successfully!',
-              `Your ${this.getDocumentDisplayName(this.selectedResubmissionRequest!.requestedDocuments)} has been submitted and will be reviewed by your assigned loan officer shortly.`,
-              5000
-            );
           },
           error: (error) => {
             console.error('Error marking notification as resolved:', error);
-            this.isUploading = false;
-            this.toastService.showError(
-              'Upload Status Error',
-              'Document uploaded but there was an error updating the status. Please contact support.',
-              6000
-            );
           }
         });
+
+        // Remove from local array immediately for better UX
+        this.documentResubmissionRequests = this.documentResubmissionRequests.filter(
+          req => req.notificationId !== currentRequest.notificationId
+        );
+        
+        // Force update the UI by triggering change detection
+        console.log(`Removed notification ${currentRequest.notificationId} from local array. Remaining requests:`, this.documentResubmissionRequests.length);
+        
+        // Reset upload state
+        this.isUploading = false;
+        
+        // Close modal immediately
+        this.closeResubmissionModal();
+        
+        // Show success message with toast
+        this.toastService.showSuccess(
+          '📄 Document Resubmitted Successfully!',
+          `Your ${this.getDocumentDisplayName(currentRequest.requestedDocuments)} has been submitted and will be reviewed by your assigned loan officer shortly.`,
+          5000
+        );
+
+        // Refresh the dashboard data to reflect changes
+        setTimeout(() => {
+          this.loadDashboardData(true); // Silent refresh
+          this.loadDocumentResubmissionRequests();
+          
+          // Also refresh notifications to ensure they're up to date
+          this.applicantService.getNotifications(this.applicantId).subscribe({
+            next: (notifications) => {
+              this.notifications = notifications.map(notif => ({
+                id: notif.notificationId,
+                type: notif.type,
+                title: notif.title,
+                message: notif.message,
+                priority: notif.priority,
+                isRead: notif.status === 'read' || notif.status === 'READ'.toUpperCase() || notif.readAt != null,
+                createdAt: notif.requestedAt,
+                actionUrl: notif.type === 'DOCUMENT_REQUEST' ? '/applicant/documents' : undefined
+              }));
+              this.unreadCount = this.notifications.filter(n => !n.isRead).length;
+              console.log('Refreshed notifications after document submission');
+            },
+            error: (error) => {
+              console.error('Error refreshing notifications:', error);
+            }
+          });
+        }, 500); // Reduced timeout for faster UI updates
       },
       error: (error) => {
         console.error('Error uploading document:', error);

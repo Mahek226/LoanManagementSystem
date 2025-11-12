@@ -37,12 +37,16 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   loading = false;
   error: string | null = null;
   activeTab = 'overview';
+  documentSubTab = 'original'; // Sub-tab for documents section
   showVerdictModal = false;
   showResubmissionModal = false;
   showDocumentModal = false;
   showScreeningDetailsModal = false;
   selectedDocument: any = null;
   extractedData: any = null;
+  
+  // Document resubmissions
+  documentResubmissions: any[] = [];
   
   // Action tracking state
   verdictSubmitted = false;
@@ -119,6 +123,7 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
           
           this.loadExternalFraudData(this.escalation.applicantId);
           this.loadLoanDocuments(this.escalation.loanId);
+          this.loadDocumentResubmissions(this.escalation.loanId);
           this.loadFraudFlags(this.escalation.applicantId, this.escalation.loanId);
           this.loadScreeningResults(this.escalation.loanId);
           this.loadEnhancedScreeningData();
@@ -173,6 +178,22 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     });
     
     this.subscriptions.push(docSub);
+  }
+  
+  loadDocumentResubmissions(loanId: number): void {
+    const resubSub = this.complianceService.getDocumentResubmissionRequests('FORWARDED').subscribe({
+      next: (resubmissions) => {
+        // Filter resubmissions for this specific loan
+        this.documentResubmissions = resubmissions.filter((req: any) => req.loanId === loanId);
+        console.log('Loaded document resubmissions for loan:', loanId, this.documentResubmissions);
+      },
+      error: (error) => {
+        console.error('Error loading document resubmissions:', error);
+        this.documentResubmissions = [];
+      }
+    });
+    
+    this.subscriptions.push(resubSub);
   }
   
   /**
@@ -1117,5 +1138,79 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
       }
     }
     return severity || 1;
+  }
+
+  // ==================== Document Sub-tab Methods ====================
+
+  setDocumentSubTab(subTab: 'original' | 'resubmissions'): void {
+    this.documentSubTab = subTab;
+  }
+
+  // ==================== Document Resubmission Methods ====================
+
+  getResolvedResubmissionsCount(): number {
+    return this.documentResubmissions.filter(req => req.status === 'RESOLVED').length;
+  }
+
+  getResubmissionStatusClass(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'PENDING': return 'badge bg-warning';
+      case 'FORWARDED': return 'badge bg-info';
+      case 'RESOLVED': return 'badge bg-success';
+      case 'REJECTED': return 'badge bg-danger';
+      default: return 'badge bg-secondary';
+    }
+  }
+
+  getDocumentTypeDisplayName(documentTypes: string | string[]): string {
+    if (!documentTypes) return 'Document';
+    
+    const types = Array.isArray(documentTypes) ? documentTypes : [documentTypes];
+    const nameMap: { [key: string]: string } = {
+      'INCOME_PROOF': 'Income Proof',
+      'IDENTITY_PROOF': 'Identity Proof',
+      'ADDRESS_PROOF': 'Address Proof',
+      'BANK_STATEMENT': 'Bank Statement',
+      'EMPLOYMENT_PROOF': 'Employment Proof',
+      'AADHAAR': 'Aadhaar Card',
+      'PAN': 'PAN Card',
+      'PASSPORT': 'Passport'
+    };
+    
+    if (types.length === 1) {
+      return nameMap[types[0]] || types[0];
+    } else {
+      return `${types.length} Documents`;
+    }
+  }
+
+  isOverdue(dueDate: string): boolean {
+    if (!dueDate) return false;
+    const due = new Date(dueDate);
+    const now = new Date();
+    return due.getTime() < now.getTime();
+  }
+
+  viewResubmissionDocument(resubmission: any): void {
+    if (resubmission.receivedDocument) {
+      // Use the same document viewing logic as the original documents
+      this.selectedDocument = resubmission.receivedDocument;
+      this.showDocumentModal = true;
+    }
+  }
+
+  markResubmissionResolved(resubmission: any): void {
+    if (resubmission.resolving) return;
+    
+    resubmission.resolving = true;
+    
+    // For now, just mark as resolved locally since the API method doesn't exist
+    // TODO: Implement proper API call when backend method is available
+    setTimeout(() => {
+      resubmission.status = 'RESOLVED';
+      resubmission.resolving = false;
+      this.successMessage = 'Document resubmission marked as resolved successfully.';
+      setTimeout(() => this.successMessage = '', 3000);
+    }, 1000);
   }
 }

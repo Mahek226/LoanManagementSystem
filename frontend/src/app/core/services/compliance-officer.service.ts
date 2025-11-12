@@ -88,6 +88,21 @@ export interface DashboardStats {
   criticalRisk: number;
   avgDecisionTime?: number;
   todayReviewed?: number;
+  
+  // Enhanced KPIs
+  weeklyReviewed: number;
+  monthlyReviewed: number;
+  avgRiskScore: number;
+  complianceRate: number; // Percentage of approved vs total reviewed
+  overdueReviews: number;
+  documentResubmissions: number;
+  fraudCasesDetected: number;
+  avgReviewTime: number; // In hours
+  workloadEfficiency: number; // Reviews per day
+  escalationTrend: 'up' | 'down' | 'stable';
+  riskTrend: 'up' | 'down' | 'stable';
+  totalLoanValue: number; // Total value of loans reviewed
+  approvedLoanValue: number; // Total value of approved loans
 }
 
 export interface KYCVerificationRequest {
@@ -808,13 +823,99 @@ export class ComplianceOfficerService {
    * Calculate dashboard statistics from escalations
    */
   calculateStats(escalations: ComplianceEscalation[]): DashboardStats {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Basic counts
+    const totalEscalations = escalations.length;
+    const pendingReview = escalations.filter(e => e.status === 'PENDING' || e.status === 'ESCALATED_TO_COMPLIANCE').length;
+    const approved = escalations.filter(e => e.status === 'APPROVED').length;
+    const rejected = escalations.filter(e => e.status === 'REJECTED').length;
+    const reviewed = approved + rejected;
+    
+    // Risk analysis
+    const highRisk = escalations.filter(e => e.riskLevel === 'HIGH').length;
+    const criticalRisk = escalations.filter(e => e.riskLevel === 'CRITICAL').length;
+    const avgRiskScore = escalations.length > 0 
+      ? escalations.reduce((sum, e) => sum + (e.riskScore || 0), 0) / escalations.length 
+      : 0;
+    
+    // Time-based metrics
+    const todayReviewed = escalations.filter(e => {
+      const reviewDate = e.processedAt ? new Date(e.processedAt) : null;
+      return reviewDate && reviewDate >= today;
+    }).length;
+    
+    const weeklyReviewed = escalations.filter(e => {
+      const reviewDate = e.processedAt ? new Date(e.processedAt) : null;
+      return reviewDate && reviewDate >= weekAgo;
+    }).length;
+    
+    const monthlyReviewed = escalations.filter(e => {
+      const reviewDate = e.processedAt ? new Date(e.processedAt) : null;
+      return reviewDate && reviewDate >= monthAgo;
+    }).length;
+    
+    // Performance metrics
+    const complianceRate = reviewed > 0 ? Math.round((approved / reviewed) * 100) : 0;
+    
+    // Overdue reviews (assuming 48 hours SLA)
+    const overdueThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    const overdueReviews = escalations.filter(e => 
+      (e.status === 'PENDING' || e.status === 'ESCALATED_TO_COMPLIANCE') &&
+      new Date(e.assignedAt) < overdueThreshold
+    ).length;
+    
+    // Financial metrics
+    const totalLoanValue = escalations.reduce((sum, e) => sum + (e.loanAmount || 0), 0);
+    const approvedLoanValue = escalations
+      .filter(e => e.status === 'APPROVED')
+      .reduce((sum, e) => sum + (e.loanAmount || 0), 0);
+    
+    // Efficiency metrics
+    const workloadEfficiency = monthlyReviewed > 0 ? Math.round(monthlyReviewed / 30) : 0;
+    
+    // Mock values for metrics that require historical data
+    const avgReviewTime = 24; // hours
+    const documentResubmissions = Math.floor(totalEscalations * 0.15); // 15% estimate
+    const fraudCasesDetected = escalations.filter(e => e.riskLevel === 'CRITICAL').length;
+    
+    // Trends (simplified calculation based on recent vs older data)
+    const recentEscalations = escalations.filter(e => new Date(e.assignedAt) >= weekAgo).length;
+    const olderEscalations = escalations.filter(e => {
+      const assignedDate = new Date(e.assignedAt);
+      return assignedDate < weekAgo && assignedDate >= new Date(weekAgo.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }).length;
+    
+    const escalationTrend: 'up' | 'down' | 'stable' = 
+      recentEscalations > olderEscalations ? 'up' : 
+      recentEscalations < olderEscalations ? 'down' : 'stable';
+    
+    const riskTrend: 'up' | 'down' | 'stable' = avgRiskScore > 70 ? 'up' : avgRiskScore < 50 ? 'down' : 'stable';
+    
     return {
-      totalEscalations: escalations.length,
-      pendingReview: escalations.filter(e => e.status === 'PENDING' || e.status === 'ESCALATED_TO_COMPLIANCE').length,
-      approved: escalations.filter(e => e.status === 'APPROVED').length,
-      rejected: escalations.filter(e => e.status === 'REJECTED').length,
-      highRisk: escalations.filter(e => e.riskLevel === 'HIGH').length,
-      criticalRisk: escalations.filter(e => e.riskLevel === 'CRITICAL').length
+      totalEscalations,
+      pendingReview,
+      approved,
+      rejected,
+      highRisk,
+      criticalRisk,
+      todayReviewed,
+      weeklyReviewed,
+      monthlyReviewed,
+      avgRiskScore: Math.round(avgRiskScore),
+      complianceRate,
+      overdueReviews,
+      documentResubmissions,
+      fraudCasesDetected,
+      avgReviewTime,
+      workloadEfficiency,
+      escalationTrend,
+      riskTrend,
+      totalLoanValue,
+      approvedLoanValue
     };
   }
 

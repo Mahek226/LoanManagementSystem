@@ -197,3 +197,68 @@
 .card-body p::-webkit-scrollbar-thumb:hover {
   background: #c82333;
 }
+
+/* Document Viewer Modal Styles */
+.modal.show {
+  display: block !important;
+}
+
+.modal-fullscreen .modal-content {
+  height: 100vh;
+  border-radius: 0;
+}
+
+.document-sidebar {
+  min-height: calc(100vh - 120px);
+}
+
+.document-sidebar .list-group-item {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  transition: all 0.3s ease;
+}
+
+.document-sidebar .list-group-item:hover {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.document-sidebar .list-group-item.active {
+  background-color: #dc3545 !important;
+  border-color: #dc3545;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+/* Document image container */
+.document-display-area {
+  background-color: #000;
+  min-height: calc(100vh - 120px);
+}
+
+.document-display-area img {
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+}
+
+.document-display-area img:hover {
+  transform: scale(1.02);
+}
+
+/* Loading spinner in modal */
+.modal .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.3em;
+}
+
+/* Modal header customization */
+.modal-header.bg-dark {
+  border-bottom: 1px solid #495057;
+}
+
+.modal-footer.bg-dark {
+  border-top: 1px solid #495057;
+}

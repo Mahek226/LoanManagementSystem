@@ -279,3 +279,98 @@
     </div>
   </div>
 </div>
+
+<!-- Document Viewer Modal -->
+<div class="modal fade" 
+     [class.show]="documentViewerVisible" 
+     [style.display]="documentViewerVisible ? 'block' : 'none'"
+     tabindex="-1" 
+     *ngIf="documentViewerVisible">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content bg-dark">
+      <!-- Modal Header -->
+      <div class="modal-header bg-dark text-white border-bottom border-secondary">
+        <h5 class="modal-title d-flex align-items-center">
+          <i class="fas {{ getDocumentTypeIcon(selectedDocument?.documentType || '') }} me-2"></i>
+          {{ selectedDocument?.documentType || 'Document' }} - {{ selectedDocument?.fileName }}
+        </h5>
+        <button type="button" 
+                class="btn-close btn-close-white" 
+                (click)="closeDocumentViewer()"></button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="modal-body p-0 bg-dark d-flex">
+        <!-- Document List Sidebar (if multiple documents) -->
+        <div class="document-sidebar bg-dark border-end border-secondary" 
+             *ngIf="documentsForRequest.length > 1"
+             style="width: 300px; max-height: 100vh; overflow-y: auto;">
+          <div class="p-3">
+            <h6 class="text-white mb-3">Documents ({{ documentsForRequest.length }})</h6>
+            <div class="list-group list-group-flush">
+              <button type="button" 
+                      class="list-group-item list-group-item-action bg-dark text-white border-secondary"
+                      [class.active]="doc.documentId === selectedDocument?.documentId"
+                      *ngFor="let doc of documentsForRequest"
+                      (click)="selectDocument(doc)">
+                <div class="d-flex align-items-center">
+                  <i class="fas {{ getDocumentTypeIcon(doc.documentType) }} me-2"></i>
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold">{{ doc.documentType }}</div>
+                    <small class="text-muted">{{ doc.fileName }}</small>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Document Display Area -->
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center bg-black">
+          <div class="text-center" *ngIf="loadingDocuments">
+            <div class="spinner-border text-light" role="status">
+              <span class="visually-hidden">Loading document...</span>
+            </div>
+            <p class="text-light mt-3">Loading document...</p>
+          </div>
+          
+          <div class="text-center w-100 h-100 d-flex align-items-center justify-content-center" 
+               *ngIf="!loadingDocuments && selectedDocument">
+            <img [src]="getDocumentImageUrl(selectedDocument)" 
+                 [alt]="selectedDocument.fileName"
+                 class="img-fluid"
+                 style="max-height: 90vh; max-width: 90vw; object-fit: contain;"
+                 (error)="onImageError($event)">
+          </div>
+          
+          <div class="text-center text-light" *ngIf="!loadingDocuments && !selectedDocument">
+            <i class="fas fa-file-alt fa-3x mb-3 text-muted"></i>
+            <h5>No Document Selected</h5>
+            <p class="text-muted">Select a document from the sidebar to view it.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-dark border-top border-secondary">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <div class="text-light" *ngIf="selectedDocument">
+            <small>
+              <i class="fas fa-calendar me-1"></i>
+              Uploaded: {{ selectedDocument.uploadedAt | date:'medium' }}
+            </small>
+          </div>
+          <button type="button" class="btn btn-secondary" (click)="closeDocumentViewer()">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade" 
+     [class.show]="documentViewerVisible" 
+     *ngIf="documentViewerVisible"
+     (click)="closeDocumentViewer()"></div>

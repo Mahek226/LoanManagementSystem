@@ -34,7 +34,7 @@
 
   <!-- Dashboard Content -->
   <div *ngIf="!loading && !errorMessage">
-    <!-- Statistics Cards -->
+    <!-- Primary KPI Cards -->
     <div class="row g-4 mb-4">
       <!-- Total Escalations -->
       <div class="col-xl-3 col-md-6">
@@ -44,6 +44,10 @@
               <div>
                 <p class="text-muted mb-1 small">Total Escalations</p>
                 <h3 class="mb-0 fw-bold">{{ stats.totalEscalations }}</h3>
+                <small class="text-muted">
+                  <i class="fas {{ getTrendIcon(stats.escalationTrend) }} me-1 {{ getTrendClass(stats.escalationTrend) }}"></i>
+                  Trend: {{ stats.escalationTrend }}
+                </small>
               </div>
               <div class="stat-icon bg-danger-subtle">
                 <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -61,6 +65,14 @@
               <div>
                 <p class="text-muted mb-1 small">Pending Review</p>
                 <h3 class="mb-0 fw-bold">{{ stats.pendingReview }}</h3>
+                <small class="text-danger" *ngIf="stats.overdueReviews > 0">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  {{ stats.overdueReviews }} overdue
+                </small>
+                <small class="text-success" *ngIf="stats.overdueReviews === 0">
+                  <i class="fas fa-check me-1"></i>
+                  All on time
+                </small>
               </div>
               <div class="stat-icon bg-warning-subtle">
                 <i class="fas fa-clock text-warning"></i>
@@ -70,14 +82,15 @@
         </div>
       </div>
 
-      <!-- Approved -->
+      <!-- Compliance Rate -->
       <div class="col-xl-3 col-md-6">
         <div class="card card-custom stat-card">
           <div class="card-body">
             <div class="d-flex align-items-center justify-content-between">
               <div>
-                <p class="text-muted mb-1 small">Approved</p>
-                <h3 class="mb-0 fw-bold">{{ stats.approved }}</h3>
+                <p class="text-muted mb-1 small">Compliance Rate</p>
+                <h3 class="mb-0 fw-bold {{ getComplianceRateClass(stats.complianceRate) }}">{{ stats.complianceRate }}%</h3>
+                <small class="text-muted">{{ stats.approved }}/{{ stats.approved + stats.rejected }} approved</small>
               </div>
               <div class="stat-icon bg-success-subtle">
                 <i class="fas fa-check-circle text-success"></i>
@@ -87,17 +100,156 @@
         </div>
       </div>
 
-      <!-- Critical Risk -->
+      <!-- Average Risk Score -->
       <div class="col-xl-3 col-md-6">
         <div class="card card-custom stat-card">
           <div class="card-body">
             <div class="d-flex align-items-center justify-content-between">
               <div>
-                <p class="text-muted mb-1 small">Critical Risk</p>
-                <h3 class="mb-0 fw-bold text-danger">{{ stats.criticalRisk }}</h3>
+                <p class="text-muted mb-1 small">Avg Risk Score</p>
+                <h3 class="mb-0 fw-bold {{ getRiskScoreClass(stats.avgRiskScore) }}">{{ stats.avgRiskScore }}</h3>
+                <small class="text-muted">
+                  <i class="fas {{ getTrendIcon(stats.riskTrend) }} me-1 {{ getTrendClass(stats.riskTrend) }}"></i>
+                  Risk trend: {{ stats.riskTrend }}
+                </small>
               </div>
-              <div class="stat-icon bg-danger-subtle">
-                <i class="fas fa-skull-crossbones text-danger"></i>
+              <div class="stat-icon bg-info-subtle">
+                <i class="fas fa-chart-line text-info"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance KPI Cards -->
+    <div class="row g-4 mb-4">
+      <!-- Today's Reviews -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-primary-subtle mb-2">
+              <i class="fas fa-calendar-day text-primary"></i>
+            </div>
+            <h4 class="mb-1 fw-bold">{{ stats.todayReviewed || 0 }}</h4>
+            <p class="text-muted mb-0 small">Today</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Reviews -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-info-subtle mb-2">
+              <i class="fas fa-calendar-week text-info"></i>
+            </div>
+            <h4 class="mb-1 fw-bold">{{ stats.weeklyReviewed }}</h4>
+            <p class="text-muted mb-0 small">This Week</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Reviews -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-success-subtle mb-2">
+              <i class="fas fa-calendar-alt text-success"></i>
+            </div>
+            <h4 class="mb-1 fw-bold">{{ stats.monthlyReviewed }}</h4>
+            <p class="text-muted mb-0 small">This Month</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workload Efficiency -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-warning-subtle mb-2">
+              <i class="fas fa-tachometer-alt text-warning"></i>
+            </div>
+            <h4 class="mb-1 fw-bold {{ getEfficiencyClass(stats.workloadEfficiency) }}">{{ stats.workloadEfficiency }}</h4>
+            <p class="text-muted mb-0 small">Reviews/Day</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fraud Cases -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-danger-subtle mb-2">
+              <i class="fas fa-shield-alt text-danger"></i>
+            </div>
+            <h4 class="mb-1 fw-bold text-danger">{{ stats.fraudCasesDetected }}</h4>
+            <p class="text-muted mb-0 small">Fraud Cases</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doc Resubmissions -->
+      <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card card-custom stat-card-sm">
+          <div class="card-body text-center">
+            <div class="stat-icon-sm bg-secondary-subtle mb-2">
+              <i class="fas fa-redo text-secondary"></i>
+            </div>
+            <h4 class="mb-1 fw-bold">{{ stats.documentResubmissions }}</h4>
+            <p class="text-muted mb-0 small">Resubmissions</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial KPI Cards -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="card card-custom">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0">
+                <i class="fas fa-coins me-2 text-warning"></i>
+                Total Loan Value Under Review
+              </h6>
+              <span class="badge bg-warning">Financial</span>
+            </div>
+            <h3 class="mb-2 fw-bold text-primary">{{ formatCurrency(stats.totalLoanValue) }}</h3>
+            <div class="row g-3">
+              <div class="col-6">
+                <small class="text-muted d-block">Approved Value</small>
+                <strong class="text-success">{{ formatCurrency(stats.approvedLoanValue) }}</strong>
+              </div>
+              <div class="col-6">
+                <small class="text-muted d-block">Approval Rate</small>
+                <strong class="{{ getComplianceRateClass(stats.complianceRate) }}">{{ stats.complianceRate }}%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card card-custom">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="mb-0">
+                <i class="fas fa-clock me-2 text-info"></i>
+                Review Performance
+              </h6>
+              <span class="badge bg-info">Performance</span>
+            </div>
+            <h3 class="mb-2 fw-bold text-info">{{ stats.avgReviewTime }}h</h3>
+            <div class="row g-3">
+              <div class="col-6">
+                <small class="text-muted d-block">Efficiency</small>
+                <strong class="{{ getEfficiencyClass(stats.workloadEfficiency) }}">{{ stats.workloadEfficiency }} reviews/day</strong>
+              </div>
+              <div class="col-6">
+                <small class="text-muted d-block">Overdue</small>
+                <strong class="text-danger" *ngIf="stats.overdueReviews > 0">{{ stats.overdueReviews }} cases</strong>
+                <strong class="text-success" *ngIf="stats.overdueReviews === 0">None</strong>
               </div>
             </div>
           </div>

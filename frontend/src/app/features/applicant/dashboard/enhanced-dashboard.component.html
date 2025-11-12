@@ -659,7 +659,7 @@
         <h5 class="modal-title" id="resubmissionModalLabel">
           <i class="fas fa-exclamation-triangle me-2"></i>Document Resubmission Required
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" (click)="closeResubmissionModal()"></button>
       </div>
       <div class="modal-body" *ngIf="selectedResubmissionRequest">
         <!-- Document Information -->
@@ -743,7 +743,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" (click)="closeResubmissionModal()">
           <i class="fas fa-times me-1"></i>Cancel
         </button>
         <button type="button" 

@@ -378,11 +378,16 @@ export class ApplicantService {
     return this.http.get<DocumentResubmissionNotification[]>(url).pipe(
       map((notifications: DocumentResubmissionNotification[]) => {
         console.log('All notifications received:', notifications);
-        const documentRequests = notifications.filter(notif => 
-          notif.type === 'DOCUMENT_REQUEST' && 
-          notif.resolvedAt == null && 
-          notif.status !== 'RESOLVED'
-        );
+        const documentRequests = notifications.filter(notif => {
+          const isDocumentRequest = notif.type === 'DOCUMENT_REQUEST';
+          const isNotResolved = notif.resolvedAt == null && 
+                               notif.status !== 'RESOLVED' && 
+                               notif.status?.toLowerCase() !== 'resolved';
+          
+          console.log(`Notification ${notif.notificationId}: type=${notif.type}, status=${notif.status}, resolvedAt=${notif.resolvedAt}, isDocumentRequest=${isDocumentRequest}, isNotResolved=${isNotResolved}`);
+          
+          return isDocumentRequest && isNotResolved;
+        });
         console.log('Filtered document resubmission requests:', documentRequests);
         return documentRequests;
       })
@@ -398,7 +403,7 @@ export class ApplicantService {
 
   // Mark notification as resolved (dismiss)
   markNotificationAsResolved(notificationId: number): Observable<any> {
-    const url = `${this.API_URL}/applicant/notifications/${notificationId}/resolve`;
+    const url = `${this.API_URL}/applicant/notification/${notificationId}/resolve`;
     console.log('Marking notification as resolved:', url);
     return this.http.put(url, {});
   }
