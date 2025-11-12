@@ -20,20 +20,7 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
     approved: 0,
     rejected: 0,
     highRisk: 0,
-    criticalRisk: 0,
-    weeklyReviewed: 0,
-    monthlyReviewed: 0,
-    avgRiskScore: 0,
-    complianceRate: 0,
-    overdueReviews: 0,
-    documentResubmissions: 0,
-    fraudCasesDetected: 0,
-    avgReviewTime: 0,
-    workloadEfficiency: 0,
-    escalationTrend: 'stable',
-    riskTrend: 'stable',
-    totalLoanValue: 0,
-    approvedLoanValue: 0
+    criticalRisk: 0
   };
 
   recentEscalations: ComplianceEscalation[] = [];
@@ -211,42 +198,5 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
 
   getPriorityColor(priority: string): string {
     return this.complianceService.getPriorityColor(priority);
-  }
-
-  // KPI Helper Methods
-  getTrendIcon(trend: 'up' | 'down' | 'stable'): string {
-    switch (trend) {
-      case 'up': return 'fa-arrow-up';
-      case 'down': return 'fa-arrow-down';
-      case 'stable': return 'fa-minus';
-      default: return 'fa-minus';
-    }
-  }
-
-  getTrendClass(trend: 'up' | 'down' | 'stable'): string {
-    switch (trend) {
-      case 'up': return 'text-success';
-      case 'down': return 'text-danger';
-      case 'stable': return 'text-muted';
-      default: return 'text-muted';
-    }
-  }
-
-  getEfficiencyClass(efficiency: number): string {
-    if (efficiency >= 5) return 'text-success';
-    if (efficiency >= 3) return 'text-warning';
-    return 'text-danger';
-  }
-
-  getComplianceRateClass(rate: number): string {
-    if (rate >= 80) return 'text-success';
-    if (rate >= 60) return 'text-warning';
-    return 'text-danger';
-  }
-
-  getRiskScoreClass(score: number): string {
-    if (score >= 70) return 'text-danger';
-    if (score >= 50) return 'text-warning';
-    return 'text-success';
   }
 }

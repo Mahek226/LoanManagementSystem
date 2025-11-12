@@ -240,66 +240,38 @@
         </div>
       </div>
 
-      <!-- Document Sub-tabs -->
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-bottom">
-          <ul class="nav nav-pills nav-fill" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" 
-                      [class.active]="documentSubTab === 'original'"
-                      (click)="setDocumentSubTab('original')"
-                      type="button">
-                <i class="fas fa-file-alt me-2"></i>Original Documents
-                <span class="badge bg-primary ms-2" *ngIf="loanDocuments.length > 0">{{ loanDocuments.length }}</span>
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" 
-                      [class.active]="documentSubTab === 'resubmissions'"
-                      (click)="setDocumentSubTab('resubmissions')"
-                      type="button">
-                <i class="fas fa-redo me-2"></i>Document Resubmissions
-                <span class="badge bg-warning ms-2" *ngIf="documentResubmissions.length > 0">{{ documentResubmissions.length }}</span>
-              </button>
-            </li>
-          </ul>
+      <!-- Verification Progress -->
+      <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="loanDocuments.length > 0">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
+              <i class="fas fa-tasks me-2 text-danger"></i>Verification Progress
+            </h6>
+            <span class="badge" 
+                  [class.bg-success]="getVerifiedCount() === loanDocuments.length"
+                  [class.bg-warning]="getVerifiedCount() !== loanDocuments.length">
+              {{ getVerifiedCount() }} / {{ loanDocuments.length }} Verified
+            </span>
+          </div>
+          <div class="progress" style="height: 10px;">
+            <div class="progress-bar" 
+                 [class.bg-success]="getVerifiedCount() === loanDocuments.length"
+                 [class.bg-warning]="getVerifiedCount() !== loanDocuments.length"
+                 role="progressbar" 
+                 [style.width.%]="(getVerifiedCount() / loanDocuments.length) * 100"
+                 [attr.aria-valuenow]="getVerifiedCount()"
+                 [attr.aria-valuemin]="0"
+                 [attr.aria-valuemax]="loanDocuments.length">
+            </div>
+          </div>
+          <small class="text-muted mt-2 d-block" *ngIf="getVerifiedCount() !== loanDocuments.length">
+            <i class="fas fa-info-circle me-1"></i>Complete document review for compliance assessment
+          </small>
+          <small class="text-success mt-2 d-block" *ngIf="getVerifiedCount() === loanDocuments.length">
+            <i class="fas fa-check-circle me-1"></i>All documents reviewed! Ready for compliance verdict.
+          </small>
         </div>
       </div>
-
-      <!-- Original Documents Sub-tab Content -->
-      <div *ngIf="documentSubTab === 'original'">
-        <!-- Verification Progress -->
-        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="loanDocuments.length > 0">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
-                <i class="fas fa-tasks me-2 text-danger"></i>Verification Progress
-              </h6>
-              <span class="badge" 
-                    [class.bg-success]="getVerifiedCount() === loanDocuments.length"
-                    [class.bg-warning]="getVerifiedCount() !== loanDocuments.length">
-                {{ getVerifiedCount() }} / {{ loanDocuments.length }} Verified
-              </span>
-            </div>
-            <div class="progress" style="height: 10px;">
-              <div class="progress-bar" 
-                   [class.bg-success]="getVerifiedCount() === loanDocuments.length"
-                   [class.bg-warning]="getVerifiedCount() !== loanDocuments.length"
-                   role="progressbar" 
-                   [style.width.%]="(getVerifiedCount() / loanDocuments.length) * 100"
-                   [attr.aria-valuenow]="getVerifiedCount()"
-                   [attr.aria-valuemin]="0"
-                   [attr.aria-valuemax]="loanDocuments.length">
-              </div>
-            </div>
-            <small class="text-muted mt-2 d-block" *ngIf="getVerifiedCount() !== loanDocuments.length">
-              <i class="fas fa-info-circle me-1"></i>Complete document review for compliance assessment
-            </small>
-            <small class="text-success mt-2 d-block" *ngIf="getVerifiedCount() === loanDocuments.length">
-              <i class="fas fa-check-circle me-1"></i>All documents reviewed! Ready for compliance verdict.
-            </small>
-          </div>
-        </div>
 
       <!-- Success Message -->
       <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show mb-3">
@@ -415,132 +387,6 @@
             <i class="fas fa-folder-open text-muted" style="font-size: 4rem;"></i>
             <h4 class="mt-3 text-muted">No Documents Found</h4>
             <p class="text-muted">No documents have been uploaded for this loan application</p>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      <!-- Document Resubmissions Sub-tab Content -->
-      <div *ngIf="documentSubTab === 'resubmissions'">
-        <!-- Resubmission Progress -->
-        <div class="card border-0 shadow-sm mb-4" style="background-color: var(--bg-primary);" *ngIf="documentResubmissions.length > 0">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h6 class="fw-bold mb-0" style="color: var(--text-primary);">
-                <i class="fas fa-redo me-2 text-warning"></i>Resubmission Status
-              </h6>
-              <span class="badge" 
-                    [class.bg-success]="getResolvedResubmissionsCount() === documentResubmissions.length"
-                    [class.bg-warning]="getResolvedResubmissionsCount() !== documentResubmissions.length">
-                {{ getResolvedResubmissionsCount() }} / {{ documentResubmissions.length }} Resolved
-              </span>
-            </div>
-            <div class="progress" style="height: 10px;">
-              <div class="progress-bar" 
-                   [class.bg-success]="getResolvedResubmissionsCount() === documentResubmissions.length"
-                   [class.bg-warning]="getResolvedResubmissionsCount() !== documentResubmissions.length"
-                   role="progressbar" 
-                   [style.width.%]="documentResubmissions.length > 0 ? (getResolvedResubmissionsCount() / documentResubmissions.length) * 100 : 0"
-                   [attr.aria-valuenow]="getResolvedResubmissionsCount()"
-                   [attr.aria-valuemin]="0"
-                   [attr.aria-valuemax]="documentResubmissions.length">
-              </div>
-            </div>
-            <small class="text-muted mt-2 d-block" *ngIf="getResolvedResubmissionsCount() !== documentResubmissions.length">
-              <i class="fas fa-info-circle me-1"></i>Review resubmitted documents and mark as resolved
-            </small>
-            <small class="text-success mt-2 d-block" *ngIf="getResolvedResubmissionsCount() === documentResubmissions.length">
-              <i class="fas fa-check-circle me-1"></i>All resubmissions resolved!
-            </small>
-          </div>
-        </div>
-
-        <!-- Resubmissions Grid -->
-        <div class="row g-4">
-          <div class="col-lg-6 col-md-12" *ngFor="let resubmission of documentResubmissions; let i = index">
-            <div class="card border-0 shadow-sm h-100 animate-slide-up" 
-                 [style.animation-delay.s]="i * 0.1"
-                 style="background-color: var(--bg-primary);">
-              <div class="card-header bg-warning bg-opacity-10 border-bottom">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h6 class="fw-bold mb-1" style="color: var(--text-primary);">
-                      <i class="fas fa-redo me-2 text-warning"></i>
-                      {{ getDocumentTypeDisplayName(resubmission.requestedDocuments) }}
-                    </h6>
-                    <small class="text-muted">Resubmission Request</small>
-                  </div>
-                  <span class="badge" [class]="getResubmissionStatusClass(resubmission.status)">
-                    {{ resubmission.status }}
-                  </span>
-                </div>
-              </div>
-              <div class="card-body">
-                <!-- Request Details -->
-                <div class="mb-3">
-                  <h6 class="text-muted mb-2">Request Details</h6>
-                  <div class="row g-2">
-                    <div class="col-6">
-                      <small class="text-muted d-block">Requested At:</small>
-                      <strong class="small">{{ formatDate(resubmission.requestedAt) }}</strong>
-                    </div>
-                    <div class="col-6">
-                      <small class="text-muted d-block">Due Date:</small>
-                      <strong class="small" [class.text-danger]="isOverdue(resubmission.dueDate)">
-                        {{ formatDate(resubmission.dueDate) }}
-                        <i class="fas fa-exclamation-triangle text-danger ms-1" *ngIf="isOverdue(resubmission.dueDate)"></i>
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Reason -->
-                <div class="mb-3">
-                  <small class="text-muted d-block">Reason for Resubmission:</small>
-                  <p class="small mb-0 text-wrap">{{ resubmission.message }}</p>
-                </div>
-
-                <!-- Received Document (if available) -->
-                <div class="mb-3" *ngIf="resubmission.receivedDocument">
-                  <small class="text-muted d-block">Received Document:</small>
-                  <div class="d-flex align-items-center gap-2 mt-1">
-                    <i class="fas fa-file-alt text-success"></i>
-                    <span class="small fw-semibold">{{ resubmission.receivedDocument.fileName }}</span>
-                    <small class="text-muted">{{ formatDate(resubmission.receivedDocument.uploadedAt) }}</small>
-                  </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="d-flex gap-2">
-                  <button class="btn btn-outline-primary btn-sm flex-fill" 
-                          (click)="viewResubmissionDocument(resubmission)"
-                          *ngIf="resubmission.receivedDocument">
-                    <i class="fas fa-eye me-1"></i>View Document
-                  </button>
-                  <button class="btn btn-success btn-sm flex-fill" 
-                          (click)="markResubmissionResolved(resubmission)"
-                          *ngIf="resubmission.status !== 'RESOLVED' && resubmission.receivedDocument"
-                          [disabled]="resubmission.resolving">
-                    <i class="fas fa-check me-1" *ngIf="!resubmission.resolving"></i>
-                    <i class="fas fa-spinner fa-spin me-1" *ngIf="resubmission.resolving"></i>
-                    {{ resubmission.resolving ? 'Resolving...' : 'Mark Resolved' }}
-                  </button>
-                  <span class="btn btn-outline-secondary btn-sm flex-fill text-center" 
-                        *ngIf="!resubmission.receivedDocument">
-                    <i class="fas fa-clock me-1"></i>Awaiting Document
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Empty State for Resubmissions -->
-          <div class="col-12" *ngIf="documentResubmissions.length === 0 && !loading">
-            <div class="text-center py-5">
-              <i class="fas fa-redo text-muted" style="font-size: 4rem;"></i>
-              <h4 class="mt-3 text-muted">No Document Resubmissions</h4>
-              <p class="text-muted">No document resubmission requests found for this loan application</p>
-            </div>
           </div>
         </div>
       </div>
