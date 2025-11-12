@@ -17,19 +17,7 @@
     </div>
   </div>
 
-  <!-- Messages - Sticky Error Banner -->
-  <div class="container-fluid px-4" *ngIf="error">
-    <div class="alert alert-danger alert-dismissible fade show sticky-error" style="position: sticky; top: 80px; z-index: 1000;">
-      <div class="d-flex align-items-center">
-        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-        <div class="flex-grow-1">
-          <strong>Please Complete Required Fields</strong>
-          <div class="mb-0 mt-1" [innerHTML]="getFormattedError()"></div>
-        </div>
-        <button type="button" class="btn-close" (click)="clearError()"></button>
-      </div>
-    </div>
-  </div>
+  <!-- Messages - Sticky Error Banner (Removed - Now using toast notifications) -->
 
   <!-- Success Message -->
   <div class="container-fluid px-4" *ngIf="success">
@@ -82,17 +70,7 @@
     </div>
   </div>
 
-  <!-- Old Messages Section (Removed) -->
-  <div class="container-fluid px-4" style="display: none;">
-    <div class="alert alert-danger alert-dismissible fade show" *ngIf="false">
-      <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
-      <button type="button" class="btn-close" (click)="clearError()"></button>
-    </div>
-    <div class="alert alert-success alert-dismissible fade show" *ngIf="success">
-      <i class="fas fa-check-circle me-2"></i>{{ success }}
-      <button type="button" class="btn-close" (click)="clearSuccess()"></button>
-    </div>
-  </div>
+  <!-- Old Messages Section (Removed - Now using toast notifications) -->
 
   <!-- Form Container -->
   <div class="container-fluid px-4 py-4">

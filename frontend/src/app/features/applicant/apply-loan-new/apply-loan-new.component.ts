@@ -57,7 +57,6 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   // Loading & Error states
   loading: boolean = false;
   submitting: boolean = false;
-  error: string = '';
   success: string = '';
   
   // Draft functionality
@@ -226,6 +225,8 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           this.loanApplicationService.updateBasicDetails(currentApp.basicDetails);
         }
         this.requiredDocuments = this.loanApplicationService.getRequiredDocuments(loanType);
+        // Update loan amount validators based on selected loan type
+        this.updateLoanAmountValidators(loanType);
       }
     });
 
@@ -277,7 +278,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading profile:', error);
-        this.error = 'Failed to load profile data';
+        this.toastService.showError(
+          '👤 Profile Loading Failed',
+          'Failed to load your profile data. Please refresh the page and try again.',
+          10000
+        );
         this.loading = false;
       }
     });
@@ -335,6 +340,47 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   }
 
   // ==================== Form Validators ====================
+
+  updateLoanAmountValidators(loanType: string): void {
+    const loanAmountControl = this.basicDetailsForm.get('loanAmount');
+    const tenureControl = this.basicDetailsForm.get('tenure');
+    
+    // Get loan type configuration from ApplicantService
+    const loanTypes = this.applicantService.getLoanTypes();
+    const selectedLoanType = loanTypes.find(type => type.id === loanType);
+    
+    if (selectedLoanType && loanAmountControl && tenureControl) {
+      // Update loan amount validators with min/max from loan type
+      loanAmountControl.setValidators([
+        Validators.required,
+        Validators.min(selectedLoanType.minAmount),
+        Validators.max(selectedLoanType.maxAmount),
+        FormValidators.positiveNumberValidator()
+      ]);
+      
+      // Update tenure validators with min/max from loan type
+      tenureControl.setValidators([
+        Validators.required,
+        Validators.min(selectedLoanType.minTenure),
+        Validators.max(selectedLoanType.maxTenure)
+      ]);
+      
+      // Update validity
+      loanAmountControl.updateValueAndValidity();
+      tenureControl.updateValueAndValidity();
+      
+      console.log(`Updated validators for ${loanType}: Amount ${selectedLoanType.minAmount}-${selectedLoanType.maxAmount}, Tenure ${selectedLoanType.minTenure}-${selectedLoanType.maxTenure} months`);
+    }
+  }
+
+  getSelectedLoanType() {
+    const loanType = this.basicDetailsForm.get('loanType')?.value;
+    if (loanType) {
+      const loanTypes = this.applicantService.getLoanTypes();
+      return loanTypes.find(type => type.id === loanType);
+    }
+    return null;
+  }
 
   updateFinancialValidators(employmentType: string): void {
     const employerName = this.financialDetailsForm.get('employerName');
@@ -484,9 +530,17 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           console.log('========================');
           
           if (!this.application) {
-            this.error = 'Failed to load application data. Please go back and check all steps.';
+            this.toastService.showError(
+              '📋 Application Data Missing',
+              'Failed to load application data. Please go back and check all steps.',
+              10000
+            );
           } else if (!this.application.basicDetails || !this.application.financialDetails) {
-            this.error = 'Some required data is missing. Please review all previous steps.';
+            this.toastService.showWarning(
+              '⚠️ Incomplete Application',
+              'Some required data is missing. Please review all previous steps and ensure all forms are completed.',
+              12000
+            );
             console.error('Missing required data in application');
           }
         }
@@ -507,9 +561,19 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       if (app) {
         this.uploadedDocuments = [...app.documents];
         console.log('Synced uploaded documents on step 4 entry:', this.uploadedDocuments);
+      } else {
+        this.toastService.showWarning(
+          '📋 Loan Type Required',
+          'Please select a loan type first before proceeding to document upload.',
+          8000
+        );
       }
     } else {
-      this.error = 'Please select a loan type first';
+      this.toastService.showWarning(
+        '📋 Loan Type Required',
+        'Please select a loan type first before proceeding to document upload.',
+        8000
+      );
     }
   }
 
@@ -536,14 +600,12 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   }
 
   validateCurrentStep(): boolean {
-    this.error = '';
-    
     switch (this.currentStep) {
       case 1:
         // Step 1: Basic Loan Details
         if (!this.basicDetailsForm.valid) {
           const missingFields = this.getMissingFields(this.basicDetailsForm);
-          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
+          this.showValidationToast('Basic Loan Details', missingFields);
           this.markFormGroupTouched(this.basicDetailsForm);
           this.scrollToFirstError();
           return false;
@@ -554,7 +616,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         // Step 2: Applicant Information
         if (!this.applicantDetailsForm.valid) {
           const missingFields = this.getMissingFields(this.applicantDetailsForm);
-          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
+          this.showValidationToast('Applicant Information', missingFields);
           this.markFormGroupTouched(this.applicantDetailsForm);
           this.scrollToFirstError();
           return false;
@@ -565,11 +627,17 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         // Step 3: Financial Details
         if (!this.financialDetailsForm.valid) {
           const missingFields = this.getMissingFields(this.financialDetailsForm);
-          this.error = `Please fill the following required fields: ${missingFields.join(', ')}`;
+          this.showValidationToast('Financial Details', missingFields);
+          this.markFormGroupTouched(this.financialDetailsForm);
+          this.scrollToFirstError();
           return false;
         }
         if (!this.emiCalculation || this.emiCalculation.dti > 60) {
-          this.error = 'Your debt-to-income ratio is too high. Please adjust loan amount or tenure.';
+          this.toastService.showWarning(
+            '⚠️ High Debt-to-Income Ratio',
+            'Your debt-to-income ratio is too high. Please adjust your loan amount or tenure to improve eligibility.',
+            10000
+          );
           return false;
         }
         return true;
@@ -587,7 +655,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         console.log('Uploaded documents array:', this.uploadedDocuments);
         
         if (missingDocs.length > 0) {
-          this.error = `Please upload all required documents: ${missingDocs.join(', ')}`;
+          this.showDocumentValidationToast(missingDocs);
           return false;
         }
         return true;
@@ -595,7 +663,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       case 5:
         // Step 5: Declarations
         if (!this.declarationsForm.valid) {
-          this.error = 'Please accept all required declarations and consents';
+          this.showDeclarationValidationToast();
           return false;
         }
         return true;
@@ -734,7 +802,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         this.toastService.showError(
           'Invalid File Format', 
           `Please upload PDF, JPG, JPEG, or PNG files only for ${docReq.displayName}. File: ${file.name}`,
-          4000
+          8000
         );
         console.error('File validation failed:', {
           fileName: file.name,
@@ -748,7 +816,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         this.toastService.showError(
           'File Too Large', 
           `File size exceeds maximum limit of ${(docReq.maxSize / (1024 * 1024)).toFixed(0)}MB for ${docReq.displayName}`,
-          4000
+          8000
         );
         return;
       }
@@ -806,7 +874,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
             this.toastService.showSuccess(
               '📄 Document Uploaded', 
               `Your ${docReq.displayName} has been uploaded successfully. File: ${file.name}`,
-              4000
+              6000
             );
             
             setTimeout(() => {
@@ -826,7 +894,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           this.toastService.showError(
             'Upload Failed', 
             error.error?.message || `Failed to upload ${file.name}. Please try again.`,
-            5000
+            8000
           );
           
           setTimeout(() => {
@@ -857,12 +925,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
 
   submitApplication(): void {
     if (!this.application) {
-      this.toastService.showError('Error', 'No application data found');
+      this.toastService.showError('❌ Submission Error', 'No application data found. Please complete all steps and try again.');
       return;
     }
 
     this.submitting = true;
-    this.error = '';
 
     this.loanApplicationService.submitApplication(this.application).subscribe({
       next: (response) => {
@@ -873,7 +940,7 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         this.toastService.showSuccess(
           '🎉 Application Submitted!', 
           `Your loan application #${loanId} has been submitted successfully. You will receive updates via email.`,
-          5000
+          8000
         );
         
         // Check if loan was assigned to an officer and show additional toast
@@ -881,13 +948,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
           this.toastService.showSuccess(
             '👨‍💼 Loan Officer Assigned!', 
             `Your application has been assigned to ${response.assignedOfficerName} for review.`,
-            6000
+            8000
           );
         } else if (response.assignmentError) {
           this.toastService.showWarning(
             'Assignment Pending', 
             'Your application was submitted successfully but assignment to a loan officer is pending.',
-            6000
+            10000
           );
         }
         
@@ -907,6 +974,145 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
         this.submitting = false;
       }
     });
+  }
+
+  // ==================== Validation Toast Methods ====================
+
+  /**
+   * Show validation toast for missing form fields
+   */
+  private showValidationToast(stepName: string, missingFields: string[]): void {
+    if (missingFields.length === 0) return;
+    
+    const title = `📝 ${stepName} - Required Fields Missing`;
+    let message: string;
+    
+    if (missingFields.length === 1) {
+      message = `Please fill the required field: ${missingFields[0]}`;
+    } else if (missingFields.length <= 3) {
+      message = `Please fill the following required fields:\n• ${missingFields.join('\n• ')}`;
+    } else {
+      message = `Please fill ${missingFields.length} required fields:\n• ${missingFields.slice(0, 3).join('\n• ')}\n• ... and ${missingFields.length - 3} more`;
+    }
+    
+    this.toastService.showWarning(title, message, 10000);
+  }
+
+  /**
+   * Show validation toast for missing documents
+   */
+  private showDocumentValidationToast(missingDocs: string[]): void {
+    const title = '📄 Document Upload Required';
+    let message: string;
+    
+    if (missingDocs.length === 1) {
+      message = `Please upload the required document: ${missingDocs[0]}`;
+    } else if (missingDocs.length <= 3) {
+      message = `Please upload the following required documents:\n• ${missingDocs.join('\n• ')}`;
+    } else {
+      message = `Please upload ${missingDocs.length} required documents:\n• ${missingDocs.slice(0, 3).join('\n• ')}\n• ... and ${missingDocs.length - 3} more`;
+    }
+    
+    this.toastService.showWarning(title, message, 12000);
+  }
+
+  /**
+   * Show validation toast for missing declarations
+   */
+  private showDeclarationValidationToast(): void {
+    const invalidFields: string[] = [];
+    const declarationFields = [
+      { key: 'kycConsent', label: 'KYC Consent' },
+      { key: 'creditBureauConsent', label: 'Credit Bureau Consent' },
+      { key: 'bankStatementConsent', label: 'Bank Statement Consent' },
+      { key: 'termsAccepted', label: 'Terms & Conditions' },
+      { key: 'privacyPolicyAccepted', label: 'Privacy Policy' }
+    ];
+    
+    declarationFields.forEach(field => {
+      const control = this.declarationsForm.get(field.key);
+      if (control && control.invalid) {
+        invalidFields.push(field.label);
+      }
+    });
+    
+    const title = '✅ Declarations & Consents Required';
+    let message: string;
+    
+    if (invalidFields.length === 0) {
+      message = 'Please accept all required declarations and consents to proceed.';
+    } else if (invalidFields.length === 1) {
+      message = `Please accept the ${invalidFields[0]} to proceed.`;
+    } else {
+      message = `Please accept the following declarations:\n• ${invalidFields.join('\n• ')}`;
+    }
+    
+    this.toastService.showWarning(title, message, 10000);
+  }
+
+  /**
+   * Show field-specific validation toast for individual field errors
+   */
+  showFieldValidationToast(fieldName: string, errorType: string, fieldDisplayName?: string): void {
+    const displayName = fieldDisplayName || this.getFieldDisplayName(fieldName);
+    let title = '⚠️ Validation Error';
+    let message = '';
+    
+    switch (errorType) {
+      case 'required':
+        title = '📝 Required Field';
+        message = `${displayName} is required. Please fill this field to continue.`;
+        break;
+      case 'min':
+        title = '📊 Minimum Value';
+        message = `${displayName} value is too low. Please enter a higher value.`;
+        break;
+      case 'max':
+        title = '📊 Maximum Value';
+        message = `${displayName} value is too high. Please enter a lower value.`;
+        break;
+      case 'minlength':
+        title = '📏 Minimum Length';
+        message = `${displayName} is too short. Please enter more characters.`;
+        break;
+      case 'maxlength':
+        title = '📏 Maximum Length';
+        message = `${displayName} is too long. Please enter fewer characters.`;
+        break;
+      case 'pattern':
+      case 'invalidFormat':
+        title = '🔤 Invalid Format';
+        message = `${displayName} format is invalid. Please check the format and try again.`;
+        break;
+      case 'invalidEmail':
+        title = '📧 Invalid Email';
+        message = 'Please enter a valid email address (e.g., user@example.com).';
+        break;
+      case 'invalidMobile':
+        title = '📱 Invalid Mobile Number';
+        message = 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.';
+        break;
+      case 'invalidPan':
+        title = '🆔 Invalid PAN';
+        message = 'Please enter a valid PAN number (e.g., ABCDE1234F).';
+        break;
+      case 'invalidAadhar':
+        title = '🆔 Invalid Aadhar';
+        message = 'Please enter a valid 12-digit Aadhar number.';
+        break;
+      case 'futureDate':
+        title = '📅 Invalid Date';
+        message = 'Date cannot be in the future. Please select a valid date.';
+        break;
+      case 'underAge':
+        title = '🎂 Age Requirement';
+        message = 'You must be at least 18 years old to apply for a loan.';
+        break;
+      default:
+        message = `Please check the ${displayName} field and correct any errors.`;
+    }
+    
+    this.toastService.showWarning(title, message, 8000);
   }
 
   // ==================== Utility Methods ====================
@@ -974,19 +1180,13 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
   cancelApplication(): void {
     if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
       this.clearSavedData();
+      this.toastService.showInfo(
+        '🚪 Application Cancelled',
+        'Your loan application has been cancelled. You can start a new application anytime.',
+        6000
+      );
       this.router.navigate(['/applicant/dashboard']);
     }
-  }
-
-  clearError(): void {
-    this.error = '';
-  }
-
-  getFormattedError(): string {
-    if (!this.error) return '';
-    
-    // Convert newlines to HTML line breaks for proper display
-    return this.error.replace(/\n/g, '<br>');
   }
 
   clearSuccess(): void {
@@ -1149,10 +1349,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       
     } catch (error) {
       console.error('Error saving draft:', error);
-      this.error = 'Failed to save draft. Please try again.';
-      setTimeout(() => {
-        this.error = '';
-      }, 5000);
+      this.toastService.showError(
+        '💾 Draft Save Failed',
+        'Failed to save draft. Please try again or continue without saving.',
+        8000
+      );
     } finally {
       this.isDraftSaving = false;
     }
@@ -1180,7 +1381,11 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error loading draft:', error);
-      this.error = 'Failed to load draft.';
+      this.toastService.showError(
+        '📂 Draft Loading Failed',
+        'Failed to load saved draft. Starting with a fresh application.',
+        8000
+      );
     }
   }
 
@@ -1391,7 +1596,6 @@ export class ApplyLoanNewComponent implements OnInit, OnDestroy {
     this.uploadedDocuments = [];
     this.uploadProgress = {};
     this.selectAllDeclarations = false;
-    this.error = '';
     this.success = '';
 
     // Clear drafts and service state

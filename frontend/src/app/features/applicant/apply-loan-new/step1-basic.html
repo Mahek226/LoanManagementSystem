@@ -10,7 +10,8 @@
       <!-- Loan Type -->
       <div class="col-md-6">
         <label class="form-label required">Loan Type</label>
-        <select class="form-select" formControlName="loanType" [disabled]="selectedLoanType">
+        <select class="form-select" formControlName="loanType" [disabled]="selectedLoanType"
+                [class.is-invalid]="basicDetailsForm.get('loanType')?.invalid && basicDetailsForm.get('loanType')?.touched">
           <option value="">Select Loan Type</option>
           <option value="PERSONAL">Personal Loan</option>
           <option value="HOME">Home Loan</option>
@@ -18,23 +19,70 @@
           <option value="EDUCATION">Education Loan</option>
           <option value="BUSINESS">Business Loan</option>
         </select>
+        
+        <!-- Validation Messages -->
+        <div class="invalid-feedback" *ngIf="basicDetailsForm.get('loanType')?.invalid && basicDetailsForm.get('loanType')?.touched">
+          <div *ngIf="basicDetailsForm.get('loanType')?.errors?.['required']">
+            Please select a loan type
+          </div>
+        </div>
       </div>
 
       <!-- Loan Amount -->
       <div class="col-md-6">
         <label class="form-label required">Loan Amount (₹)</label>
         <input type="number" class="form-control" formControlName="loanAmount" 
-               placeholder="Enter amount" min="1000">
+               placeholder="Enter amount" min="1000"
+               [class.is-invalid]="basicDetailsForm.get('loanAmount')?.invalid && basicDetailsForm.get('loanAmount')?.touched">
+        
+        <!-- Loan Type Range Info -->
+        <small class="text-muted" *ngIf="getSelectedLoanType()">
+          Range: ₹{{ getSelectedLoanType()?.minAmount | number }} - ₹{{ getSelectedLoanType()?.maxAmount | number }}
+        </small>
+        
+        <!-- EMI Info -->
         <small class="text-muted" *ngIf="emiCalculation">
           EMI: {{ formatCurrency(emiCalculation.emi) }}/month
         </small>
+        
+        <!-- Validation Messages -->
+        <div class="invalid-feedback" *ngIf="basicDetailsForm.get('loanAmount')?.invalid && basicDetailsForm.get('loanAmount')?.touched">
+          <div *ngIf="basicDetailsForm.get('loanAmount')?.errors?.['required']">
+            Loan amount is required
+          </div>
+          <div *ngIf="basicDetailsForm.get('loanAmount')?.errors?.['min'] && getSelectedLoanType()">
+            Minimum amount for {{ getSelectedLoanType()?.name }} is ₹{{ getSelectedLoanType()?.minAmount | number }}
+          </div>
+          <div *ngIf="basicDetailsForm.get('loanAmount')?.errors?.['max'] && getSelectedLoanType()">
+            Maximum amount for {{ getSelectedLoanType()?.name }} is ₹{{ getSelectedLoanType()?.maxAmount | number }}
+          </div>
+        </div>
       </div>
 
       <!-- Tenure -->
       <div class="col-md-6">
         <label class="form-label required">Tenure (Months)</label>
         <input type="number" class="form-control" formControlName="tenure" 
-               placeholder="Enter tenure" min="6" max="360">
+               placeholder="Enter tenure" min="6" max="360"
+               [class.is-invalid]="basicDetailsForm.get('tenure')?.invalid && basicDetailsForm.get('tenure')?.touched">
+        
+        <!-- Tenure Range Info -->
+        <small class="text-muted" *ngIf="getSelectedLoanType()">
+          Range: {{ getSelectedLoanType()?.minTenure }} - {{ getSelectedLoanType()?.maxTenure }} months
+        </small>
+        
+        <!-- Validation Messages -->
+        <div class="invalid-feedback" *ngIf="basicDetailsForm.get('tenure')?.invalid && basicDetailsForm.get('tenure')?.touched">
+          <div *ngIf="basicDetailsForm.get('tenure')?.errors?.['required']">
+            Tenure is required
+          </div>
+          <div *ngIf="basicDetailsForm.get('tenure')?.errors?.['min'] && getSelectedLoanType()">
+            Minimum tenure for {{ getSelectedLoanType()?.name }} is {{ getSelectedLoanType()?.minTenure }} months
+          </div>
+          <div *ngIf="basicDetailsForm.get('tenure')?.errors?.['max'] && getSelectedLoanType()">
+            Maximum tenure for {{ getSelectedLoanType()?.name }} is {{ getSelectedLoanType()?.maxTenure }} months
+          </div>
+        </div>
       </div>
 
       <!-- Co-Applicant -->

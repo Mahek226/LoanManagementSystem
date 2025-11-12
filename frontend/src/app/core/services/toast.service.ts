@@ -24,29 +24,29 @@ export class ToastService {
   /**
    * Show a success toast
    */
-  showSuccess(title: string, message: string, duration: number = 5000): void {
-    this.addToast('success', title, message, Math.max(duration, 3000));
+  showSuccess(title: string, message: string, duration: number = 12000): void {
+    this.addToast('success', title, message, Math.max(duration, 8000));
   }
 
   /**
    * Show an error toast
    */
-  showError(title: string, message: string, duration: number = 8000): void {
-    this.addToast('error', title, message, Math.max(duration, 3000));
+  showError(title: string, message: string, duration: number = 18000): void {
+    this.addToast('error', title, message, Math.max(duration, 10000));
   }
 
   /**
    * Show a warning toast
    */
-  showWarning(title: string, message: string, duration: number = 6000): void {
-    this.addToast('warning', title, message, Math.max(duration, 3000));
+  showWarning(title: string, message: string, duration: number = 15000): void {
+    this.addToast('warning', title, message, Math.max(duration, 8000));
   }
 
   /**
    * Show an info toast
    */
-  showInfo(title: string, message: string, duration: number = 5000): void {
-    this.addToast('info', title, message, Math.max(duration, 3000));
+  showInfo(title: string, message: string, duration: number = 12000): void {
+    this.addToast('info', title, message, Math.max(duration, 8000));
   }
 
   /**
@@ -218,13 +218,13 @@ export class ToastService {
   showSystemToast(type: 'maintenance' | 'security' | 'update', message: string): void {
     switch (type) {
       case 'maintenance':
-        this.showWarning('🔧 System Maintenance', message, 10000);
+        this.showWarning('🔧 System Maintenance', message, 25000);
         break;
       case 'security':
-        this.showError('🔒 Security Alert', message, 15000);
+        this.showError('🔒 Security Alert', message, 30000);
         break;
       case 'update':
-        this.showInfo('📢 System Update', message, 8000);
+        this.showInfo('📢 System Update', message, 20000);
         break;
     }
   }
