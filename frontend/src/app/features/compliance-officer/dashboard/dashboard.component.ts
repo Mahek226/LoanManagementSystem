@@ -1,15 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { ComplianceOfficerService, ComplianceEscalation, DashboardStats } from '../../../core/services/compliance-officer.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-compliance-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -26,11 +28,19 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
   recentEscalations: ComplianceEscalation[] = [];
   loading: boolean = true;
   errorMessage: string = '';
+  timeFilter: string = 'all';
+  userName: string = '';
 
   private statusChart: Chart | null = null;
   private riskChart: Chart | null = null;
 
-  constructor(private complianceService: ComplianceOfficerService) {}
+  constructor(
+    private complianceService: ComplianceOfficerService,
+    private authService: AuthService
+  ) {
+    const user = this.authService.currentUserValue;
+    this.userName = user?.username || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Compliance Officer');
+  }
 
   ngOnInit(): void {
     this.loadDashboardData();
@@ -198,5 +208,18 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
 
   getPriorityColor(priority: string): string {
     return this.complianceService.getPriorityColor(priority);
+  }
+
+  getCurrentDate(): string {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  onTimeFilterChange(): void {
+    this.loadDashboardData();
   }
 }

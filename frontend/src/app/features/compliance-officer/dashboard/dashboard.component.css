@@ -47,6 +47,106 @@
   to { transform: rotate(360deg); }
 }
 
+/* KPI Cards */
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.kpi-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #e5e7eb, #d1d5db);
+}
+
+.kpi-card.kpi-primary::before {
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.kpi-card.kpi-success::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.kpi-card.kpi-warning::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.kpi-card.kpi-danger::before {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.kpi-card.kpi-info::before {
+  background: linear-gradient(90deg, #06b6d4, #0891b2);
+}
+
+.kpi-icon i {
+  font-size: 1.5rem;
+  color: #6b7280;
+}
+
+.kpi-card.kpi-primary .kpi-icon i {
+  color: #3b82f6;
+}
+
+.kpi-card.kpi-success .kpi-icon i {
+  color: #10b981;
+}
+
+.kpi-card.kpi-warning .kpi-icon i {
+  color: #f59e0b;
+}
+
+.kpi-card.kpi-danger .kpi-icon i {
+  color: #ef4444;
+}
+
+.kpi-card.kpi-info .kpi-icon i {
+  color: #06b6d4;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.kpi-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.kpi-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.kpi-trend .badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Section Headers */
+h5 {
+  font-weight: 600;
+  color: #1f2937;
+}
+
 /* Statistics Cards */
 .stat-card {
   animation: slideInUp 0.6s ease-out;
@@ -318,28 +418,12 @@
 @media (max-width: 768px) {
   .welcome-banner {
     padding: 1.5rem;
+    text-align: center;
   }
-
-  .chart-container {
-    height: 250px;
-  }
-
-  .stat-card:hover {
-    transform: none;
-  }
-
-  .escalation-row {
-    animation: none;
-  }
-
-  .table {
-    font-size: 0.875rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .welcome-banner {
-    padding: 1rem;
+  
+  .welcome-banner .d-flex {
+    flex-direction: column;
+    gap: 1rem;
   }
 
   .welcome-banner h2 {
@@ -354,6 +438,32 @@
 
   .chart-container {
     height: 200px;
+  }
+  
+  .kpi-value {
+    font-size: 1.5rem;
+  }
+  
+  .kpi-card .card-body {
+    padding: 1rem;
+  }
+  
+  .kpi-icon i {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .kpi-value {
+    font-size: 1.25rem;
+  }
+  
+  h5 {
+    font-size: 1rem;
+  }
+  
+  .welcome-banner {
+    padding: 1rem;
   }
 }
 

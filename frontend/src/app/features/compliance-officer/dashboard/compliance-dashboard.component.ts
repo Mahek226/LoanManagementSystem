@@ -13,8 +13,18 @@ import { Subscription } from 'rxjs';
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
-        <h1>Compliance Officer Dashboard</h1>
+        <div class="header-left">
+          <h1>Compliance Officer Dashboard</h1>
+          <p class="dashboard-subtitle">{{ userName }} • {{ getCurrentDate() }}</p>
+        </div>
         <div class="header-actions">
+          <select class="form-select me-2" [(ngModel)]="timeFilter" (change)="onTimeFilterChange()" style="width: auto;">
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="all">All Time</option>
+          </select>
           <button (click)="refreshData()" class="btn btn-outline-primary me-2" [disabled]="isLoading">
             <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Refresh
           </button>
@@ -22,31 +32,142 @@ import { Subscription } from 'rxjs';
         </div>
       </div>
 
-      <!-- Dashboard Stats -->
-      <div class="stats-grid" *ngIf="stats">
-        <div class="stat-card">
-          <div class="stat-value">{{ stats.totalEscalations }}</div>
-          <div class="stat-label">Total Escalations</div>
+      <!-- KPI Dashboard -->
+      <div class="kpi-dashboard" *ngIf="stats">
+        <!-- Primary KPIs -->
+        <div class="kpi-section">
+          <h3 class="kpi-section-title">
+            <i class="fas fa-tachometer-alt me-2"></i>Key Performance Indicators
+          </h3>
+          <div class="kpi-grid primary">
+            <div class="kpi-card primary">
+              <div class="kpi-header">
+                <i class="fas fa-clipboard-list"></i>
+                <span class="kpi-trend positive" *ngIf="stats.todayReviewed! > 0">+{{ stats.todayReviewed }}</span>
+              </div>
+              <div class="kpi-value">{{ stats.totalEscalations }}</div>
+              <div class="kpi-label">Total Escalations</div>
+              <div class="kpi-subtitle">{{ stats.pendingReview }} pending review</div>
+            </div>
+            
+            <div class="kpi-card warning">
+              <div class="kpi-header">
+                <i class="fas fa-clock"></i>
+                <span class="kpi-trend negative" *ngIf="stats.overdueReviews! > 0">{{ stats.overdueReviews }} overdue</span>
+              </div>
+              <div class="kpi-value">{{ stats.avgDecisionTime }}h</div>
+              <div class="kpi-label">Avg Decision Time</div>
+              <div class="kpi-subtitle">Target: ≤48 hours</div>
+            </div>
+            
+            <div class="kpi-card success">
+              <div class="kpi-header">
+                <i class="fas fa-check-circle"></i>
+                <span class="kpi-trend positive">{{ stats.approvalRate }}%</span>
+              </div>
+              <div class="kpi-value">{{ stats.approved }}</div>
+              <div class="kpi-label">Approved Cases</div>
+              <div class="kpi-subtitle">{{ stats.reviewsCompletedOnTime }} on-time</div>
+            </div>
+            
+            <div class="kpi-card danger">
+              <div class="kpi-header">
+                <i class="fas fa-times-circle"></i>
+                <span class="kpi-trend">{{ stats.rejectionRate }}%</span>
+              </div>
+              <div class="kpi-value">{{ stats.rejected }}</div>
+              <div class="kpi-label">Rejected Cases</div>
+              <div class="kpi-subtitle">Quality control</div>
+            </div>
+          </div>
         </div>
-        <div class="stat-card pending">
-          <div class="stat-value">{{ stats.pendingReview }}</div>
-          <div class="stat-label">Pending Review</div>
+
+        <!-- Performance Metrics -->
+        <div class="kpi-section">
+          <h3 class="kpi-section-title">
+            <i class="fas fa-chart-line me-2"></i>Performance Metrics
+          </h3>
+          <div class="kpi-grid secondary">
+            <div class="kpi-card info">
+              <div class="kpi-header">
+                <i class="fas fa-calendar-day"></i>
+              </div>
+              <div class="kpi-value">{{ stats.todayReviewed }}</div>
+              <div class="kpi-label">Today's Reviews</div>
+              <div class="kpi-subtitle">{{ stats.avgDailyReviews }}/day avg</div>
+            </div>
+            
+            <div class="kpi-card info">
+              <div class="kpi-header">
+                <i class="fas fa-calendar-week"></i>
+              </div>
+              <div class="kpi-value">{{ stats.weeklyReviewed }}</div>
+              <div class="kpi-label">This Week</div>
+              <div class="kpi-subtitle">7-day total</div>
+            </div>
+            
+            <div class="kpi-card info">
+              <div class="kpi-header">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+              <div class="kpi-value">{{ stats.monthlyReviewed }}</div>
+              <div class="kpi-label">This Month</div>
+              <div class="kpi-subtitle">30-day total</div>
+            </div>
+            
+            <div class="kpi-card warning">
+              <div class="kpi-header">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="kpi-value">{{ stats.avgRiskScore }}</div>
+              <div class="kpi-label">Avg Risk Score</div>
+              <div class="kpi-subtitle">{{ stats.highRisk + stats.criticalRisk }} high-risk</div>
+            </div>
+          </div>
         </div>
-        <div class="stat-card approved">
-          <div class="stat-value">{{ stats.approved }}</div>
-          <div class="stat-label">Approved</div>
-        </div>
-        <div class="stat-card rejected">
-          <div class="stat-value">{{ stats.rejected }}</div>
-          <div class="stat-label">Rejected</div>
-        </div>
-        <div class="stat-card high-risk">
-          <div class="stat-value">{{ stats.highRisk }}</div>
-          <div class="stat-label">High Risk</div>
-        </div>
-        <div class="stat-card critical-risk">
-          <div class="stat-value">{{ stats.criticalRisk }}</div>
-          <div class="stat-label">Critical Risk</div>
+
+        <!-- Risk & Quality Metrics -->
+        <div class="kpi-section">
+          <h3 class="kpi-section-title">
+            <i class="fas fa-shield-alt me-2"></i>Risk & Quality Analysis
+          </h3>
+          <div class="kpi-grid tertiary">
+            <div class="kpi-card danger">
+              <div class="kpi-header">
+                <i class="fas fa-user-secret"></i>
+              </div>
+              <div class="kpi-value">{{ stats.fraudDetectionRate }}%</div>
+              <div class="kpi-label">Fraud Detection</div>
+              <div class="kpi-subtitle">Risk identification</div>
+            </div>
+            
+            <div class="kpi-card success">
+              <div class="kpi-header">
+                <i class="fas fa-bullseye"></i>
+              </div>
+              <div class="kpi-value">{{ stats.escalationAccuracy }}%</div>
+              <div class="kpi-label">Accuracy Rate</div>
+              <div class="kpi-subtitle">Decision quality</div>
+            </div>
+            
+            <div class="kpi-card warning">
+              <div class="kpi-header">
+                <i class="fas fa-file-alt"></i>
+              </div>
+              <div class="kpi-value">{{ stats.documentResubmissionRate }}%</div>
+              <div class="kpi-label">Doc Resubmission</div>
+              <div class="kpi-subtitle">Quality indicator</div>
+            </div>
+            
+            <div class="kpi-card info">
+              <div class="kpi-header">
+                <i class="fas fa-coins"></i>
+              </div>
+              <div class="kpi-value">{{ stats.highValueLoansReviewed }}</div>
+              <div class="kpi-label">High-Value Loans</div>
+              <div class="kpi-subtitle">>₹10L reviewed</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -158,54 +279,150 @@ import { Subscription } from 'rxjs';
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .dashboard-header h1 {
+    .header-left h1 {
       font-size: 2rem;
       font-weight: 700;
       color: #1a202c;
       margin: 0;
     }
 
+    .dashboard-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 0.25rem 0 0 0;
+    }
+
     .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .kpi-dashboard {
+      margin-bottom: 2rem;
+    }
+    
+    .kpi-section {
+      margin-bottom: 2rem;
+    }
+    
+    .kpi-section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
     }
     
-    .stats-grid {
+    .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      margin-bottom: 2rem;
     }
     
-    .stat-card {
+    .kpi-grid.primary {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    
+    .kpi-grid.secondary,
+    .kpi-grid.tertiary {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    
+    .kpi-card {
       background: white;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      text-align: center;
-      border-left: 4px solid #e2e8f0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      border: 1px solid #f1f5f9;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
     
-    .stat-card.pending { border-left-color: #f59e0b; }
-    .stat-card.approved { border-left-color: #10b981; }
-    .stat-card.rejected { border-left-color: #ef4444; }
-    .stat-card.high-risk { border-left-color: #f59e0b; }
-    .stat-card.critical-risk { border-left-color: #dc2626; }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
     
-    .stat-value {
-      font-size: 2rem;
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+    }
+    
+    .kpi-card.primary::before { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+    .kpi-card.success::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .kpi-card.warning::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .kpi-card.danger::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .kpi-card.info::before { background: linear-gradient(90deg, #06b6d4, #0891b2); }
+    
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .kpi-header i {
+      font-size: 1.5rem;
+      color: #64748b;
+    }
+    
+    .kpi-card.primary .kpi-header i { color: #3b82f6; }
+    .kpi-card.success .kpi-header i { color: #10b981; }
+    .kpi-card.warning .kpi-header i { color: #f59e0b; }
+    .kpi-card.danger .kpi-header i { color: #ef4444; }
+    .kpi-card.info .kpi-header i { color: #06b6d4; }
+    
+    .kpi-trend {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    
+    .kpi-trend.positive {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .kpi-trend.negative {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    
+    .kpi-value {
+      font-size: 2.5rem;
       font-weight: 700;
       color: #1a202c;
       margin-bottom: 0.5rem;
+      line-height: 1;
     }
     
-    .stat-label {
+    .kpi-label {
       font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.25rem;
+    }
+    
+    .kpi-subtitle {
+      font-size: 0.75rem;
       color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-weight: 500;
     }
     
     .loading-container {
@@ -345,6 +562,39 @@ import { Subscription } from 'rxjs';
         padding: 1rem;
       }
       
+      .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      
+      .header-left h1 {
+        font-size: 1.5rem;
+      }
+      
+      .header-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .kpi-grid.primary {
+        grid-template-columns: 1fr;
+      }
+      
+      .kpi-grid.secondary,
+      .kpi-grid.tertiary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .kpi-card {
+        padding: 1rem;
+      }
+      
+      .kpi-value {
+        font-size: 2rem;
+      }
+      
       .escalations-grid {
         grid-template-columns: 1fr;
       }
@@ -358,6 +608,21 @@ import { Subscription } from 'rxjs';
         flex-direction: column;
       }
     }
+    
+    @media (max-width: 480px) {
+      .kpi-grid.secondary,
+      .kpi-grid.tertiary {
+        grid-template-columns: 1fr;
+      }
+      
+      .kpi-section-title {
+        font-size: 1rem;
+      }
+      
+      .kpi-value {
+        font-size: 1.75rem;
+      }
+    }
   `]
 })
 export class ComplianceDashboardComponent implements OnInit, OnDestroy {
@@ -369,6 +634,7 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
   statusFilter = '';
   riskFilter = '';
+  timeFilter = 'all';
   private subscription = new Subscription();
 
   constructor(
@@ -433,5 +699,55 @@ export class ComplianceDashboardComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  getCurrentDate(): string {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  onTimeFilterChange(): void {
+    // Filter escalations based on time period
+    this.applyTimeFilter();
+    // Recalculate stats with filtered data
+    this.stats = this.complianceService.calculateStats(this.filteredEscalations);
+  }
+
+  private applyTimeFilter(): void {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (this.timeFilter) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'quarter':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        // 'all' - no filtering
+        this.filteredEscalations = [...this.escalations];
+        this.applyFilters(); // Apply status and risk filters
+        return;
+    }
+
+    // Filter escalations by time period
+    this.filteredEscalations = this.escalations.filter(escalation => {
+      const assignedDate = new Date(escalation.assignedAt);
+      return assignedDate >= startDate;
+    });
+
+    // Apply additional filters
+    this.applyFilters();
   }
 }

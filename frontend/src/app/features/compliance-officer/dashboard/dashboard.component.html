@@ -1,19 +1,28 @@
 <div class="dashboard-container">
-  <!-- Welcome Banner -->
+  <!-- Enhanced Header -->
   <div class="welcome-banner mb-4">
     <div class="row align-items-center">
-      <div class="col-md-8">
+      <div class="col-md-6">
         <h2 class="mb-2">
           <i class="fas fa-shield-alt me-2"></i>
           Compliance Dashboard
         </h2>
-        <p class="mb-0 text-white-50">Monitor and review escalated loan applications for compliance</p>
+        <p class="mb-0 text-white-50">{{ userName }} • {{ getCurrentDate() }}</p>
       </div>
-      <div class="col-md-4 text-md-end mt-3 mt-md-0">
-        <button class="btn btn-light" routerLink="/compliance-officer/escalations">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          View All Escalations
-        </button>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <div class="d-flex align-items-center justify-content-md-end gap-2">
+          <select class="form-select form-select-sm" [(ngModel)]="timeFilter" (change)="onTimeFilterChange()" style="width: auto;">
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="all">All Time</option>
+          </select>
+          <button class="btn btn-light" routerLink="/compliance-officer/escalations">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            View All Escalations
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -34,71 +43,215 @@
 
   <!-- Dashboard Content -->
   <div *ngIf="!loading && !errorMessage">
-    <!-- Statistics Cards -->
-    <div class="row g-4 mb-4">
-      <!-- Total Escalations -->
-      <div class="col-xl-3 col-md-6">
-        <div class="card card-custom stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <p class="text-muted mb-1 small">Total Escalations</p>
-                <h3 class="mb-0 fw-bold">{{ stats.totalEscalations }}</h3>
+    <!-- Primary KPIs -->
+    <div class="mb-4">
+      <h5 class="mb-3">
+        <i class="fas fa-tachometer-alt me-2 text-danger"></i>
+        Key Performance Indicators
+      </h5>
+      <div class="row g-4">
+        <!-- Total Escalations -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-primary">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="kpi-icon">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="kpi-trend" *ngIf="stats.todayReviewed && stats.todayReviewed > 0">
+                  <span class="badge bg-success">+{{ stats.todayReviewed }}</span>
+                </div>
               </div>
-              <div class="stat-icon bg-danger-subtle">
-                <i class="fas fa-exclamation-triangle text-danger"></i>
+              <h2 class="kpi-value mb-1">{{ stats.totalEscalations }}</h2>
+              <p class="kpi-label mb-1">Total Escalations</p>
+              <small class="kpi-subtitle text-muted">{{ stats.pendingReview }} pending review</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Average Decision Time -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-warning">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="kpi-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="kpi-trend" *ngIf="stats.overdueReviews && stats.overdueReviews > 0">
+                  <span class="badge bg-danger">{{ stats.overdueReviews }} overdue</span>
+                </div>
               </div>
+              <h2 class="kpi-value mb-1">{{ stats.avgDecisionTime || 0 }}h</h2>
+              <p class="kpi-label mb-1">Avg Decision Time</p>
+              <small class="kpi-subtitle text-muted">Target: ≤48 hours</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Approved Cases -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-success">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="kpi-icon">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="kpi-trend">
+                  <span class="badge bg-info">{{ stats.approvalRate || 0 }}%</span>
+                </div>
+              </div>
+              <h2 class="kpi-value mb-1">{{ stats.approved }}</h2>
+              <p class="kpi-label mb-1">Approved Cases</p>
+              <small class="kpi-subtitle text-muted">{{ stats.reviewsCompletedOnTime || 0 }} on-time</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rejected Cases -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-danger">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="kpi-icon">
+                  <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="kpi-trend">
+                  <span class="badge bg-secondary">{{ stats.rejectionRate || 0 }}%</span>
+                </div>
+              </div>
+              <h2 class="kpi-value mb-1">{{ stats.rejected }}</h2>
+              <p class="kpi-label mb-1">Rejected Cases</p>
+              <small class="kpi-subtitle text-muted">Quality control</small>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Pending Review -->
-      <div class="col-xl-3 col-md-6">
-        <div class="card card-custom stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <p class="text-muted mb-1 small">Pending Review</p>
-                <h3 class="mb-0 fw-bold">{{ stats.pendingReview }}</h3>
+    <!-- Performance Metrics -->
+    <div class="mb-4">
+      <h5 class="mb-3">
+        <i class="fas fa-chart-line me-2 text-danger"></i>
+        Performance Metrics
+      </h5>
+      <div class="row g-4">
+        <!-- Today's Reviews -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-info">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-calendar-day"></i>
               </div>
-              <div class="stat-icon bg-warning-subtle">
-                <i class="fas fa-clock text-warning"></i>
+              <h3 class="kpi-value mb-1">{{ stats.todayReviewed || 0 }}</h3>
+              <p class="kpi-label mb-1">Today's Reviews</p>
+              <small class="kpi-subtitle text-muted">{{ stats.avgDailyReviews || 0 }}/day avg</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- This Week -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-info">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-calendar-week"></i>
               </div>
+              <h3 class="kpi-value mb-1">{{ stats.weeklyReviewed || 0 }}</h3>
+              <p class="kpi-label mb-1">This Week</p>
+              <small class="kpi-subtitle text-muted">7-day total</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- This Month -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-info">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-calendar-alt"></i>
+              </div>
+              <h3 class="kpi-value mb-1">{{ stats.monthlyReviewed || 0 }}</h3>
+              <p class="kpi-label mb-1">This Month</p>
+              <small class="kpi-subtitle text-muted">30-day total</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Average Risk Score -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-warning">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <h3 class="kpi-value mb-1">{{ stats.avgRiskScore || 0 }}</h3>
+              <p class="kpi-label mb-1">Avg Risk Score</p>
+              <small class="kpi-subtitle text-muted">{{ (stats.highRisk || 0) + (stats.criticalRisk || 0) }} high-risk</small>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Approved -->
-      <div class="col-xl-3 col-md-6">
-        <div class="card card-custom stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <p class="text-muted mb-1 small">Approved</p>
-                <h3 class="mb-0 fw-bold">{{ stats.approved }}</h3>
+    <!-- Risk & Quality Analysis -->
+    <div class="mb-4">
+      <h5 class="mb-3">
+        <i class="fas fa-shield-alt me-2 text-danger"></i>
+        Risk & Quality Analysis
+      </h5>
+      <div class="row g-4">
+        <!-- Fraud Detection Rate -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-danger">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-user-secret"></i>
               </div>
-              <div class="stat-icon bg-success-subtle">
-                <i class="fas fa-check-circle text-success"></i>
-              </div>
+              <h3 class="kpi-value mb-1">{{ stats.fraudDetectionRate || 0 }}%</h3>
+              <p class="kpi-label mb-1">Fraud Detection</p>
+              <small class="kpi-subtitle text-muted">Risk identification</small>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Critical Risk -->
-      <div class="col-xl-3 col-md-6">
-        <div class="card card-custom stat-card">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <p class="text-muted mb-1 small">Critical Risk</p>
-                <h3 class="mb-0 fw-bold text-danger">{{ stats.criticalRisk }}</h3>
+        <!-- Accuracy Rate -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-success">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-bullseye"></i>
               </div>
-              <div class="stat-icon bg-danger-subtle">
-                <i class="fas fa-skull-crossbones text-danger"></i>
+              <h3 class="kpi-value mb-1">{{ stats.escalationAccuracy || 0 }}%</h3>
+              <p class="kpi-label mb-1">Accuracy Rate</p>
+              <small class="kpi-subtitle text-muted">Decision quality</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Document Resubmission Rate -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-warning">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-file-alt"></i>
               </div>
+              <h3 class="kpi-value mb-1">{{ stats.documentResubmissionRate || 0 }}%</h3>
+              <p class="kpi-label mb-1">Doc Resubmission</p>
+              <small class="kpi-subtitle text-muted">Quality indicator</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- High-Value Loans -->
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-custom kpi-card kpi-info">
+            <div class="card-body">
+              <div class="kpi-icon mb-2">
+                <i class="fas fa-coins"></i>
+              </div>
+              <h3 class="kpi-value mb-1">{{ stats.highValueLoansReviewed || 0 }}</h3>
+              <p class="kpi-label mb-1">High-Value Loans</p>
+              <small class="kpi-subtitle text-muted">>₹10L reviewed</small>
             </div>
           </div>
         </div>

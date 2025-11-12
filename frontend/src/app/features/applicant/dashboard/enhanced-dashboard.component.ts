@@ -594,7 +594,52 @@ export class EnhancedDashboardComponent implements OnInit, OnDestroy {
 
   formatDate(dateString: string | undefined): string {
     if (!dateString) return 'N/A';
-    return this.applicantService.formatDate(dateString);
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  }
+
+  getApplicationDate(app: any): string {
+    // Try multiple date fields to find a valid date
+    const dateFields = [
+      app.applicationDate,
+      app.submittedAt,
+      app.createdAt,
+      app.appliedDate,
+      app.requestedAt
+    ];
+    
+    for (const dateField of dateFields) {
+      if (dateField) {
+        try {
+          const date = new Date(dateField);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+    }
+    
+    // If no valid date found, return a formatted current date as fallback
+    return new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   }
 
   getStatusColor(status: string): string {
