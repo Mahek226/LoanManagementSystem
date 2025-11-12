@@ -1199,10 +1199,10 @@ export class ComplianceOfficerService {
 
   // ==================== Document Resubmission Review (Forwarded by Loan Officer) ====================
 
-  // Get documents forwarded by loan officers for compliance review
-  getForwardedDocuments(complianceOfficerId: number): Observable<any[]> {
-    const url = `${this.apiUrl}/compliance-officer/${complianceOfficerId}/forwarded-documents`;
-    console.log('Fetching forwarded documents:', url);
+  // Get documents forwarded by loan officers for compliance review (old method - keeping for compatibility)
+  getForwardedDocumentsByOfficer(complianceOfficerId: number): Observable<any[]> {
+    const url = `${this.apiUrl}/${complianceOfficerId}/forwarded-documents`;
+    console.log('Fetching forwarded documents by officer:', url);
     return this.http.get<any[]>(url);
   }
 
@@ -1214,7 +1214,7 @@ export class ComplianceOfficerService {
     remarks: string;
     sendBackToLoanOfficer: boolean;
   }): Observable<any> {
-    const url = `${this.apiUrl}/compliance-officer/process-forwarded-document`;
+    const url = `${this.apiUrl}/process-forwarded-document`;
     console.log('Processing forwarded document:', request);
     return this.http.post<any>(url, request);
   }
@@ -1226,8 +1226,36 @@ export class ComplianceOfficerService {
     feedback: string;
     requiresAction: string; // APPROVE, REJECT, REQUEST_RESUBMISSION
   }): Observable<any> {
-    const url = `${this.apiUrl}/compliance-officer/send-back-to-loan-officer`;
+    const url = `${this.apiUrl}/send-back-to-loan-officer`;
     console.log('Sending document back to loan officer:', request);
     return this.http.post<any>(url, request);
+  }
+
+  // ==================== Document Resubmission Management ====================
+
+  // Get document resubmission requests made by this compliance officer
+  getDocumentResubmissionRequests(status: string): Observable<DocumentResubmissionRequest[]> {
+    const url = `${this.apiUrl}/document-resubmission-requests?status=${status}`;
+    console.log('Fetching document resubmission requests:', url);
+    return this.http.get<DocumentResubmissionRequest[]>(url);
+  }
+
+  // Get document resubmission requests by officer ID
+  getDocumentResubmissionRequestsByOfficer(officerId: number, status?: string): Observable<any[]> {
+    let url = `${this.apiUrl}/${officerId}/document-resubmission-requests`;
+    if (status) {
+      url += `?status=${status}`;
+    }
+    console.log('Fetching document resubmission requests by officer:', { officerId, status, url });
+    return this.http.get<any[]>(url);
+  }
+
+  getForwardedDocuments(status?: string): Observable<any[]> {
+    let url = `${this.apiUrl}/forwarded-documents`;
+    if (status) {
+      url += `?status=${status}`;
+    }
+    console.log('Fetching forwarded documents:', { status, url });
+    return this.http.get<any[]>(url);
   }
 }

@@ -372,16 +372,14 @@
                           (click)="viewDocument(doc)">
                     <i class="fas fa-eye me-1"></i>View
                   </button>
-                  <button class="btn btn-success btn-sm flex-fill" 
-                          (click)="processDocument(doc, 'APPROVE')"
+                  <button class="btn btn-warning btn-sm flex-fill" 
+                          (click)="sendToCompliance(doc)"
                           *ngIf="doc.status === 'PENDING'">
-                    <i class="fas fa-check me-1"></i>Approve
+                    <i class="fas fa-paper-plane me-1"></i>Send to Compliance
                   </button>
-                  <button class="btn btn-danger btn-sm flex-fill" 
-                          (click)="processDocument(doc, 'REJECT')"
-                          *ngIf="doc.status === 'PENDING'">
-                    <i class="fas fa-times me-1"></i>Reject
-                  </button>
+                  <span *ngIf="doc.status !== 'PENDING'" class="text-muted small text-center">
+                    <i class="fas fa-check-circle"></i> Sent to Compliance
+                  </span>
                 </div>
               </div>
             </div>

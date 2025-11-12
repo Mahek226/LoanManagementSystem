@@ -1027,4 +1027,47 @@ public class LoanOfficerScreeningController {
 //        }
 //    }
     
+    /**
+     * Forward resubmitted document to compliance officer for review
+     */
+    @PostMapping("/forward-to-compliance")
+    public ResponseEntity<?> forwardDocumentToCompliance(@Valid @RequestBody Map<String, Object> request) {
+        try {
+            log.info("Forwarding document to compliance: {}", request);
+            
+            // Validate required fields
+            if (request.get("documentId") == null || request.get("loanId") == null || 
+                request.get("applicantId") == null || request.get("loanOfficerId") == null) {
+                log.error("Missing required fields in request: {}", request);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Missing required fields: documentId, loanId, applicantId, or loanOfficerId"));
+            }
+            
+            Long documentId = Long.valueOf(request.get("documentId").toString());
+            Long loanId = Long.valueOf(request.get("loanId").toString());
+            Long applicantId = Long.valueOf(request.get("applicantId").toString());
+            Long loanOfficerId = Long.valueOf(request.get("loanOfficerId").toString());
+            String comments = request.get("comments") != null ? request.get("comments").toString() : "Forwarded to compliance";
+            
+            log.info("Processing forward request - DocumentID: {}, LoanID: {}, ApplicantID: {}, OfficerID: {}", 
+                    documentId, loanId, applicantId, loanOfficerId);
+            
+            // Forward document to compliance officer
+            Map<String, Object> result = loanOfficerDocumentService.forwardDocumentToCompliance(
+                    documentId, loanId, applicantId, loanOfficerId, comments);
+            
+            log.info("Successfully forwarded document to compliance: {}", result);
+            return ResponseEntity.ok(result);
+            
+        } catch (NumberFormatException e) {
+            log.error("Invalid number format in request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Invalid number format in request parameters"));
+        } catch (Exception e) {
+            log.error("Error forwarding document to compliance: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to forward document to compliance: " + e.getMessage()));
+        }
+    }
+    
 }

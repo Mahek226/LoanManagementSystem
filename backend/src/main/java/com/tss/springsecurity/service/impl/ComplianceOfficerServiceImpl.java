@@ -38,6 +38,9 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
     private DocumentResubmissionRepository documentResubmissionRepository;
     
     @Autowired
+    private ForwardedDocumentRepository forwardedDocumentRepository;
+    
+    @Autowired
     private ApplicantRepository applicantRepository;
     
     @Autowired
@@ -2154,6 +2157,145 @@ public class ComplianceOfficerServiceImpl implements ComplianceOfficerService {
 	public List<java.util.Map<String, Object>> getLoanHistory(Long applicantId) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+	
+	@Override
+	public List<Map<String, Object>> getDocumentResubmissionRequestsByStatus(String status) {
+		log.info("Fetching document resubmission requests by status: {}", status);
+		
+		try {
+			List<DocumentResubmission> requests = documentResubmissionRepository.findByStatusOrderByPriorityLevelDescRequestedAtDesc(status);
+			
+			return requests.stream().map(request -> {
+				Map<String, Object> requestInfo = new HashMap<>();
+				requestInfo.put("resubmissionId", request.getResubmissionId());
+				requestInfo.put("assignmentId", request.getAssignment().getAssignmentId());
+				requestInfo.put("loanId", request.getAssignment().getLoan().getLoanId());
+				requestInfo.put("applicantId", request.getApplicant().getApplicantId());
+				requestInfo.put("applicantName", request.getApplicant().getFirstName() + " " + request.getApplicant().getLastName());
+				requestInfo.put("loanType", request.getAssignment().getLoan().getLoanType());
+				requestInfo.put("loanAmount", request.getAssignment().getLoan().getLoanAmount());
+				requestInfo.put("requestedDocuments", parseRequestedDocuments(request.getRequestedDocuments()));
+				requestInfo.put("reason", request.getReason());
+				requestInfo.put("additionalComments", request.getAdditionalComments());
+				requestInfo.put("priorityLevel", request.getPriorityLevel());
+				requestInfo.put("status", request.getStatus());
+				requestInfo.put("requestedAt", request.getRequestedAt());
+				requestInfo.put("submittedAt", request.getSubmittedAt());
+				requestInfo.put("reviewedAt", request.getReviewedAt());
+				requestInfo.put("processedAt", request.getProcessedAt());
+				requestInfo.put("requestedByOfficerId", request.getRequestedByOfficer().getOfficerId());
+				
+				return requestInfo;
+			}).collect(Collectors.toList());
+			
+		} catch (Exception e) {
+			log.error("Error fetching document resubmission requests by status: {}", status, e);
+			throw new RuntimeException("Failed to fetch document resubmission requests: " + e.getMessage());
+		}
+	}
+	
+	@Override
+	public List<Map<String, Object>> getDocumentResubmissionRequestsByOfficer(Long officerId, String status) {
+		log.info("Fetching document resubmission requests for officer: {} with status: {}", officerId, status);
+		
+		try {
+			List<DocumentResubmission> requests;
+			
+			if (status != null && !status.isEmpty()) {
+				// Filter by both officer and status
+				requests = documentResubmissionRepository.findByStatusOrderByPriorityLevelDescRequestedAtDesc(status)
+					.stream()
+					.filter(req -> req.getRequestedByOfficer().getOfficerId().equals(officerId))
+					.collect(Collectors.toList());
+			} else {
+				// Get all requests by this officer
+				requests = documentResubmissionRepository.findByRequestedByOfficerOfficerIdOrderByRequestedAtDesc(officerId);
+			}
+			
+			return requests.stream().map(request -> {
+				Map<String, Object> requestInfo = new HashMap<>();
+				requestInfo.put("resubmissionId", request.getResubmissionId());
+				requestInfo.put("assignmentId", request.getAssignment().getAssignmentId());
+				requestInfo.put("loanId", request.getAssignment().getLoan().getLoanId());
+				requestInfo.put("applicantId", request.getApplicant().getApplicantId());
+				requestInfo.put("applicantName", request.getApplicant().getFirstName() + " " + request.getApplicant().getLastName());
+				requestInfo.put("loanType", request.getAssignment().getLoan().getLoanType());
+				requestInfo.put("loanAmount", request.getAssignment().getLoan().getLoanAmount());
+				requestInfo.put("requestedDocuments", parseRequestedDocuments(request.getRequestedDocuments()));
+				requestInfo.put("reason", request.getReason());
+				requestInfo.put("additionalComments", request.getAdditionalComments());
+				requestInfo.put("priorityLevel", request.getPriorityLevel());
+				requestInfo.put("status", request.getStatus());
+				requestInfo.put("requestedAt", request.getRequestedAt());
+				requestInfo.put("submittedAt", request.getSubmittedAt());
+				requestInfo.put("reviewedAt", request.getReviewedAt());
+				requestInfo.put("processedAt", request.getProcessedAt());
+				requestInfo.put("requestedByOfficerId", request.getRequestedByOfficer().getOfficerId());
+				
+				return requestInfo;
+			}).collect(Collectors.toList());
+			
+		} catch (Exception e) {
+			log.error("Error fetching document resubmission requests for officer: {}", officerId, e);
+			throw new RuntimeException("Failed to fetch document resubmission requests: " + e.getMessage());
+		}
+	}
+	
+	private String[] parseRequestedDocuments(String requestedDocuments) {
+		try {
+			// If it's already a JSON array string, parse it
+			if (requestedDocuments.startsWith("[") && requestedDocuments.endsWith("]")) {
+				return requestedDocuments.substring(1, requestedDocuments.length() - 1)
+					.replace("\"", "")
+					.split(",");
+			}
+			// Otherwise, treat as single document type
+			return new String[]{requestedDocuments};
+		} catch (Exception e) {
+			log.warn("Error parsing requested documents: {}", requestedDocuments, e);
+			return new String[]{requestedDocuments};
+		}
+	}
+	
+	@Override
+	public List<Map<String, Object>> getForwardedDocuments(String status) {
+		log.info("Fetching forwarded documents with status: {}", status);
+		
+		try {
+			List<ForwardedDocument> forwardedDocs;
+			
+			if (status != null && !status.isEmpty()) {
+				forwardedDocs = forwardedDocumentRepository.findByStatusOrderByForwardedAtDesc(status);
+			} else {
+				forwardedDocs = forwardedDocumentRepository.findAllByOrderByForwardedAtDesc();
+			}
+			
+			return forwardedDocs.stream().map(doc -> {
+				Map<String, Object> docInfo = new HashMap<>();
+				docInfo.put("forwardedId", doc.getForwardedId());
+				docInfo.put("documentId", doc.getDocumentId());
+				docInfo.put("documentType", doc.getDocumentType());
+				docInfo.put("documentName", doc.getDocumentName());
+				docInfo.put("applicantId", doc.getApplicantId());
+				docInfo.put("applicantName", doc.getApplicantName());
+				docInfo.put("loanId", doc.getLoanId());
+				docInfo.put("loanType", doc.getLoanType());
+				docInfo.put("loanAmount", doc.getLoanAmount());
+				docInfo.put("forwardedByOfficerId", doc.getForwardedByOfficerId());
+				docInfo.put("forwardedToComplianceOfficerId", doc.getForwardedToComplianceOfficerId());
+				docInfo.put("forwardedAt", doc.getForwardedAt());
+				docInfo.put("status", doc.getStatus());
+				docInfo.put("reason", doc.getReason());
+				docInfo.put("priorityLevel", doc.getPriorityLevel());
+				
+				return docInfo;
+			}).collect(Collectors.toList());
+			
+		} catch (Exception e) {
+			log.error("Error fetching forwarded documents: {}", e.getMessage(), e);
+			throw new RuntimeException("Failed to fetch forwarded documents: " + e.getMessage());
+		}
 	}
 }
 

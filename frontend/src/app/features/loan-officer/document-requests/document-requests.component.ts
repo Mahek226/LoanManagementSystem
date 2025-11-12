@@ -373,13 +373,6 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
   
   // ==================== Resubmitted Documents Methods ====================
   
-  viewDocument(document: any): void {
-    // Open document in new tab
-    if (document.documentUrl) {
-      window.open(document.documentUrl, '_blank');
-    }
-  }
-  
   processDocument(document: any, action: 'APPROVE' | 'REJECT'): void {
     const officerId = this.getOfficerId();
     const remarks = action === 'APPROVE' ? 'Document approved after resubmission' : 'Document rejected after resubmission';
@@ -455,6 +448,85 @@ export class DocumentRequestsComponent implements OnInit, OnDestroy {
     }
     
     return pages;
+  }
+  
+  // ==================== Document Actions ====================
+  
+  sendToCompliance(document: any): void {
+    if (confirm('Are you sure you want to send this document to compliance for review?')) {
+      this.loading = true;
+      
+      // Debug: Log document object to see what properties are available
+      console.log('Document object:', document);
+      
+      const request = {
+        documentId: document.documentId || document.id,
+        loanId: document.loanId,
+        applicantId: document.applicantId,
+        loanOfficerId: this.getOfficerId(),
+        comments: 'Document resubmitted by applicant - forwarding to compliance for review'
+      };
+      
+      // Debug: Log request object
+      console.log('Forward to compliance request:', request);
+      
+      // Validate required fields
+      if (!request.documentId || !request.loanId || !request.applicantId || !request.loanOfficerId) {
+        this.error = 'Missing required information. Cannot forward document to compliance.';
+        this.loading = false;
+        console.error('Missing required fields:', request);
+        return;
+      }
+      
+      this.loanOfficerService.forwardDocumentToCompliance(request).subscribe({
+        next: (response) => {
+          console.log('Forward to compliance response:', response);
+          this.success = 'Document successfully forwarded to compliance officer for review';
+          this.error = null;
+          document.status = 'FORWARDED_TO_COMPLIANCE';
+          this.loading = false;
+          
+          // Auto-hide success message after 5 seconds
+          setTimeout(() => {
+            this.success = null;
+          }, 5000);
+        },
+        error: (error) => {
+          console.error('Error forwarding document to compliance:', error);
+          
+          // More detailed error message
+          let errorMessage = 'Failed to forward document to compliance. ';
+          if (error.error && error.error.error) {
+            errorMessage += error.error.error;
+          } else if (error.message) {
+            errorMessage += error.message;
+          } else {
+            errorMessage += 'Please try again.';
+          }
+          
+          this.error = errorMessage;
+          this.success = null;
+          this.loading = false;
+          
+          // Auto-hide error message after 8 seconds
+          setTimeout(() => {
+            this.error = null;
+          }, 8000);
+        }
+      });
+    }
+  }
+  
+  viewDocument(document: any): void {
+    // Open document in new tab/window
+    if (document.documentUrl) {
+      window.open(document.documentUrl, '_blank');
+    } else {
+      this.error = 'Document URL not available';
+      setTimeout(() => {
+        this.error = null;
+      }, 5000);
+    }
   }
   
   // ==================== Export ====================

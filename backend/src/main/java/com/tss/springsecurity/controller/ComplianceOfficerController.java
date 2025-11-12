@@ -4,7 +4,6 @@ import com.tss.springsecurity.dto.*;
 import com.tss.springsecurity.service.LoanOfficerScreeningService;
 import com.tss.springsecurity.service.ComplianceOfficerService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +13,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/compliance-officer")
-@RequiredArgsConstructor
 public class ComplianceOfficerController {
     
     private final LoanOfficerScreeningService screeningService;
     private final ComplianceOfficerService complianceOfficerService;
+    
+    public ComplianceOfficerController(LoanOfficerScreeningService screeningService, 
+                                     ComplianceOfficerService complianceOfficerService) {
+        this.screeningService = screeningService;
+        this.complianceOfficerService = complianceOfficerService;
+    }
     
     @GetMapping("/escalations")
     public ResponseEntity<List<LoanScreeningResponse>> getComplianceEscalations() {
@@ -490,6 +494,7 @@ public class ComplianceOfficerController {
      */
     @PostMapping("/document/{documentId}/request-resubmission")
     public ResponseEntity<?> requestDocumentResubmission(
+            @PathVariable Long documentId,
             @Valid @RequestBody DocumentResubmissionRequestDTO request) {
         try {
             Map<String, Object> response = complianceOfficerService.requestDocumentResubmissionDetailed(request);
@@ -497,6 +502,52 @@ public class ComplianceOfficerController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(e.getMessage()));
+        }
+    }
+    
+    // ==================== Document Resubmission Management ====================
+
+    /**
+     * Get document resubmission requests by status
+     */
+    @GetMapping("/document-resubmission-requests")
+    public ResponseEntity<?> getDocumentResubmissionRequests(@RequestParam String status) {
+        try {
+            List<Map<String, Object>> requests = complianceOfficerService.getDocumentResubmissionRequestsByStatus(status);
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to fetch document resubmission requests: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get document resubmission requests by officer ID
+     */
+    @GetMapping("/{officerId}/document-resubmission-requests")
+    public ResponseEntity<?> getDocumentResubmissionRequestsByOfficer(
+            @PathVariable Long officerId,
+            @RequestParam(required = false) String status) {
+        try {
+            List<Map<String, Object>> requests = complianceOfficerService.getDocumentResubmissionRequestsByOfficer(officerId, status);
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to fetch document resubmission requests: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get forwarded documents from loan officers
+     */
+    @GetMapping("/forwarded-documents")
+    public ResponseEntity<?> getForwardedDocuments(@RequestParam(required = false) String status) {
+        try {
+            List<Map<String, Object>> forwardedDocs = complianceOfficerService.getForwardedDocuments(status);
+            return ResponseEntity.ok(forwardedDocs);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to fetch forwarded documents: " + e.getMessage()));
         }
     }
     

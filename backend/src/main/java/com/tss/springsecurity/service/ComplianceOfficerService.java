@@ -188,5 +188,20 @@ public interface ComplianceOfficerService {
      * Get external person details by person ID from external database
      */
     Map<String, Object> getExternalPersonDetails(Long personId);
+    
+    /**
+     * Get document resubmission requests by status
+     */
+    List<Map<String, Object>> getDocumentResubmissionRequestsByStatus(String status);
+    
+    /**
+     * Get document resubmission requests by officer ID and optional status
+     */
+    List<Map<String, Object>> getDocumentResubmissionRequestsByOfficer(Long officerId, String status);
+    
+    /**
+     * Get forwarded documents from loan officers
+     */
+    List<Map<String, Object>> getForwardedDocuments(String status);
 //>>>>>>> fbd8d4982247036d3e587f42bd5f81bc6ccc9259
 }

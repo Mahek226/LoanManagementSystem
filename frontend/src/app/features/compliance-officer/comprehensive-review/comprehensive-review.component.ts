@@ -467,10 +467,14 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
           // Reload documents to show updated status
           this.loadLoanDocuments(this.escalation!.loanId);
           
-          // Show success message
+          // Show success message and redirect to document resubmission tab
           this.error = null;
-          this.successMessage = 'Document resubmission request sent directly to applicant with email notification!';
-          setTimeout(() => this.successMessage = '', 5000);
+          this.successMessage = 'Document resubmission request sent! Redirecting to Document Resubmission tab...';
+          
+          // Redirect to document resubmission tab after 2 seconds
+          setTimeout(() => {
+            this.router.navigate(['/compliance-officer/document-resubmission']);
+          }, 2000);
         },
         error: (err: any) => {
           console.error('Error requesting document resubmission:', err);
@@ -635,6 +639,20 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
   }
   
   /**
+   * Check if any document resubmission is pending
+   */
+  get hasDocumentResubmissionPending(): boolean {
+    return this.resubmissionRequested.size > 0;
+  }
+
+  /**
+   * Check if verdict submission should be disabled
+   */
+  get isVerdictSubmissionDisabled(): boolean {
+    return this.verdictSubmitted || this.verdictSubmitting || this.hasDocumentResubmissionPending;
+  }
+
+  /**
    * Get status message for verdict button
    */
   getVerdictButtonMessage(): string {
@@ -643,6 +661,9 @@ export class ComprehensiveReviewComponent implements OnInit, OnDestroy {
     }
     if (this.verdictSubmitted) {
       return 'Verdict has been submitted. Case is now read-only.';
+    }
+    if (this.hasDocumentResubmissionPending) {
+      return 'Cannot submit verdict while document resubmission is pending. Please wait for applicant to resubmit documents.';
     }
     return 'Submit your compliance verdict to the loan officer.';
   }

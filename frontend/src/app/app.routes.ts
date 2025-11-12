@@ -166,6 +166,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/compliance-officer/forwarded-documents/forwarded-documents.component').then(m => m.ForwardedDocumentsComponent)
       },
       {
+        path: 'document-resubmission',
+        loadComponent: () => import('./features/compliance-officer/document-resubmission/document-resubmission.component').then(m => m.DocumentResubmissionComponent)
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'

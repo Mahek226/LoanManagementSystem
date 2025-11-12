@@ -1,0 +1,281 @@
+<!-- Header Section -->
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="h3 mb-1 text-danger fw-bold">
+            <i class="fas fa-file-alt me-2"></i>Document Resubmission Management
+          </h2>
+          <p class="text-muted mb-0">Manage document resubmission requests and track their status</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" (click)="refreshData()">
+            <i class="fas fa-sync-alt me-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div class="row mb-3" *ngIf="success || error">
+    <div class="col-12">
+      <div class="alert alert-success alert-dismissible fade show" *ngIf="success">
+        <i class="fas fa-check-circle me-2"></i>{{ success }}
+        <button type="button" class="btn-close" (click)="success = null"></button>
+      </div>
+      <div class="alert alert-danger alert-dismissible fade show" *ngIf="error">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+        <button type="button" class="btn-close" (click)="error = null"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <ul class="nav nav-tabs nav-fill">
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'pending'"
+                  (click)="switchTab('pending')">
+            <i class="fas fa-clock me-2"></i>
+            Pending Requests
+            <span class="badge bg-warning ms-2" *ngIf="pendingRequests.length > 0">{{ pendingRequests.length }}</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" 
+                  [class.active]="activeTab === 'resolved'"
+                  (click)="switchTab('resolved')">
+            <i class="fas fa-check-circle me-2"></i>
+            Resolved Requests
+            <span class="badge bg-success ms-2" *ngIf="resolvedRequests.length > 0">{{ resolvedRequests.length }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Search</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="fas fa-search text-muted"></i>
+                </span>
+                <input 
+                  type="text" 
+                  class="form-control border-start-0" 
+                  placeholder="Search by applicant, loan type, reason..."
+                  [(ngModel)]="searchTerm"
+                  (input)="applyFilters()">
+              </div>
+            </div>
+            
+            <!-- Status Filter (for resolved tab) -->
+            <div class="col-md-3" *ngIf="activeTab === 'resolved'">
+              <label class="form-label fw-semibold">Status</label>
+              <select class="form-select" [(ngModel)]="statusFilter" (change)="applyFilters()">
+                <option value="">All Statuses</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="REVIEWED">Reviewed</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            
+            <!-- Priority Filter (for pending tab) -->
+            <div class="col-md-3" *ngIf="activeTab === 'pending'">
+              <label class="form-label fw-semibold">Priority</label>
+              <select class="form-select" [(ngModel)]="priorityFilter" (change)="applyFilters()">
+                <option value="">All Priorities</option>
+                <option value="5">URGENT</option>
+                <option value="4">HIGH</option>
+                <option value="3">MEDIUM</option>
+                <option value="2">LOW</option>
+                <option value="1">VERY LOW</option>
+              </select>
+            </div>
+            
+            <!-- Sort -->
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Sort By</label>
+              <select class="form-select" [(ngModel)]="sortBy" (change)="applyFilters()">
+                <option value="requestedAt">Date Requested</option>
+                <option value="priorityLevel" *ngIf="activeTab === 'pending'">Priority</option>
+                <option value="submittedAt" *ngIf="activeTab === 'resolved'">Date Submitted</option>
+                <option value="applicantName">Applicant Name</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="row" *ngIf="loading">
+    <div class="col-12 text-center py-5">
+      <div class="spinner-border text-danger" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading document resubmission requests...</p>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="row mb-3" *ngIf="!loading">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted">
+          Showing {{ paginatedRequests.length }} of 
+          {{ activeTab === 'pending' ? filteredPendingRequests.length : filteredResolvedRequests.length }} 
+          {{ activeTab === 'pending' ? 'pending' : 'resolved' }} requests
+        </span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">Items per page:</span>
+          <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="itemsPerPage" (change)="calculatePagination()">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requests Cards -->
+  <div class="row" *ngIf="!loading">
+    <div class="col-12">
+      <!-- Requests List -->
+      <div class="row g-3" *ngIf="paginatedRequests.length > 0">
+        <div class="col-md-6 col-lg-4" *ngFor="let request of paginatedRequests">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h6 class="card-title mb-1 text-danger fw-bold">{{ request.applicantName }}</h6>
+                  <small class="text-muted">{{ request.loanType }}</small>
+                </div>
+                <div class="text-end">
+                  <span class="badge" [class]="getStatusClass(request.status)">{{ request.status }}</span>
+                  <div class="mt-1" *ngIf="activeTab === 'pending'">
+                    <span class="badge" [class]="getPriorityClass(request.priorityLevel)">
+                      {{ getPriorityLabel(request.priorityLevel) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block">Loan Amount:</small>
+                <strong class="small">₹{{ request.loanAmount | number:'1.2-2' }}</strong>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block">Requested Documents:</small>
+                <div class="d-flex flex-wrap gap-1">
+                  <span class="badge bg-light text-dark" 
+                        *ngFor="let docType of parseDocumentTypes(request.requestedDocuments)">
+                    {{ docType }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block">Reason:</small>
+                <p class="small mb-0">{{ request.reason }}</p>
+              </div>
+              
+              <div class="mb-3" *ngIf="request.additionalComments">
+                <small class="text-muted d-block">Additional Comments:</small>
+                <p class="small mb-0">{{ request.additionalComments }}</p>
+              </div>
+              
+              <div class="mb-3">
+                <small class="text-muted d-block">Requested At:</small>
+                <strong class="small">{{ formatDate(request.requestedAt) }}</strong>
+              </div>
+              
+              <div class="mb-3" *ngIf="request.submittedAt && activeTab === 'resolved'">
+                <small class="text-muted d-block">Submitted At:</small>
+                <strong class="small">{{ formatDate(request.submittedAt) }}</strong>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm flex-fill" 
+                        (click)="viewRequestDetails(request)">
+                  <i class="fas fa-eye me-1"></i>View Details
+                </button>
+                
+                <!-- For forwarded documents, show Proceed to Review button -->
+                <button class="btn btn-primary btn-sm flex-fill" 
+                        (click)="proceedToReview(request)"
+                        *ngIf="activeTab === 'resolved' && request.status === 'FORWARDED'">
+                  <i class="fas fa-arrow-right me-1"></i>Proceed to Review
+                </button>
+                
+                <!-- For resolved requests, show Continue with Application button -->
+                <button class="btn btn-success btn-sm flex-fill" 
+                        (click)="continueWithApplication(request)"
+                        *ngIf="activeTab === 'resolved' && request.status === 'SUBMITTED'">
+                  <i class="fas fa-arrow-right me-1"></i>Continue Application
+                </button>
+                
+                <!-- For pending requests, show status -->
+                <span class="btn btn-outline-secondary btn-sm flex-fill text-center" 
+                      *ngIf="activeTab === 'pending'">
+                  <i class="fas fa-clock me-1"></i>Awaiting Resubmission
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Requests Message -->
+      <div class="text-center py-5" *ngIf="paginatedRequests.length === 0">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No {{ activeTab === 'pending' ? 'Pending' : 'Resolved' }} Requests Found</h5>
+        <p class="text-muted">
+          {{ activeTab === 'pending' ? 
+             'There are no pending document resubmission requests at this time.' : 
+             'There are no resolved document resubmission requests to display.' }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="row mt-4" *ngIf="!loading && totalPages > 1">
+    <div class="col-12 d-flex justify-content-center">
+      <nav aria-label="Page navigation">
+        <ul class="pagination">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <button class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+          </li>
+          <li 
+            *ngFor="let page of pageNumbers" 
+            class="page-item" 
+            [class.active]="page === currentPage">
+            <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <button class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>

@@ -101,7 +101,7 @@ export class ForwardedDocumentsComponent implements OnInit {
 
   loadForwardedDocuments(): void {
     this.loading = true;
-    this.complianceService.getForwardedDocuments(this.complianceOfficerId).subscribe({
+    this.complianceService.getForwardedDocuments('FORWARDED').subscribe({
       next: (documents) => {
         this.forwardedDocuments = documents;
         this.applyFilters();
