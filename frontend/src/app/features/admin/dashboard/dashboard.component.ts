@@ -1,18 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { AdminService, DashboardStats, ActivityLog } from '../../../core/services/admin.service';
-import { ThemeService, Theme } from '../../../core/services/theme.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ApplicantsComponent } from '../applicants/applicants.component';
-import { LoansComponent } from '../loans/loans.component';
-import { LoanOfficersComponent } from '../loan-officers/loan-officers.component';
-import { ComplianceOfficersComponent } from '../compliance-officers/compliance-officers.component';
-import { ReportsComponent } from '../reports/reports.component';
-import { ActivityLogsComponent } from '../activity-logs/activity-logs.component';
-import { FraudRulesComponent } from '../fraud-rules/fraud-rules.component';
-import { PredictiveAnalyticsComponent } from '../predictive-analytics/predictive-analytics.component';
 import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
@@ -29,18 +18,13 @@ interface Activity {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ApplicantsComponent, LoansComponent, LoanOfficersComponent, ComplianceOfficersComponent, ReportsComponent, ActivityLogsComponent, FraudRulesComponent, PredictiveAnalyticsComponent],
+  imports: [CommonModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('monthlyChart') monthlyChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('statusChart') statusChartRef!: ElementRef<HTMLCanvasElement>;
-
-  activeTab = 'dashboard';
-  currentTheme: Theme = 'system';
-  showFallbackLogo = false;
-  notificationCount = 3;
 
   stats: DashboardStats | null = null;
   recentActivities: Activity[] = [];
@@ -49,28 +33,15 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   
   private monthlyChart: Chart | null = null;
   private statusChart: Chart | null = null;
-  private themeSubscription: Subscription | null = null;
   private statsSubscription: Subscription | null = null;
   private activitiesSubscription: Subscription | null = null;
 
   constructor(
-    private adminService: AdminService,
-    private themeService: ThemeService,
-    private authService: AuthService,
-    private router: Router
+    private adminService: AdminService
   ) {}
 
   ngOnInit(): void {
     this.initializeData();
-    
-    // Subscribe to theme changes
-    this.themeSubscription = this.themeService.theme$.subscribe(theme => {
-      this.currentTheme = theme;
-      // Update charts when theme changes
-      setTimeout(() => {
-        this.updateChartsForTheme();
-      }, 100);
-    });
   }
 
   ngAfterViewInit(): void {
@@ -81,9 +52,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.themeSubscription) {
-      this.themeSubscription.unsubscribe();
-    }
     if (this.statsSubscription) {
       this.statsSubscription.unsubscribe();
     }
@@ -387,41 +355,6 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 50);
   }
 
-  // Theme methods
-  setTheme(theme: Theme): void {
-    this.themeService.setTheme(theme);
-  }
-
-  getThemeIcon(): string {
-    switch (this.currentTheme) {
-      case 'light': return 'fa-sun';
-      case 'dark': return 'fa-moon';
-      case 'system': return 'fa-desktop';
-      default: return 'fa-desktop';
-    }
-  }
-
-  getThemeLabel(): string {
-    switch (this.currentTheme) {
-      case 'light': return 'Light';
-      case 'dark': return 'Dark';
-      case 'system': return 'System';
-      default: return 'System';
-    }
-  }
-
-  // Navigation methods
-  setActiveTab(tab: string): void {
-    this.activeTab = tab;
-    
-    // If returning to dashboard tab, ensure data is loaded
-    if (tab === 'dashboard') {
-      // Check if we need to refresh data
-      if (!this.stats) {
-        this.initializeData();
-      }
-    }
-  }
 
   // Refresh data method
   refreshData(): void {
@@ -430,15 +363,4 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.adminService.refreshDashboardData();
   }
 
-  // Utility methods
-  onImageError(): void {
-    this.showFallbackLogo = true;
-  }
-
-  logout(): void {
-    // Clear cached data on logout
-    this.adminService.clearCache();
-    this.authService.logout();
-    this.router.navigate(['/auth/login']);
-  }
 }

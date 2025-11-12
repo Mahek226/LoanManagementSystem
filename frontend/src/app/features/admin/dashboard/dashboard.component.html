@@ -1,193 +1,6 @@
-<div class="admin-dashboard min-h-screen" style="background-color: var(--bg-secondary);">
-  <!-- Header with Theme Toggle -->
-  <header class="sticky top-0 z-50 border-b" style="background-color: var(--bg-primary); border-color: var(--border-color);">
-    <div class="container-fluid px-4 py-3">
-      <div class="d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-3">
-          <img src="assets/images/logo.jpeg" alt="FraudShield Logo" 
-               class="w-10 h-10 rounded-lg object-cover shadow-sm" 
-               (error)="onImageError()"
-               [style.display]="showFallbackLogo ? 'none' : 'block'">
-          
-          <div class="w-10 h-10 bg-blue-100 rounded-lg d-flex align-items-center justify-content-center" 
-               *ngIf="showFallbackLogo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-              <path d="M2 17l10 5 10-5"></path>
-              <path d="M2 12l10 5 10-5"></path>
-            </svg>
-          </div>
-          
-          <div>
-            <h1 class="h5 fw-bold mb-0" style="color: var(--text-primary);">Admin Dashboard</h1>
-            <p class="small mb-0" style="color: var(--text-secondary);">FraudShield Loan Management</p>
-          </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
-          <!-- Theme Toggle -->
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
-                    type="button" 
-                    data-bs-toggle="dropdown">
-              <i class="fas" [class]="getThemeIcon()"></i>
-              {{ getThemeLabel() }}
-            </button>
-            <ul class="dropdown-menu">
-              <li>
-                <button class="dropdown-item d-flex align-items-center gap-2" 
-                        (click)="setTheme('light')"
-                        [class.active]="currentTheme === 'light'">
-                  <i class="fas fa-sun"></i> Light
-                </button>
-              </li>
-              <li>
-                <button class="dropdown-item d-flex align-items-center gap-2" 
-                        (click)="setTheme('dark')"
-                        [class.active]="currentTheme === 'dark'">
-                  <i class="fas fa-moon"></i> Dark
-                </button>
-              </li>
-              <li>
-                <button class="dropdown-item d-flex align-items-center gap-2" 
-                        (click)="setTheme('system')"
-                        [class.active]="currentTheme === 'system'">
-                  <i class="fas fa-desktop"></i> System
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Notifications -->
-          <button class="btn btn-outline-secondary btn-sm position-relative">
-            <i class="fas fa-bell"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
-                  *ngIf="notificationCount > 0">
-              {{ notificationCount }}
-            </span>
-          </button>
-
-          <!-- Admin Profile -->
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" 
-                    type="button" 
-                    data-bs-toggle="dropdown">
-              <i class="fas fa-user-circle"></i>
-              Admin
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
-              <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Navigation Tabs -->
-  <nav class="border-b" style="background-color: var(--bg-primary); border-color: var(--border-color);">
-    <div class="container-fluid px-4">
-      <ul class="nav nav-tabs border-0">
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'dashboard'"
-                  (click)="setActiveTab('dashboard')">
-            <i class="fas fa-chart-line me-2"></i>
-            Dashboard
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'applicants'"
-                  (click)="setActiveTab('applicants')">
-            <i class="fas fa-users me-2"></i>
-            Applicants
-            <span class="badge bg-warning text-dark ms-2" *ngIf="stats?.pendingApplications">
-              {{ stats?.pendingApplications }}
-            </span>
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'loans'"
-                  (click)="setActiveTab('loans')">
-            <i class="fas fa-money-check-alt me-2"></i>
-            Loan Applications
-          </button>
-        </li>
-        <li class="nav-item dropdown">
-          <button class="nav-link dropdown-toggle" 
-                  [class.active]="activeTab === 'loan-officers' || activeTab === 'compliance-officers'"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false">
-            <i class="fas fa-users-cog me-2"></i>
-            Officer Management
-          </button>
-          <ul class="dropdown-menu">
-            <li>
-              <button class="dropdown-item d-flex align-items-center gap-2" 
-                      (click)="setActiveTab('loan-officers')"
-                      [class.active]="activeTab === 'loan-officers'">
-                <i class="fas fa-user-tie"></i>
-                Loan Officers
-              </button>
-            </li>
-            <li>
-              <button class="dropdown-item d-flex align-items-center gap-2" 
-                      (click)="setActiveTab('compliance-officers')"
-                      [class.active]="activeTab === 'compliance-officers'">
-                <i class="fas fa-user-shield"></i>
-                Compliance Officers
-              </button>
-            </li>
-          </ul>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'reports'"
-                  (click)="setActiveTab('reports')">
-            <i class="fas fa-chart-bar me-2"></i>
-            Reports
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'activity-logs'"
-                  (click)="setActiveTab('activity-logs')">
-            <i class="fas fa-history me-2"></i>
-            Activity Logs
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'fraud-rules'"
-                  (click)="setActiveTab('fraud-rules')">
-            <i class="fas fa-shield-alt me-2"></i>
-            Fraud Rules
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" 
-                  [class.active]="activeTab === 'predictive-analytics'"
-                  (click)="setActiveTab('predictive-analytics')">
-            <i class="fas fa-brain me-2"></i>
-            Predictive Analytics
-            <span class="badge bg-success text-white ms-2">AI</span>
-          </button>
-        </li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <main class="container-fluid px-4 py-4">
-    
-    <!-- Dashboard Tab -->
-    <div *ngIf="activeTab === 'dashboard'" class="dashboard-content">
+<!-- Dashboard Content -->
+<div class="container-fluid px-4 py-4">
+  <div class="dashboard-content">
       
       <!-- Loading Indicator -->
       <div *ngIf="isLoadingStats" class="d-flex justify-content-center align-items-center py-5">
@@ -266,7 +79,7 @@
                   </div>
                 </div>
                 <div class="flex-grow-1 ms-3">
-                  <h6 class="text-muted mb-1">Approved Loans</h6>
+                  <h6 class="text-muted mb-1">Approved Applications</h6>
                   <h3 class="mb-0 fw-bold" style="color: var(--text-primary);">
                     {{ stats?.approvedLoans || 0 | number }}
                   </h3>
@@ -292,11 +105,11 @@
                 <div class="flex-grow-1 ms-3">
                   <h6 class="text-muted mb-1">Total Loan Amount</h6>
                   <h3 class="mb-0 fw-bold" style="color: var(--text-primary);">
-                    ${{ (stats?.totalLoanAmount || 0) | number:'1.0-0' }}
+                    Rs {{ (stats?.totalLoanAmount || 0) | number:'1.0-0' }}
                   </h3>
                   <small class="text-info">
                     <i class="fas fa-info-circle me-1"></i>
-                    Avg: ${{ (stats?.averageLoanAmount || 0) | number:'1.0-0' }}
+                    Avg: Rs {{ (stats?.averageLoanAmount || 0) | number:'1.0-0' }}
                   </small>
                 </div>
               </div>
@@ -320,11 +133,11 @@
           </div>
         </div>
 
-        <!-- Loan Status Distribution -->
+        <!-- Applicants Status -->
         <div class="col-xl-4">
           <div class="card border-0 shadow-sm h-100" style="background-color: var(--bg-primary);">
             <div class="card-header border-0 pb-0" style="background-color: var(--bg-primary);">
-              <h5 class="card-title mb-0" style="color: var(--text-primary);">Loan Status Distribution</h5>
+              <h5 class="card-title mb-0" style="color: var(--text-primary);">Applicants Status Distribution</h5>
               <p class="text-muted small mb-0">Current status breakdown</p>
             </div>
             <div class="card-body">
@@ -371,47 +184,5 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Applicants Tab -->
-    <div *ngIf="activeTab === 'applicants'">
-      <app-applicants></app-applicants>
-    </div>
-
-    <!-- Loans Tab -->
-    <div *ngIf="activeTab === 'loans'">
-      <app-loans></app-loans>
-    </div>
-
-    <!-- Loan Officers Tab -->
-    <div *ngIf="activeTab === 'loan-officers'">
-      <app-loan-officers></app-loan-officers>
-    </div>
-
-    <!-- Compliance Officers Tab -->
-    <div *ngIf="activeTab === 'compliance-officers'">
-      <app-compliance-officers></app-compliance-officers>
-    </div>
-
-    <!-- Reports Tab -->
-    <div *ngIf="activeTab === 'reports'">
-      <app-reports></app-reports>
-    </div>
-
-    <!-- Activity Logs Tab -->
-    <div *ngIf="activeTab === 'activity-logs'">
-      <app-activity-logs></app-activity-logs>
-    </div>
-
-    <!-- Fraud Rules Tab -->
-    <div *ngIf="activeTab === 'fraud-rules'">
-      <app-fraud-rules></app-fraud-rules>
-    </div>
-
-    <!-- Predictive Analytics Tab -->
-    <div *ngIf="activeTab === 'predictive-analytics'">
-      <app-predictive-analytics></app-predictive-analytics>
-    </div>
-
-  </main>
+  </div>
 </div>

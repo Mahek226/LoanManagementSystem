@@ -49,10 +49,39 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [authGuard, roleGuard],
     data: { roles: [APP_CONSTANTS.ROLES.ADMIN] },
+    loadComponent: () => import('./features/admin/admin-layout/admin-layout.component').then(m => m.AdminLayoutComponent),
     children: [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/admin/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'applicants',
+        loadComponent: () => import('./features/admin/applicants/applicants.component').then(m => m.ApplicantsComponent)
+      },
+      {
+        path: 'loans',
+        loadComponent: () => import('./features/admin/loans/loans.component').then(m => m.LoansComponent)
+      },
+      {
+        path: 'loan-officers',
+        loadComponent: () => import('./features/admin/loan-officers/loan-officers.component').then(m => m.LoanOfficersComponent)
+      },
+      {
+        path: 'compliance-officers',
+        loadComponent: () => import('./features/admin/compliance-officers/compliance-officers.component').then(m => m.ComplianceOfficersComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./features/admin/reports/reports.component').then(m => m.ReportsComponent)
+      },
+      {
+        path: 'activity-logs',
+        loadComponent: () => import('./features/admin/activity-logs/activity-logs.component').then(m => m.ActivityLogsComponent)
+      },
+      {
+        path: 'fraud-rules',
+        loadComponent: () => import('./features/admin/fraud-rules/fraud-rules.component').then(m => m.FraudRulesComponent)
       },
       {
         path: 'predictive-analytics',
