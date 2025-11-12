@@ -6,40 +6,113 @@
 /out-tsc
 /bazel-out
 
-# Node
+# Dependencies
 /node_modules
 npm-debug.log
 yarn-error.log
 
-# IDEs and editors
-.idea/
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Spring Boot / Java Backend
+backend/target/
+backend/build/
+backend/out/
+backend/bin/
+backend/logs/
+backend/temp/
+backend/.gradle/
+backend/.mvn/
+backend/mvnw*
+backend/gradlew*
 
+# Angular Frontend  
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+frontend/.angular/
+frontend/node_modules/
+frontend/coverage/
+frontend/.nyc_output/
 
-*.md
+# Environment files
+.env*
+backend/.env*
+frontend/.env*
 
-# Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-.history/*
+# Database files
+*.db
+*.sqlite*
+h2/
+hsqldb/
 
-# Miscellaneous
+# Log files
+logs/
+*.log
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
 /.angular/cache
 .sass-cache/
-/connect.lock
-/coverage
-/libpeerconnection.log
-testem.log
-/typings
 
-# System files
-.DS_Store
+# OS generated files
+.DS_Store*
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+.metadata/
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+*.iws
+*.iml
+*.ipr
+*.launch
+*.sublime-workspace
+
+# Build tools
+target/
+build/
+out/
+bin/
+tmp/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*~.nib
+
+# Package files
+*.jar
+*.war
+*.ear
+*.class
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
+
+# Python (if any)
+__pycache__/
+*.py[cod]
+venv/
+env/
+
+# Documentation
+docs/_build/
